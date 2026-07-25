@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Thread Time Audit"
+  short_description: "Codexスレッド作業時刻を日別Markdown表にする"
+  default_prompt: "Use $codex-thread-time-audit to list Codex thread work times by project and day."
+
+policy:
+  allow_implicit_invocation: true

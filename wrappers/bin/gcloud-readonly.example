@@ -1,0 +1,46 @@
+#!/bin/zsh
+set -euo pipefail
+
+if [[ $# -lt 2 ]]; then
+  print -u2 "Usage: gcloud-readonly <group> <command-or-resource> [args...]"
+  exit 2
+fi
+
+group="$1"
+command_or_resource="$2"
+shift 2
+
+for arg in "$@"; do
+  case "$arg" in
+    *token*|*credential*|*secret*|--access-token-file*|--impersonate-service-account*)
+      print -u2 "Blocked Google Cloud argument that can expose or use sensitive auth material: $arg"
+      exit 2
+      ;;
+  esac
+done
+
+case "$group:$command_or_resource" in
+  config:list|config:get-value|\
+  projects:list|projects:describe|projects:get-iam-policy|\
+  logging:read|\
+  storage:ls|storage:du|storage:stat)
+    exec gcloud "$group" "$command_or_resource" "$@"
+    ;;
+esac
+
+verb="${1:-}"
+case "$group:$command_or_resource:$verb" in
+  compute:instances:list|compute:instances:describe|\
+  compute:networks:list|compute:networks:describe|\
+  compute:subnets:list|compute:subnets:describe|\
+  compute:firewall-rules:list|compute:firewall-rules:describe|\
+  compute:routes:list|compute:routes:describe|\
+  compute:addresses:list|compute:addresses:describe|\
+  run:services:list|run:services:describe|\
+  run:jobs:list|run:jobs:describe)
+    exec gcloud "$group" "$command_or_resource" "$@"
+    ;;
+esac
+
+print -u2 "Blocked Google Cloud command because it is not in the explicit read-only allowlist: gcloud $group $command_or_resource $*"
+exit 2

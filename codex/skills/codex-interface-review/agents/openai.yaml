@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Interface Review"
+  short_description: "Review API boundaries state contracts and compatibility"
+  default_prompt: "Use $codex-interface-review to review this interface or boundary decision."

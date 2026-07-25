@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Frontend UI"
+  short_description: "Plan build or review web UI with visual QA and design-system discipline"
+  default_prompt: "Use $codex-frontend-ui to choose the UI mode and handle the frontend visual workflow."

@@ -1,0 +1,3 @@
+display_name: Codex Writing
+short_description: Draft Japanese technical prose, PR bodies, design docs, and team updates directly with Codex.
+default_prompt: Write this prose deliverable using the appropriate Codex writing reference and then self-review it for factual accuracy and AI-like filler.

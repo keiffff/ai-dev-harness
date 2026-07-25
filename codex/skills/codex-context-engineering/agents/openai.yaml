@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Context Engineering"
+  short_description: "Gather focused repo context without flooding the thread"
+  default_prompt: "Use $codex-context-engineering to gather focused repository context before work."

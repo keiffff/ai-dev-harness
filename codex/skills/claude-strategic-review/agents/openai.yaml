@@ -1,0 +1,7 @@
+interface:
+  display_name: "Claude Strategic Review"
+  short_description: "大局的な設計・方針レビューをClaudeに依頼"
+  default_prompt: "Use $claude-strategic-review to challenge this implementation plan and suggest better alternatives."
+
+policy:
+  allow_implicit_invocation: true

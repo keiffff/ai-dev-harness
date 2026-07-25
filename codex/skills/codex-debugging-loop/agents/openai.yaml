@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Debugging Loop"
+  short_description: "Diagnose failures from evidence and fix root causes"
+  default_prompt: "Use $codex-debugging-loop to diagnose and fix this failure systematically."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Loop Router"
+  short_description: "Route tasks to the smallest useful Codex workflow"
+  default_prompt: "Use $codex-loop-router to choose the right workflow for this task."

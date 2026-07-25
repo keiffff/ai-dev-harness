@@ -1,0 +1,50 @@
+#!/bin/zsh
+set -euo pipefail
+
+if [[ $# -lt 2 ]]; then
+  print -u2 "Usage: aws-readonly <service> <operation> [args...]"
+  exit 2
+fi
+
+service="$1"
+operation="$2"
+shift 2
+
+for arg in "$@"; do
+  case "$arg" in
+    --with-decryption|--include-decryption|--query=SecretString*|--query=SecretBinary*)
+      print -u2 "Blocked AWS option that can expose secrets: $arg"
+      exit 2
+      ;;
+  esac
+done
+
+case "$service:$operation" in
+  sts:get-caller-identity|\
+  s3:ls|s3api:list-buckets|s3api:list-objects-v2|s3api:head-object|\
+  cloudformation:describe-stacks|cloudformation:describe-stack-events|cloudformation:list-stacks|cloudformation:list-stack-resources|\
+  logs:describe-log-groups|logs:describe-log-streams|\
+  iam:get-role|iam:list-roles|iam:get-policy|iam:get-policy-version|iam:list-attached-role-policies|\
+  ec2:describe-vpcs|ec2:describe-subnets|ec2:describe-security-groups|ec2:describe-route-tables|\
+  lambda:get-function-configuration|lambda:list-functions|\
+  sqs:get-queue-attributes|sqs:list-queues|\
+  sns:get-topic-attributes|sns:list-topics|\
+  dynamodb:describe-table|dynamodb:list-tables)
+    exec aws "$service" "$operation" "$@"
+    ;;
+
+  # Data-plane reads such as logs:filter-log-events, logs:start-query,
+  # dynamodb:get-item/query/scan, and lambda:get-function can expose application
+  # data or signed artifact URLs. Add them locally only when your environment
+  # policy explicitly allows that class of read.
+esac
+
+case "$service" in
+  secretsmanager|ssm|ecr|codeartifact|cognito-idp|kms)
+    print -u2 "Blocked AWS service that can expose secrets/tokens or sensitive auth material: $service"
+    exit 2
+    ;;
+esac
+
+print -u2 "Blocked AWS command because it is not in the explicit read-only allowlist: aws $service $operation $*"
+exit 2

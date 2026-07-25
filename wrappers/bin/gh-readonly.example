@@ -1,0 +1,24 @@
+#!/bin/zsh
+set -euo pipefail
+
+# Optional: load GH_TOKEN from a local secret manager before this point. Do not print it.
+
+if [[ $# -lt 1 ]]; then
+  print -u2 "Usage: gh-readonly <read-only gh command>"
+  exit 2
+fi
+
+cmd="$1"
+sub="${2:-}"
+case "$cmd:$sub" in
+  auth:status|pr:view|pr:list|pr:checks|pr:diff|pr:status|issue:view|issue:list|issue:status|run:view|run:list|repo:view|repo:list|release:view|release:list|workflow:view|workflow:list)
+    exec gh "$@"
+    ;;
+esac
+
+case "$cmd" in
+  browse|search) exec gh "$@" ;;
+esac
+
+print -u2 "Blocked non-read GitHub CLI command: gh $*"
+exit 2

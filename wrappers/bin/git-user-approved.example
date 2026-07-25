@@ -1,0 +1,97 @@
+#!/bin/zsh
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  print -u2 "Usage: git-user-approved add|commit|rebase|submodule|push [args...]"
+  exit 2
+fi
+
+case "$1" in
+  add)
+    shift
+    if [[ $# -lt 1 ]]; then
+      print -u2 "Usage: git-user-approved add <path...>"
+      exit 2
+    fi
+    for arg in "$@"; do
+      case "$arg" in
+        -A|--all|.|-f|--force)
+          print -u2 "Use explicit non-ignored file paths; refusing: $arg"
+          exit 2
+          ;;
+      esac
+    done
+    exec git add -- "$@"
+    ;;
+  commit)
+    shift
+    for arg in "$@"; do
+      case "$arg" in
+        -a|--all|--amend)
+          print -u2 "Commit requires explicit git-user-approved add before commit; refusing: $arg"
+          exit 2
+          ;;
+      esac
+    done
+    exec git commit "$@"
+    ;;
+  rebase)
+    shift
+    if [[ $# -lt 1 ]]; then
+      print -u2 "Usage: git-user-approved rebase <upstream>|--continue|--abort|--skip"
+      exit 2
+    fi
+    for arg in "$@"; do
+      case "$arg" in
+        -i|--interactive|--exec|--root)
+          print -u2 "Refusing interactive, exec, or root rebase: $arg"
+          exit 2
+          ;;
+      esac
+    done
+    exec git rebase "$@"
+    ;;
+  submodule)
+    shift
+    if [[ $# -lt 2 || "$1" != "update" ]]; then
+      print -u2 "Usage: git-user-approved submodule update [--remote] [--init] [--recursive] <path...>"
+      exit 2
+    fi
+    for arg in "$@"; do
+      case "$arg" in
+        --force|--checkout|--merge|--rebase)
+          print -u2 "Refusing history-changing submodule mode: $arg"
+          exit 2
+          ;;
+      esac
+    done
+    exec git submodule "$@"
+    ;;
+  push)
+    shift
+    if [[ "${1:-}" != "--confirm-user-requested" ]]; then
+      print -u2 "Push requires explicit latest user request and --confirm-user-requested."
+      exit 2
+    fi
+    shift
+    for arg in "$@"; do
+      case "$arg" in
+        --force|--delete|--mirror|--prune|+*)
+          print -u2 "Refusing unsafe push option: $arg"
+          exit 2
+          ;;
+        --force-with-lease|--force-with-lease=*)
+          ;;
+        :*|*:)
+          print -u2 "Refusing branch deletion refspec: $arg"
+          exit 2
+          ;;
+      esac
+    done
+    exec git push "$@"
+    ;;
+  *)
+    print -u2 "git-user-approved only allows add, commit, rebase, submodule update, or push."
+    exit 2
+    ;;
+esac

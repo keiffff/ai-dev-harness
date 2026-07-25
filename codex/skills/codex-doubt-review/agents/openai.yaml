@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Doubt Review"
+  short_description: "Challenge non-trivial decisions with bounded review"
+  default_prompt: "Use $codex-doubt-review to challenge this non-trivial decision before proceeding."

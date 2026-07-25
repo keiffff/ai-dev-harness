@@ -1,0 +1,44 @@
+---
+name: codex-loop-router
+description: Route Codex work to the smallest useful workflow. Use when a task could be specification, implementation, debugging, review, prose, frontend UI, OpenSpec, Claude strategic review, or subagent work, and Codex should choose the right loop without loading every detailed skill.
+---
+
+# Codex Loop Router
+
+Use this skill as a thin dispatch layer. Do not implement from this skill directly. Select the smallest next workflow, load only the needed skill(s), and keep AGENTS.md rules authoritative.
+
+## Routing Table
+
+| User intent | Primary route | Notes |
+| --- | --- | --- |
+| "OpenSpec に起こして", "openspec input" | OpenSpec workflow in AGENTS.md | Create proposal/design/tasks/spec delta and validate. Do not implement. |
+| "この方針で実装", "tasks に沿って" | `codex-incremental-implementation` | Use OpenSpec tasks if present. Do not ask per-task approval unless I/F or external behavior changes. |
+| "調査して", "既存パターン見て" | `codex-context-engineering` | Gather only task-relevant repo facts. Use subagents only for bounded parallel scans. |
+| CI/test/build failure, unexpected error | `codex-debugging-loop` | Stop feature work, preserve evidence, reproduce, fix root cause. |
+| API, I/F, schema, state, boundary decision | `codex-interface-review` | If non-trivial or long-term, add `claude-strategic-review`. |
+| "これで本当にいい?", architecture, migration | `claude-strategic-review` | Claude is sidecar reviewer only; Codex decides. |
+| "Solで", "GPT-5.6 Solで", strongest OpenAI reviewer | `gpt-sol-strategic-review` | Explicit high-stakes OpenAI advisor route only. Do not use by default. |
+| "Fable 5で", "Fableで", stronger Claude reviewer | `claude-fable-strategic-review` | Explicit experimental Claude route only. Do not use by default. |
+| Non-trivial decision under uncertainty | `codex-doubt-review` | Use bounded adversarial review. Prefer Claude strategic review for broad second opinion. |
+| "レビューして", pre-final diff review | `codex-code-review` | Findings first. Review behavior, tests, structure, risks. |
+| decision-oriented design doc, ADR/RFC-like doc, migration rationale, docs/designDocs | `codex-decision-doc` | Preserve project format when present; focus on decisions, rationale, alternatives, compatibility, risks, and non-goals. |
+| PR body, release note, Markdown summary, reply draft, Slack/team prose, README prose | `codex-writing` | Codex writes directly using the relevant writing reference and self-review pass. |
+| frontend UI strategy, visual QA, HTML/mock/report UI, Figma/design-system adherence | `codex-frontend-ui` | Select strategy/freeform/adherence/qa mode. Do not start full app browser verification without user approval. |
+| commit / push / PR branch update | Git policy in AGENTS.md | Router does not infer permission. Latest user message must explicitly ask. |
+
+## Output Discipline
+
+- If one route is obvious, silently use it and proceed.
+- If multiple routes are plausible, pick one primary route and mention it in one sentence.
+- Do not load multiple workflow skills "just in case".
+- Do not create a plan unless the task is broad, risky, or the user asks.
+- Do not route to Claude for ordinary chat, writing, implementation, debugging, or tests. Claude is only for strategic review when explicitly useful.
+- Do not let router logic override Git, AWS, GitHub CLI, or local safety policy.
+
+## Stop Gates
+
+Stop and ask only when:
+- I/F name, spec meaning, persistence format, external behavior, or release risk changes beyond the user's request.
+- Local and remote Git history both have independent commits and safe push cannot be determined.
+- A requested action requires secrets or production mutation that policy forbids.
+- The selected workflow would need a broad permission expansion instead of a narrow wrapper/rule.

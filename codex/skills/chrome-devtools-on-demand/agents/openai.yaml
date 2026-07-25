@@ -1,0 +1,6 @@
+interface:
+  display_name: "Chrome DevTools On Demand"
+  short_description: "必要時だけDevTools MCPを切替"
+  default_prompt: "Use $chrome-devtools-on-demand when a task needs Chrome DevTools network, console, performance, or page debugging without leaving Chrome automation enabled."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Incremental Implementation"
+  short_description: "Implement in small verified slices without auto Git"
+  default_prompt: "Use $codex-incremental-implementation to implement this change in focused slices."

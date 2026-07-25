@@ -1,0 +1,3 @@
+display_name: Claude Fable Strategic Review
+short_description: Use Claude Fable 5 for explicit, high-value strategic review experiments.
+default_prompt: Use Claude Fable 5 as a sidecar reviewer for this plan, then decide what to adopt based on repo facts and user constraints.

@@ -1,0 +1,32 @@
+# Codex config example for this harness.
+# Copy the relevant fragments into your local Codex config and adapt paths.
+
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+
+# Keep sandbox and approval as separate layers:
+# - sandbox: technical filesystem/process boundary
+# - approval: human or auto-review decision for boundary crossing
+#
+# Prefer granular approval when available so routine sandbox prompts do not drown
+# important skill/tool decisions.
+# approval_policy = { granular = {
+#   sandbox_approval = false,
+#   rules = false,
+#   mcp_elicitations = true,
+#   request_permissions = true,
+#   skill_approval = true
+# }}
+
+# Models are intentionally configured locally, not in repo policy.
+# Recommended pattern:
+# - main: strongest reliable Codex model available for implementation
+# - scout: cheaper/faster model for bounded research
+# - advisor: high-end model only for explicit strategic review
+
+# Hook commands should point to copied files under hooks/codex/.
+# Wrapper paths are configurable through environment variables used by hooks:
+# GIT_USER_APPROVED_WRAPPER=$HOME/.local/bin/git-user-approved
+# GH_READONLY_WRAPPER=$HOME/.local/bin/gh-readonly
+# AWS_READONLY_WRAPPER=$HOME/.local/bin/aws-readonly
+# GCLOUD_READONLY_WRAPPER=$HOME/.local/bin/gcloud-readonly

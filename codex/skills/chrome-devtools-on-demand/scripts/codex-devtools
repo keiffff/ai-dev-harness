@@ -1,0 +1,82 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+CONFIG="${CODEX_HOME:-$HOME/.codex}/config.toml"
+ACTION="${1:-status}"
+
+if [[ ! -f "$CONFIG" ]]; then
+  print -u2 "config not found: $CONFIG"
+  exit 1
+fi
+
+get_block_enabled() {
+  local block="$1"
+  awk -v block="$block" '
+    $0 == "[" block "]" { in_block=1; next }
+    in_block && /^\[/ { in_block=0 }
+    in_block && /^enabled = / { print $3; exit }
+  ' "$CONFIG"
+}
+
+get_backend() {
+  awk -F' = ' '/^BROWSER_USE_AVAILABLE_BACKENDS = / { gsub(/"/, "", $2); print $2; exit }' "$CONFIG"
+}
+
+status() {
+  print "config: $CONFIG"
+  print "chrome-devtools mcp: $(get_block_enabled 'mcp_servers.chrome-devtools')"
+  print "browser backends: $(get_backend)"
+  print "chrome plugin: $(get_block_enabled 'plugins.\"chrome@openai-bundled\"')"
+  print "browser plugin: $(get_block_enabled 'plugins.\"browser@openai-bundled\"')"
+}
+
+rewrite() {
+  local mode="$1"
+  local tmp
+  local backup
+  tmp="$(mktemp "${TMPDIR:-/tmp}/codex-devtools.XXXXXX")"
+  backup="$CONFIG.bak-codex-devtools-$(date +%Y%m%d%H%M%S)"
+  cp "$CONFIG" "$backup"
+
+  awk -v mode="$mode" '
+    $0 ~ /^\[/ { section=$0 }
+    section == "[mcp_servers.chrome-devtools]" && /^enabled = / {
+      if (mode == "on") print "enabled = true"
+      else print "enabled = false"
+      next
+    }
+    /^BROWSER_USE_AVAILABLE_BACKENDS = / {
+      if (mode == "on") print "BROWSER_USE_AVAILABLE_BACKENDS = \"chrome,iab\""
+      else print "BROWSER_USE_AVAILABLE_BACKENDS = \"iab\""
+      next
+    }
+    section == "[plugins.\"chrome@openai-bundled\"]" && /^enabled = / {
+      print "enabled = false"
+      next
+    }
+    { print }
+  ' "$CONFIG" > "$tmp"
+
+  mv "$tmp" "$CONFIG"
+  print "updated: $CONFIG"
+  print "backup: $backup"
+}
+
+case "$ACTION" in
+  status)
+    status
+    ;;
+  on)
+    rewrite on
+    status
+    print "note: restart the Codex thread/app if the MCP tools are not available yet."
+    ;;
+  off)
+    rewrite off
+    status
+    ;;
+  *)
+    print -u2 "usage: $0 status|on|off"
+    exit 2
+    ;;
+esac
