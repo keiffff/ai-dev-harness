@@ -31,6 +31,7 @@ AI agent は、既存コード、会話履歴、指示文、利用可能な tool
 | Router | 薄い workflow 選択 | 実装、debug、review、writing、OpenSpec、advisor 相談の最小経路を選ぶ |
 | Subagents | bounded scout | 影響範囲調査、既存パターン調査、差分レビュー。最終判断や Git 操作はしない |
 | Strategic advisors | sidecar reviewer | 設計方針、長期保守性、代替案、大局的レビューを返す。採否は main agent が判断する |
+| External research scouts | bounded evidence discovery | X など特定情報源の最新情報とURLを集める。事実確認と採否は main agent が行う |
 | Execution harness | 実行境界 | Git、cloud、GitHub CLI、secret、production 操作を wrapper/rules/hooks で制御する |
 
 ## Repository Layout

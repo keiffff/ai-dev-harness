@@ -1,6 +1,6 @@
 ---
 name: codex-loop-router
-description: Route Codex work to the smallest useful workflow. Use when a task could be specification, implementation, debugging, review, prose, frontend UI, OpenSpec, Claude strategic review, or subagent work, and Codex should choose the right loop without loading every detailed skill.
+description: Route Codex work to the smallest useful workflow. Use when a task could be specification, implementation, debugging, review, prose, frontend UI, X research, OpenSpec, strategic review, or subagent work, and Codex should choose the right loop without loading every detailed skill.
 ---
 
 # Codex Loop Router
@@ -14,6 +14,7 @@ Use this skill as a thin dispatch layer. Do not implement from this skill direct
 | "OpenSpec に起こして", "openspec input" | OpenSpec workflow in AGENTS.md | Create proposal/design/tasks/spec delta and validate. Do not implement. |
 | "この方針で実装", "tasks に沿って" | `codex-incremental-implementation` | Use OpenSpec tasks if present. Do not ask per-task approval unless I/F or external behavior changes. |
 | "調査して", "既存パターン見て" | `codex-context-engineering` | Gather only task-relevant repo facts. Use subagents only for bounded parallel scans. |
+| current X posts, named-account statements, X reactions, emerging X incidents | `grok-x-research` | Use bounded X Search for discovery only. Codex verifies material claims and owns final synthesis. |
 | CI/test/build failure, unexpected error | `codex-debugging-loop` | Stop feature work, preserve evidence, reproduce, fix root cause. |
 | API, I/F, schema, state, boundary decision | `codex-interface-review` | If non-trivial or long-term, add `claude-strategic-review`. |
 | "これで本当にいい?", architecture, migration | `claude-strategic-review` | Claude is sidecar reviewer only; Codex decides. |

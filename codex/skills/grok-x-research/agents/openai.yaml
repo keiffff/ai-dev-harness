@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grok X Research"
+  short_description: "Discover recent X evidence with bounded cost and citations"
+  default_prompt: "Use $grok-x-research to collect recent X evidence for this topic and return citations, uncertainty, and cost."

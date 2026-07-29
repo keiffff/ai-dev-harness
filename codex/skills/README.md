@@ -24,6 +24,7 @@ skill は、プロンプトを長くするための文章ではありません�
 | `gpt-sol-strategic-review` | Sol を明示的に使う高リスク・高価値の second opinion | OpenAI 側の強い advisor として使う | 普段の実装や文章生成に使わない |
 | `chrome-devtools-on-demand` | network、console、performance、page inspection が必要な browser debug | 必要な時だけ DevTools MCP を起動する | 常時 browser automation を前提にしない |
 | `codex-thread-time-audit` | Codex thread の作業時間や日次稼働を集計したいとき | thread turn から開始・終了時刻を抽出して集計する | thread-level created/updated だけで雑に集計しない |
+| `grok-x-research` | X の最新投稿、特定アカウントの発言、障害初動、実務者の反応を調べるとき | X 専用 scout としてURL、対立意見、citation、費用を返す | 通常Web調査、最終検証、設計判断、repo変更を任せない |
 
 ## How To Choose
 
@@ -36,6 +37,7 @@ skill は、プロンプトを長くするための文章ではありません�
 - 判断が後から読み返されるなら `codex-decision-doc`
 - 人間向けの文章成果物なら `codex-writing`
 - 方針を外から疑いたいなら strategic review 系
+- X 固有の最新情報が必要なら `grok-x-research`
 
 ## Principle
 

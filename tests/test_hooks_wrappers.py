@@ -2,7 +2,9 @@ import json
 import os
 import subprocess
 import tempfile
+import threading
 import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -146,6 +148,156 @@ class WrapperTests(unittest.TestCase):
             self.assertNotEqual(run(['push', '--confirm-user-requested', '--force', 'origin', 'HEAD:main']).returncode, 0)
             self.assertNotEqual(run(['push', '--confirm-user-requested', 'origin', ':main']).returncode, 0)
             self.assertEqual(run(['push', '--confirm-user-requested', '--force-with-lease=refs/heads/main:abc', 'origin', 'HEAD:main']).returncode, 0)
+
+    def run_grok_wrapper(
+        self,
+        response_payload: dict,
+        args: list[str] | None = None,
+    ) -> tuple[subprocess.CompletedProcess[str], dict]:
+        captured: dict = {}
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                length = int(self.headers['Content-Length'])
+                captured['authorization'] = self.headers.get('Authorization')
+                captured['payload'] = json.loads(self.rfile.read(length))
+                body = json.dumps(response_payload).encode()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, format, *args):
+                pass
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                prompt = Path(tmp) / 'prompt.md'
+                prompt.write_text('直近のAI agent運用の議論を調査して')
+                env = os.environ.copy()
+                env.update({
+                    'XAI_API_KEY': 'test-key',
+                    'XAI_API_URL': f'http://127.0.0.1:{server.server_port}/responses',
+                })
+                command = [
+                    str(ROOT / 'wrappers' / 'bin' / 'grok-x-research.example'),
+                    '--prompt-file',
+                    str(prompt),
+                    '--from-date',
+                    '2026-07-22',
+                    '--to-date',
+                    '2026-07-29',
+                    *(args or []),
+                ]
+                result = subprocess.run(
+                    command,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=env,
+                    check=False,
+                )
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+
+        return result, captured
+
+    def test_grok_wrapper_uses_only_x_search_and_normalizes_citations_and_cost(self):
+        response = {
+            'status': 'completed',
+            'output': [{
+                'type': 'message',
+                'content': [{
+                    'type': 'output_text',
+                    'text': '調査結果',
+                    'annotations': [
+                        {'type': 'url_citation', 'url': 'https://x.com/example/status/1', 'title': '1'},
+                        {'type': 'url_citation', 'url': 'https://x.com/example/status/1', 'title': 'duplicate'},
+                    ],
+                }],
+            }],
+            'usage': {
+                'input_tokens': 100,
+                'output_tokens': 20,
+                'total_tokens': 120,
+                'num_server_side_tools_used': 2,
+                'cost_in_usd_ticks': 580_000_000,
+                'server_side_tool_usage_details': {
+                    'x_search_calls': 2,
+                    'web_search_calls': 0,
+                },
+            },
+        }
+        result, captured = self.run_grok_wrapper(response, ['--allow-handle', '@example'])
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertEqual(output['status'], 'completed')
+        self.assertEqual(output['sources'], [{
+            'url': 'https://x.com/example/status/1',
+            'citation_type': 'url_citation',
+            'title': '1',
+        }])
+        self.assertEqual(output['usage']['cost_usd'], 0.058)
+        self.assertEqual(captured['authorization'], 'Bearer test-key')
+        self.assertEqual(captured['payload']['tools'], [{
+            'type': 'x_search',
+            'from_date': '2026-07-22',
+            'to_date': '2026-07-29',
+            'allowed_x_handles': ['example'],
+        }])
+        self.assertNotIn('web_search', json.dumps(captured['payload']))
+
+    def test_grok_wrapper_returns_partial_when_structured_citations_are_missing(self):
+        response = {
+            'status': 'completed',
+            'output': [{
+                'type': 'message',
+                'content': [{'type': 'output_text', 'text': 'URLなし', 'annotations': []}],
+            }],
+            'usage': {
+                'cost_in_usd_ticks': 0,
+                'server_side_tool_usage_details': {'x_search_calls': 1},
+            },
+        }
+        result, _ = self.run_grok_wrapper(response)
+
+        self.assertEqual(result.returncode, 3, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertEqual(output['status'], 'partial')
+        self.assertIn('No structured citation annotations were returned.', output['warnings'])
+
+    def test_grok_wrapper_rejects_overly_broad_date_range_before_request(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt = Path(tmp) / 'prompt.md'
+            prompt.write_text('調査して')
+            env = os.environ.copy()
+            env['XAI_API_KEY'] = 'test-key'
+            result = subprocess.run(
+                [
+                    str(ROOT / 'wrappers' / 'bin' / 'grok-x-research.example'),
+                    '--prompt-file',
+                    str(prompt),
+                    '--from-date',
+                    '2026-01-01',
+                    '--to-date',
+                    '2026-07-29',
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('Date range must not exceed 31 calendar days.', result.stderr)
 
 
 if __name__ == '__main__':
