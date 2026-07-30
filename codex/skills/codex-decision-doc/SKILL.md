@@ -25,8 +25,11 @@ It is not a detailed design spec, implementation log, PR body, file-by-file expl
 2. Check whether the repository or target directory already has a design doc template or recurring structure.
 3. Preserve the project format when one exists, but fill it with decision-oriented content.
 4. If no project format exists, use the fallback Japanese structure below.
-5. Draft in Japanese by default.
-6. Self-review against `references/style.md` before returning or editing the file.
+5. Choose the smallest representation that lets the reader verify the decision without mentally reconstructing relationships, order, state, comparison axes, or hierarchy from prose.
+6. Keep exact values and contracts in text, tables, code, or schema. Use Mermaid inside the canonical document when a dependency, state transition, sequence, or timeline is materially clearer as a diagram.
+7. If several coordinated views, dense cross-references, or useful interaction make standalone HTML materially easier to review, keep this document canonical and use `codex-frontend-ui` `freeform` for a review projection.
+8. Draft in Japanese by default.
+9. Self-review against `references/style.md` before returning or editing the file.
 
 ## Output Structure
 
@@ -86,7 +89,10 @@ Even when headings are preserved in English, write the body text in Japanese unl
 - Do not lead with internal component names, abbreviations, or implementation role names before explaining the user-visible or operational flow they belong to.
 - Do not add abstract organizer sections such as `論点`, `判断すること`, `後続仕様`, or `対応方針` unless the repository template requires them. Use headings that name the actual flow, contract, state, or responsibility the reader needs to understand.
 - Use tables only when comparing multiple subjects on the same axes. Do not use a table to repeat that every row is part of the same change.
+- Do not let a diagram or HTML projection become the only record of an exact contract, decision, uncertainty, or rejected alternative.
 
 ## Reference
 
 Read `references/style.md` before drafting or revising a decision doc.
+
+When standalone review visualization is useful, also read `../codex-frontend-ui/references/review-visualization.md`.

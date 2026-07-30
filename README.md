@@ -18,6 +18,7 @@ AI agent は、既存コード、会話履歴、指示文、利用可能な tool
 - hook は、secret 表示、破壊的操作、raw CLI 実行などの逸脱を検知する
 - wrapper は、Git、GitHub、cloud CLI などの危険な入口を狭める
 - review loop は、実装結果を仕様、差分、テスト、残リスクに照らして見直す
+- review visualization は、関係、順序、状態、比較、階層を人間が確認しやすい表現へ変換する
 - test は、hook や wrapper の安全境界を継続的に確認する
 - OpenSpec は、大きめの変更で仕様、設計判断、実装タスク、検証条件を分ける
 
@@ -33,6 +34,14 @@ AI agent は、既存コード、会話履歴、指示文、利用可能な tool
 | Strategic advisors | sidecar reviewer | 設計方針、長期保守性、代替案、大局的レビューを返す。採否は main agent が判断する |
 | External research scouts | bounded evidence discovery | X など特定情報源の最新情報とURLを集める。事実確認と採否は main agent が行う |
 | Execution harness | 実行境界 | Git、cloud、GitHub CLI、secret、production 操作を wrapper/rules/hooks で制御する |
+
+## Review Visualization
+
+文章だけでは、依存関係、状態遷移、処理順序、比較軸、階層を読み手が頭の中で組み立て直さなければならない場合があります。このハーネスでは、レビュー対象に合わせて表、Mermaid、timeline、tree などを併用します。複数の図表を一つの画面で確認したい場合や、情報量と配置がレビュー精度に影響する場合は、standalone HTML を使います。
+
+Markdown、OpenSpec、code、schema など、判断や契約を記録した元の artifact を正とします。生成 HTML はレビュー用の一時 artifact として扱い、指摘は agent との会話へ戻します。採用した変更を元の artifact へ反映してから、必要に応じて HTML を再生成します。
+
+詳しい選択基準と生成物の扱いは、[`review-visualization.md`](codex/skills/codex-frontend-ui/references/review-visualization.md) にまとめています。
 
 ## Repository Layout
 

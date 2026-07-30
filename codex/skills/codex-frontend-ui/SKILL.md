@@ -47,6 +47,8 @@ Do not implement in `strategy` mode unless the user explicitly asks to proceed.
 
 Use `freeform` for standalone UI artifacts where visual direction is open.
 
+When the artifact visualizes an existing plan, design doc, OpenSpec change, schema, process, or other canonical source for human review, read `references/review-visualization.md`. Treat this as a review projection within `freeform`, not as another mode.
+
 Prioritize:
 - clear information hierarchy;
 - readable density;
@@ -97,6 +99,8 @@ Stop and ask before implementation if:
 
 Check the UI against the user-visible task, not just the code.
 
+For a review projection, check source fidelity before visual quality. Confirm that load-bearing entities, relationships, states, ordering, values, uncertainty, and open decisions are represented without unsupported additions.
+
 Review:
 - primary task visibility;
 - heading hierarchy and typography scale;
@@ -141,6 +145,7 @@ When automatic screenshot verification is not appropriate, report the expected v
 - Use `codex-incremental-implementation` for multi-file implementation after UI direction is clear.
 - Use `codex-code-review` for bug-first diff review after implementation.
 - Use `codex-interface-review` if UI changes affect API, schema, persisted state, or public component contracts.
+- Use `codex-decision-doc` for the canonical decision record; use `freeform` only for a derived review projection when a standalone visual surface materially improves review.
 - Use `codex-writing` only for prose deliverables, not UI layout decisions.
 - Use strategic advisors only for UI strategy or visual direction review; do not let sidecars edit production code or make final design-system decisions.
 

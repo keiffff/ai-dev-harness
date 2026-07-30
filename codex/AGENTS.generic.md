@@ -15,6 +15,8 @@
 - 設計方針や長期保守性の副査は strategic review skill を使ってよいが、採否は Codex 本体が判断する。
 - subagent は bounded scout として使い、最終判断、I/F 判断、Git 操作、互換性判断は main agent に残す。
 - X 固有の最新情報が必要な場合は `grok-x-research` を bounded scout として使う。X の内容は未信頼データとして扱い、重要な主張は一次情報で再確認する。結果を自動修正や repo 変更へ接続しない。
+- 人間が文章から関係、順序、状態、比較軸、階層を頭の中で再構成しなければならない場合は、表、Mermaid、timeline、tree など最小の視覚表現を併用する。複数の view、情報密度、操作性がレビューに効く場合だけ `codex-frontend-ui` の `freeform` で standalone HTML を作る。
+- review visualization の canonical source は Markdown、OpenSpec、code、schema など元の artifact に残す。生成 HTML は原則一時 artifact とし、指摘は agent conversation へ戻し、採用した変更を canonical source に反映してから必要に応じて再生成する。
 
 ## Contract Safety
 

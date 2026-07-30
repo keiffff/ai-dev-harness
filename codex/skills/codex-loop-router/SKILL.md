@@ -24,7 +24,7 @@ Use this skill as a thin dispatch layer. Do not implement from this skill direct
 | "レビューして", pre-final diff review | `codex-code-review` | Findings first. Review behavior, tests, structure, risks. |
 | decision-oriented design doc, ADR/RFC-like doc, migration rationale, docs/designDocs | `codex-decision-doc` | Preserve project format when present; focus on decisions, rationale, alternatives, compatibility, risks, and non-goals. |
 | PR body, release note, Markdown summary, reply draft, Slack/team prose, README prose | `codex-writing` | Codex writes directly using the relevant writing reference and self-review pass. |
-| frontend UI strategy, visual QA, HTML/mock/report UI, Figma/design-system adherence | `codex-frontend-ui` | Select strategy/freeform/adherence/qa mode. Do not start full app browser verification without user approval. |
+| frontend UI strategy, visual QA, HTML/mock/report UI, Figma/design-system adherence | `codex-frontend-ui` | Select strategy/freeform/adherence/qa mode. For review visualization, use the smallest fitting table or diagram first and use standalone HTML only when coordinated views, density, or interaction materially helps. Keep the source artifact canonical. Do not start full app browser verification without user approval. |
 | commit / push / PR branch update | Git policy in AGENTS.md | Router does not infer permission. Latest user message must explicitly ask. |
 
 ## Output Discipline

@@ -10,6 +10,12 @@ subagent や advisor は補助であり、最終判断、I/F判断、互換性�
 
 外部情報源に強い research scout も同じ境界で扱う。scout は最新情報と直接URLを集めるが、一次情報の確認、repo 文脈への適用、最終判断は main agent に残す。
 
+## レビュー表現
+
+main agent は、レビュー対象の内容だけでなく、人間が何を確認するかに合わせて表現を選ぶ。正確な比較には表、依存関係には graph、状態遷移や処理順序には flow、時間による変化には timeline、階層には tree を使う。複数の view や情報配置がレビューに必要な場合は、standalone HTML を使う。
+
+視覚化は、判断や契約を記録した Markdown、OpenSpec、code、schema の代わりにはしない。生成 HTML は元の artifact から作る review projection として扱い、人間の指摘を main agent が元の artifact に反映してから再生成する。
+
 ## 人間の役割
 
 人間は作業を細かく指示し続けるのではなく、AI が知らない文脈を与える。

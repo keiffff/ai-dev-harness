@@ -15,7 +15,7 @@ skill は、プロンプトを長くするための文章ではありません�
 | `codex-code-review` | diff review、完了前 review、AI 生成コードの確認 | bug、regression、missing test、構造、残リスクを見る | 変更内容の要約だけで終わらない |
 | `codex-interface-review` | API、schema、state、persisted data、module boundary を変えるとき | I/F 契約、互換性、境界条件を確認する | 実装都合で契約変更を通さない |
 | `codex-doubt-review` | 非自明な判断、移行、順序、idempotency、production risk があるとき | 採用案を敵対的に見直し、弱い前提を探す | 何でも否定するために使わない |
-| `codex-frontend-ui` | UI 方針、HTML/mock/report、既存デザインシステム準拠、visual QA | strategy/freeform/adherence/qa mode を選び、見た目とUI判断を制御する | full app browser 検証を勝手に始めない |
+| `codex-frontend-ui` | UI 方針、HTML/mock/report、review visualization、既存デザインシステム準拠、visual QA | strategy/freeform/adherence/qa mode を選び、見た目とUI判断を制御する | canonical source を生成 HTML へ置き換えたり、full app browser 検証を勝手に始めたりしない |
 | `codex-writing` | PR説明、README、チーム共有、release note、返信案などの文章成果物 | 読者、目的、事実、書かないことを整理して本文を書く | Claude に文章草稿を外注しない |
 | `codex-decision-doc` | design doc、ADR/RFC、移行方針、判断の記録 | 判断、理由、代替案、互換性、残リスクを残す | 実装ファイル一覧や作業ログを書かない |
 | `codex-cdk-design-review` | CDK、CloudFormation、stack、shared environment、cross-stack reference を触るとき | resource ownership、依存方向、物理名、quota、region を事前に見る | isolated 環境で通るだけの設計を安全扱いしない |
