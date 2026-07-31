@@ -22,14 +22,19 @@ It is not a detailed design spec, implementation log, PR body, file-by-file expl
 ## Workflow
 
 1. Gather the target path, audience, existing docs in the same directory, user-provided facts, relevant repo facts, and any explicit template.
-2. Check whether the repository or target directory already has a design doc template or recurring structure.
-3. Preserve the project format when one exists, but fill it with decision-oriented content.
-4. If no project format exists, use the fallback Japanese structure below.
-5. Choose the smallest representation that lets the reader verify the decision without mentally reconstructing relationships, order, state, comparison axes, or hierarchy from prose.
-6. Keep exact values and contracts in text, tables, code, or schema. Use Mermaid inside the canonical document when a dependency, state transition, sequence, or timeline is materially clearer as a diagram.
-7. If several coordinated views, dense cross-references, or useful interaction make standalone HTML materially easier to review, keep this document canonical and use `codex-frontend-ui` `freeform` for a review projection.
-8. Draft in Japanese by default.
-9. Self-review against `references/style.md` before returning or editing the file.
+2. Classify source material before drafting:
+   - inherited constraint: an existing contract, operation, or decision this change must preserve;
+   - current decision: a choice made by this change;
+   - unresolved question: a choice that cannot be resolved from current user and repository facts;
+   - out of scope: related work that this change does not decide.
+3. Check whether the repository or target directory already has a design doc template or recurring structure.
+4. Preserve the project format when one exists, but fill it with decision-oriented content.
+5. If no project format exists, use the fallback Japanese structure below.
+6. Choose the smallest representation that lets the reader verify the decision without mentally reconstructing relationships, order, state, comparison axes, or hierarchy from prose.
+7. Keep exact values and contracts in text, tables, code, or schema. Use Mermaid inside the canonical document when a dependency, state transition, sequence, or timeline is materially clearer as a diagram.
+8. If several coordinated views, dense cross-references, or useful interaction make standalone HTML materially easier to review, keep this document canonical and use `codex-frontend-ui` `freeform` for a review projection.
+9. Draft in Japanese by default.
+10. Self-review against `references/style.md` before returning or editing the file.
 
 ## Output Structure
 
@@ -83,9 +88,13 @@ Even when headings are preserved in English, write the body text in Japanese unl
 - Do not invent domain terminology. Use repository terms or literal field names.
 - Before introducing a new label, state name, condition name, or summary heading, write the concrete referent first. Keep condition, state, event, value, record, purpose, and means separate; if one label would cover multiple roles, split it or write the concrete description instead.
 - Do not include fallback or backward compatibility just because it is possible. Explain whether compatibility is required and why.
+- Do not introduce a field, ID, artifact, exit code, state, version, retry, fallback, recovery procedure, or compatibility behavior unless it is required by the user, an existing repository contract or operation, or concrete external or operational evidence.
 - If source facts are insufficient to explain a decision, ask for the missing decision context instead of filling with generic prose.
 - Every alternative must include a reason it was rejected.
 - Every compatibility claim must name the affected existing data, API, client, test, or workflow.
+- Describe inherited architecture and prior decisions as background or constraints, not as decisions made by the current change.
+- Do not turn a discovered resource, inconsistency, or adjacent problem into remaining work, a deletion target, or accepted scope without a user or source decision.
+- Do not manufacture unresolved questions from hypothetical states that the repository contract excludes.
 - Do not lead with internal component names, abbreviations, or implementation role names before explaining the user-visible or operational flow they belong to.
 - Do not add abstract organizer sections such as `論点`, `判断すること`, `後続仕様`, or `対応方針` unless the repository template requires them. Use headings that name the actual flow, contract, state, or responsibility the reader needs to understand.
 - Use tables only when comparing multiple subjects on the same axes. Do not use a table to repeat that every row is part of the same change.

@@ -7,6 +7,16 @@ description: Review code changes with a bug-first stance. Use for "review" reque
 
 Use a code-review stance: findings first, ordered by severity, grounded in file/line references when possible.
 
+## Decision Context
+
+Before reviewing, read the accepted contract and, when available, the current task's explicitly rejected ideas and unresolved decisions from the conversation, OpenSpec, design doc, or PR context.
+
+- Treat accepted behavior as the review baseline.
+- Do not re-raise a rejected defensive mechanism, abstraction, compatibility path, or test as a finding unless new evidence changes the risk.
+- When reopening a rejected idea, name the new evidence.
+- If the accepted design itself appears unsafe, report that separately as a design decision to revisit rather than disguising it as an implementation bug.
+- Do not require a formal decision ledger for a simple change; use durable artifacts when the decision must survive compaction or handoff.
+
 ## Review Order
 
 1. Understand the intended behavior and contract.

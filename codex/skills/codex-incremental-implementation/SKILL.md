@@ -38,6 +38,8 @@ For each slice:
 
 - Add tests for observable contracts, meaningful regressions, and risk-bearing state transitions. Do not add tests only because a new helper, wrapper, field, branch, or intermediate status exists.
 - Before adding a test, name the behavior it protects and who would observe the regression: API caller, UI user, persisted data reader, worker retry path, billing/metrics consumer, or operator.
+- Place the test at the boundary that owns the contract: persistence and data mapping at the repository/domain boundary, response and validation behavior at the API boundary, retry and publish behavior at the worker/external boundary, and dry-run or progress behavior at the operator-facing CLI boundary.
+- Do not duplicate the same contract across layers unless each layer has a distinct transformation or failure mode that the higher-level test cannot localize.
 - Do not test implementation plumbing when a higher-level behavior test already fails if that plumbing breaks.
 - Do not add tests that freeze speculative defensive paths, temporary architecture, unused fields, or cleanup mechanisms that are not part of the accepted contract.
 - If a new test mainly asserts that a mock method was called, check whether the same contract can be covered by a persisted state, response shape, rendered UI, queued message, or output artifact.
@@ -45,6 +47,13 @@ For each slice:
 - Keep tests aligned with the chosen design. When the design removes a limiter, sweeper, compatibility path, or extra API, remove or avoid tests for that removed concept instead of preserving them as safety coverage.
 - Do not keep removed behavior alive as a negative test such as "does not call X", "does not create Y", or "does not use Z" unless X/Y/Z is an accepted public contract, cost guard, security boundary, or previously observed regression. A deleted implementation path should usually disappear from tests too.
 - If the only reason for a test is "we removed this, so make sure it stays removed", replace it with a positive contract test for the behavior that remains.
+
+## Telemetry Ownership
+
+- Before adding exception capture, logging, or metrics, identify which existing layer owns emission.
+- When a global handler captures an exception, lower layers should attach only the context they uniquely know and rethrow without capturing the same exception again.
+- Do not add a catch-and-log block that only repeats information already emitted by the owner.
+- Add local telemetry only when it exposes an operator-visible event, boundary result, billing signal, or context unavailable to the existing owner.
 
 ## ANDON Conditions
 
@@ -76,6 +85,7 @@ When implementing from OpenSpec:
 - Do not rerun the same successful command without intervening changes.
 - If verification is blocked by environment setup, state the blocked check and why.
 - Do not use symlink/copy hacks from another worktree to fake verification.
+- When success is observable only after release, separate pre-release verification from the production signal, comparison basis, and observation window. Do not report the production outcome as verified before that observation occurs.
 
 ## Completion Evidence
 
