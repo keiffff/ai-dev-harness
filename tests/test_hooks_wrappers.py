@@ -149,6 +149,54 @@ class WrapperTests(unittest.TestCase):
             self.assertNotEqual(run(['push', '--confirm-user-requested', 'origin', ':main']).returncode, 0)
             self.assertEqual(run(['push', '--confirm-user-requested', '--force-with-lease=refs/heads/main:abc', 'origin', 'HEAD:main']).returncode, 0)
 
+    def run_claude_wrapper(self, claude_script: str, timeout: str = '5') -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_security = Path(tmp) / 'security'
+            fake_security.write_text('#!/bin/sh\nprintf "test-token\\n"\n')
+            fake_security.chmod(0o755)
+
+            fake_claude = Path(tmp) / 'claude'
+            fake_claude.write_text(claude_script)
+            fake_claude.chmod(0o755)
+
+            prompt = Path(tmp) / 'prompt.md'
+            prompt.write_text('Review this bounded plan.')
+            env = os.environ.copy()
+            env.update({
+                'PATH': tmp + os.pathsep + env.get('PATH', ''),
+                'CLAUDE_STRATEGIC_TIMEOUT_SECONDS': timeout,
+            })
+            return subprocess.run(
+                [
+                    str(ROOT / 'wrappers' / 'bin' / 'claude-strategic-review.example'),
+                    '--prompt-file',
+                    str(prompt),
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+
+    def test_claude_strategic_review_disables_agentic_execution(self):
+        result = self.run_claude_wrapper(
+            '#!/bin/sh\n'
+            'test -n "$CLAUDE_CODE_OAUTH_TOKEN" || exit 9\n'
+            'printf "%s\\n" "$@"\n'
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        args = result.stdout.splitlines()
+        self.assertIn('--safe-mode', args)
+        self.assertIn('--no-session-persistence', args)
+        self.assertEqual(args[args.index('--tools') + 1], '')
+        self.assertEqual(args[args.index('--max-turns') + 1], '1')
+
+    def test_claude_strategic_review_has_a_hard_timeout(self):
+        result = self.run_claude_wrapper('#!/bin/sh\nsleep 2\n', timeout='1')
+        self.assertEqual(result.returncode, 124)
+        self.assertIn('timed out after 1 seconds', result.stderr)
+
     def run_grok_wrapper(
         self,
         response_payload: dict,

@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+
+import os
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_TIMEOUT_SECONDS = 300
+HEARTBEAT_SECONDS = 30
+
+
+def stop(message: str, exit_code: int = 2) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(exit_code)
+
+
+def parse_prompt_file(argv: list[str]) -> Path:
+    if len(argv) != 2 or argv[0] != "--prompt-file":
+        stop("Usage: claude-strategic-review --prompt-file <path>")
+
+    prompt_file = Path(argv[1])
+    if not prompt_file.is_file():
+        stop("--prompt-file requires an existing regular file.")
+    return prompt_file
+
+
+def load_oauth_token() -> str:
+    account = os.environ.get("USER", "")
+    if not account:
+        stop("USER is required for macOS Keychain lookup.", 1)
+
+    result = subprocess.run(
+        [
+            "security",
+            "find-generic-password",
+            "-a",
+            account,
+            "-s",
+            "CLAUDE_CODE_OAUTH_TOKEN",
+            "-w",
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    token = result.stdout.strip()
+    if result.returncode != 0 or not token:
+        stop("CLAUDE_CODE_OAUTH_TOKEN was not found in macOS Keychain.", 1)
+    return token
+
+
+def timeout_seconds() -> int:
+    raw = os.environ.get(
+        "CLAUDE_STRATEGIC_TIMEOUT_SECONDS",
+        str(DEFAULT_TIMEOUT_SECONDS),
+    )
+    try:
+        value = int(raw)
+    except ValueError:
+        stop("CLAUDE_STRATEGIC_TIMEOUT_SECONDS must be an integer.")
+    if not 1 <= value <= 900:
+        stop("CLAUDE_STRATEGIC_TIMEOUT_SECONDS must be between 1 and 900.")
+    return value
+
+
+def run_review(prompt: str, token: str, timeout: int) -> str:
+    env = os.environ.copy()
+    env["CLAUDE_CODE_OAUTH_TOKEN"] = token
+    command = [
+        "claude",
+        "-p",
+        "--model",
+        os.environ.get("CLAUDE_STRATEGIC_MODEL", DEFAULT_MODEL),
+        "--output-format",
+        "text",
+        "--safe-mode",
+        "--tools",
+        "",
+        "--max-turns",
+        "1",
+        "--no-session-persistence",
+    ]
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+            start_new_session=True,
+        )
+    except FileNotFoundError:
+        stop("claude command was not found.", 1)
+
+    started = time.monotonic()
+    first_wait = True
+    while True:
+        elapsed = time.monotonic() - started
+        remaining = timeout - elapsed
+        if remaining <= 0:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                process.communicate()
+            stop(f"Claude strategic review timed out after {timeout} seconds.", 124)
+
+        try:
+            stdout, stderr = process.communicate(
+                input=prompt if first_wait else None,
+                timeout=min(HEARTBEAT_SECONDS, remaining),
+            )
+            break
+        except subprocess.TimeoutExpired:
+            first_wait = False
+            elapsed_seconds = int(time.monotonic() - started)
+            print(
+                f"Claude strategic review is still running ({elapsed_seconds}s elapsed).",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    if process.returncode != 0:
+        if stderr:
+            print(stderr.rstrip(), file=sys.stderr)
+        stop(f"Claude strategic review failed with exit code {process.returncode}.", 1)
+    if not stdout.strip():
+        stop("Claude strategic review returned an empty response.", 1)
+    return stdout
+
+
+def main() -> None:
+    prompt_file = parse_prompt_file(sys.argv[1:])
+    try:
+        prompt = prompt_file.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        stop("--prompt-file must be UTF-8.")
+    if not prompt.strip():
+        stop("--prompt-file must not be empty.")
+
+    output = run_review(
+        prompt,
+        load_oauth_token(),
+        timeout_seconds(),
+    )
+    sys.stdout.write(output)
+
+
+if __name__ == "__main__":
+    main()

@@ -20,6 +20,7 @@ wrapper は、AI agent に期待する実行境界を command level で表現し
 - `bin/aws-readonly.example`: read-only AWS CLI commands with secret/token and broad data-plane reads blocked by default
 - `bin/gcloud-readonly.example`: explicit read-only Google Cloud CLI allowlist with secret/token access blocked
 - `bin/grok-x-research.example`: one bounded xAI X Search request with date limits, no Web Search, normalized citation annotations, and explicit cost reporting
+- `bin/claude-strategic-review.example`: one bounded Claude Opus review with tools, project customizations, session persistence, and extra agent turns disabled
 
 ## Local Adaptation
 
