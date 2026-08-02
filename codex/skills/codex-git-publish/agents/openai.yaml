@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Git Publish"
+  short_description: "Commit and push explicitly approved changes"
+  default_prompt: "Use $codex-git-publish to commit or push the approved local changes."

@@ -9,6 +9,8 @@ skill は、プロンプトを長くするための文章ではありません�
 | Skill | 使う場面 | 主な役割 | しないこと |
 | --- | --- | --- | --- |
 | `codex-loop-router` | 依頼の種類が実装、調査、review、文章、UI、OpenSpec などに分かれそうなとき | 最小 workflow を選び、必要な skill だけを読む | 実装や判断を router 自体で進めない |
+| `codex-openspec-workflow` | OpenSpec の作成、適用、照合、archive | current CLI、artifact、互換性gate、spec照合を管理する | 通常実装や未承認proposalの実装には使わない |
+| `codex-git-publish` | 明示依頼されたcommit、push、PR branch更新、submodule sync | wrapper経由のGit mutation手順を管理する | skill自体からmutation権限を推定しない |
 | `codex-context-engineering` | repo の既存パターン、関連テスト、仕様、PR 状況を読む必要があるとき | 必要な evidence を集め、読みすぎを防ぐ | 無関係なファイルを広く読み込まない |
 | `codex-incremental-implementation` | 複数ファイルの実装、OpenSpec tasks、refactor、feature work | 変更を検証可能な単位に分けて進める | 大きな speculative edit を一気に入れない |
 | `codex-debugging-loop` | test、build、CI、API、browser、runtime log が失敗したとき | 再現、原因特定、修正、再確認の loop に戻す | 推測だけで修正しない |

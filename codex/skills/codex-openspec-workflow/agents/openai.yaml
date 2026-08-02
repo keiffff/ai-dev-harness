@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex OpenSpec Workflow"
+  short_description: "Create and apply OpenSpec changes safely"
+  default_prompt: "Use $codex-openspec-workflow to create or apply this OpenSpec change."

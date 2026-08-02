@@ -11,8 +11,8 @@ Use this skill as a thin dispatch layer. Do not implement from this skill direct
 
 | User intent | Primary route | Notes |
 | --- | --- | --- |
-| "OpenSpec に起こして", "openspec input" | OpenSpec workflow in AGENTS.md | Create proposal/design/tasks/spec delta and validate. Do not implement. |
-| "この方針で実装", "tasks に沿って" | `codex-incremental-implementation` | Use OpenSpec tasks if present. Do not ask per-task approval unless I/F or external behavior changes. |
+| "OpenSpec に起こして", "openspec input" | `codex-openspec-workflow` | Create artifacts and validate. Do not implement. |
+| approved OpenSpec, "tasks に沿って" | `codex-openspec-workflow` | Obtain current apply instructions, then use incremental implementation. |
 | "調査して", "確認して", "何が分かる?", "既存パターン見て" | `codex-context-engineering` | Set the output ceiling from the request before gathering evidence. Add recommendations or a decision workflow only when the user asks for them. Use subagents only for bounded parallel scans. |
 | current X posts, named-account statements, X reactions, emerging X incidents | `grok-x-research` | Use bounded X Search for discovery only. Codex verifies material claims and owns final synthesis. |
 | CI/test/build failure, unexpected error | `codex-debugging-loop` | Stop feature work, preserve evidence, reproduce, fix root cause. |
@@ -25,7 +25,7 @@ Use this skill as a thin dispatch layer. Do not implement from this skill direct
 | decision-oriented design doc, ADR/RFC-like doc, migration rationale, docs/designDocs | `codex-decision-doc` | Preserve project format when present; focus on decisions, rationale, alternatives, compatibility, risks, and non-goals. |
 | PR body, release note, Markdown summary, reply draft, Slack/team prose, README prose | `codex-writing` | Codex writes directly using the relevant writing reference and self-review pass. |
 | frontend UI strategy, visual QA, HTML/mock/report UI, Figma/design-system adherence | `codex-frontend-ui` | Select strategy/freeform/adherence/qa mode. For review visualization, use the smallest fitting table or diagram first and use standalone HTML only when coordinated views, density, or interaction materially helps. Keep the source artifact canonical. Do not start full app browser verification without user approval. |
-| commit / push / PR branch update | Git policy in AGENTS.md | Router does not infer permission. Latest user message must explicitly ask. |
+| commit / push / PR branch update / submodule sync | `codex-git-publish` | The skill does not grant permission. Latest user message must explicitly ask. |
 
 ## Output Discipline
 

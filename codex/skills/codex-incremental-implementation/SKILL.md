@@ -71,13 +71,7 @@ Stop and ask before editing further when a slice appears to require:
 
 ## OpenSpec Integration
 
-When implementing from OpenSpec:
-- Use current OpenSpec artifact workflow: run `openspec status --change <id> --json`, then `openspec instructions apply --change <id> --json`, and read the returned context/dependency files before editing.
-- If `status` / `instructions` is unavailable, do not implement from legacy direct artifact reads. Update the global OpenSpec CLI first, then rerun the artifact workflow. Direct proposal/design/tasks/spec reads are supplemental only when the CLI output lacks detail.
-- Follow `tasks.md` autonomously.
-- Keep design/spec semantics fixed.
-- Stop before changing I/F names, persistence format, external behavior, or scope.
-- After implementation, perform an OpenSpec contract check and then use `claude-strategic-review` for sidecar review when AGENTS.md calls for it.
+When implementing from OpenSpec, load `codex-openspec-workflow` first. That skill owns artifact discovery, current CLI instructions, compatibility decisions, spec review, and sidecar review. This skill owns only the incremental implementation loop after those inputs are fixed.
 
 ## Verification
 
