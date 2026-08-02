@@ -1,6 +1,6 @@
-# AGENTS Generic Harness
+# AGENTS Harness
 
-このファイルは、特定プロジェクトへ持ち込む前の汎用 Codex harness 断片です。プロジェクト固有のパス、顧客名、issue/PR番号、社内用語、secret はここに置かない。
+このファイルは、Codex が常時読む共通 harness の正本です。プロジェクト固有のパス、顧客名、issue/PR番号、社内用語、secret はここに置かない。
 
 ## Conversation
 

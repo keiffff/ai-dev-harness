@@ -18,6 +18,6 @@ Codex には、repo 文脈を読んで実装、検証、差分確認、最終判
 
 ## Contents
 
-- `AGENTS.generic.md`: 汎用化した Codex ルールの断片
+- `AGENTS.md`: Codex が常時読む共通ルールの正本
 - `config.example.toml`: approval、sandbox、model、tool 境界の設定例
 - `skills/`: 作業手順、review、debug、writing、advisor 呼び出しを管理する skill 群
