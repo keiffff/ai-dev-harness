@@ -1,5 +1,6 @@
 import json
 import os
+import runpy
 import subprocess
 import tempfile
 import threading
@@ -192,10 +193,16 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(args[args.index('--tools') + 1], '')
         self.assertEqual(args[args.index('--max-turns') + 1], '1')
 
+    def test_claude_strategic_review_default_timeout_allows_deep_review(self):
+        wrapper = ROOT / 'wrappers' / 'bin' / 'claude-strategic-review.example'
+        namespace = runpy.run_path(str(wrapper))
+        self.assertEqual(namespace['DEFAULT_TIMEOUT_SECONDS'], 600)
+
     def test_claude_strategic_review_has_a_hard_timeout(self):
         result = self.run_claude_wrapper('#!/bin/sh\nsleep 2\n', timeout='1')
         self.assertEqual(result.returncode, 124)
         self.assertIn('timed out after 1 seconds', result.stderr)
+        self.assertIn('process remained active but final stdout was not received', result.stderr)
 
     def run_grok_wrapper(
         self,

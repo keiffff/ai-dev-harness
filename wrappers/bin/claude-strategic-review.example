@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 DEFAULT_MODEL = "claude-opus-5"
-DEFAULT_TIMEOUT_SECONDS = 300
+DEFAULT_TIMEOUT_SECONDS = 600
 HEARTBEAT_SECONDS = 30
 
 
@@ -117,7 +117,12 @@ def run_review(prompt: str, token: str, timeout: int) -> str:
                 except ProcessLookupError:
                     pass
                 process.communicate()
-            stop(f"Claude strategic review timed out after {timeout} seconds.", 124)
+            stop(
+                "Claude strategic review timed out after "
+                f"{timeout} seconds; the process remained active but final stdout "
+                "was not received.",
+                124,
+            )
 
         try:
             stdout, stderr = process.communicate(

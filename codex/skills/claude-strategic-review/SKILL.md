@@ -93,7 +93,7 @@ Execution:
 - Run the command with escalated sandbox permissions when using Codex tools, because the wrapper reads `CLAUDE_CODE_OAUTH_TOKEN` from macOS Keychain. This wrapper uses `claude-opus-5` for higher-quality strategic review.
 - Configure an approved command prefix for the local Claude strategic review wrapper, for example `$HOME/.local/bin/claude-strategic-review`.
 - The wrapper must run Claude Code with safe mode, no tools, one maximum turn, and no session persistence. Prompt wording is not the enforcement boundary.
-- The wrapper emits a stderr heartbeat while Claude is processing and applies a bounded timeout. Continue polling while heartbeat messages arrive; do not interrupt the process early merely because final stdout is still empty.
+- The wrapper emits a stderr heartbeat while Claude is processing and applies a 600-second default timeout. Continue polling while heartbeat messages arrive; do not interrupt the process early merely because final stdout is still empty.
 - Treat wrapper timeout or non-zero exit as advisor unavailability. Continue the Codex task without fabricating Claude feedback or retrying automatically.
 
 Rules:
