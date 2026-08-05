@@ -15,6 +15,7 @@ AI agent は、既存コード、会話履歴、指示文、利用可能な tool
 このリポジトリの考え方は次のとおりです。
 
 - skill は、作業ごとの手順と判断基準を渡す
+- thread handoff は、長期化した会話を全履歴のforkではなくcompactなcontinuation packetでfresh taskへ移す
 - hook は、secret 表示、破壊的操作、raw CLI 実行などの逸脱を検知する
 - wrapper は、Git、GitHub、cloud CLI などの危険な入口を狭める
 - review loop は、実装結果を仕様、差分、テスト、残リスクに照らして見直す

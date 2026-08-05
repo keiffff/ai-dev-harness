@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Thread Handoff"
+  short_description: "長期化したCodexタスクを新規タスクへ安全に引き継ぐ"
+  default_prompt: "Use $codex-thread-handoff to assess whether this task should move to a fresh task and perform the handoff only after explicit approval."
+
+policy:
+  allow_implicit_invocation: true

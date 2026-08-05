@@ -14,6 +14,7 @@ Codex には、repo 文脈を読んで実装、検証、差分確認、最終判
 - 重い知識や作業手順は skill や reference に切り出す
 - 文章、review、debug、OpenSpec、cloud/CDK などは用途別の skill に分ける
 - subagent は bounded scout として使い、最終判断と Git 操作は main agent に残す
+- 長期化したtaskは、安全な工程境界でhandoffを提案し、明示承認後にfresh taskへ必要な文脈だけを移す
 - project 固有事情は各 project repo に置き、このリポジトリには抽象化した運用だけを戻す
 
 ## Contents
