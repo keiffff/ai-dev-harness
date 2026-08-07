@@ -16,6 +16,18 @@ For each slice:
 4. Run the narrowest meaningful verification.
 5. Review the diff for scope creep before continuing.
 
+## Existing Path Reuse Gate
+
+Before the first edit for a CLI, migration, data extraction/import/export, or another path that resembles existing behavior:
+
+1. Trace the current path through entrypoint, argument parsing, data access, mapping, output, and tests where each exists.
+2. Identify which existing owners the change will reuse and what behavior genuinely has no current owner.
+3. Start from the existing path instead of creating a parallel parser, mapper, repository path, output convention, or test structure.
+
+- Treat changes to shared product code for a one-off CLI or migration as scope expansion. Stop unless the accepted behavior requires that shared change.
+- Do not add a flag, output artifact, exit code, parser, mapper, or helper unless it is required by the user, an accepted artifact, an existing contract, or a concrete boundary the current owner cannot handle.
+- If the planned code duplicates an existing owner, stop and revise the slice before editing.
+
 ## Scope Rules
 
 - Prefer existing helpers, architecture, and tests over new abstractions.
