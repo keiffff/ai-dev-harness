@@ -38,7 +38,7 @@ Do not use for mechanical renames, formatting, obvious one-line fixes, or pure c
 ## Reviewer Choice
 
 - For broad architecture or maintainability, use `claude-strategic-review`.
-- For repo-local diff review, use a Codex subagent when available.
+- For consequential repo-local diff review, explicitly route a Codex subagent to `gpt-5.6-terra` with `high` reasoning when available. If that routing cannot be verified, keep the review in the main agent instead of silently accepting the scout default.
 - For simple behavioral claims, a failing/regression test can be the doubt mechanism.
 
 Do not require cross-model review every time. Offer it only when the cost is justified by risk or the user asks.

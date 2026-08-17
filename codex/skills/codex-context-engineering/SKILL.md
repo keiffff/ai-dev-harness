@@ -81,8 +81,9 @@ Do not let subagents decide final architecture, Git actions, or user confirmatio
 Use this pattern when repository exploration is broad enough that reading all candidates in
 the main context would create noise.
 
-Scout model guidance:
-- Prefer `gpt-5.6-luna` for scout subagents when model selection is available. Use the main model only when Luna is unavailable or the scout task needs stronger reasoning.
+Scout routing:
+- Use the native subagent default configured for the harness for ordinary repo scouts.
+- Override that default only when the scout task demonstrably needs stronger reasoning. Keep final judgment in the main agent.
 
 Scout responsibilities:
 - search and read only;

@@ -18,11 +18,12 @@ approvals_reviewer = "auto_review"
 #   skill_approval = true
 # }}
 
-# Models are intentionally configured locally, not in repo policy.
-# Recommended pattern:
-# - main: strongest reliable Codex model available for implementation
-# - scout: cheaper/faster model for bounded research
-# - advisor: high-end model only for explicit strategic review
+# The main and advisor models remain local choices. Native Codex subagents are
+# bounded scouts by default; consequential review overrides this routing.
+[agents]
+enabled = true
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "medium"
 
 # Hook commands should point to copied files under hooks/codex/.
 # Wrapper paths are configurable through environment variables used by hooks:
@@ -30,3 +31,15 @@ approvals_reviewer = "auto_review"
 # GH_READONLY_WRAPPER=$HOME/.local/bin/gh-readonly
 # AWS_READONLY_WRAPPER=$HOME/.local/bin/aws-readonly
 # GCLOUD_READONLY_WRAPPER=$HOME/.local/bin/gcloud-readonly
+
+# After the second compaction in one task, ask Codex to assess a fresh-task
+# handoff at the next safe checkpoint. The hook only injects context; it never
+# creates or mutates a task.
+[[hooks.SessionStart]]
+matcher = "^compact$"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/compaction-handoff-reminder.py"
+timeout = 10
+statusMessage = "Checking task context health"
