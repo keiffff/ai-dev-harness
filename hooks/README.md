@@ -22,6 +22,17 @@ hook 自体は task の作成、fork、archive を行いません。実行中の
 
 compaction 回数は session ごとに `~/.codex/hook-state/compaction-handoff/` へ保存します。test などで保存先を分離する場合は `CODEX_HANDOFF_STATE_DIR` を指定できます。入力を解釈できない場合は、作業を妨げないよう何も通知せず終了します。
 
+### Activation Check
+
+command hook は、設定へ追加しただけでは実行されません。追加または command 変更後は Codex を再起動し、CLI の `/hooks` で `SessionStart` の compact hookを確認して trust します。
+
+導入完了は次の両方で確認します。
+
+- `/hooks` で対象hookが `Active` になり、`Review` が0である
+- 実際の1回目のcompaction後に `~/.codex/hook-state/compaction-handoff/` へstateファイルが作られる
+
+スクリプトへの模擬入力やunit testだけでは、Codex lifecycleへの接続、trust、実行を確認したことにはなりません。
+
 ## Parse Failure Policy
 
 Codex hooks are a policy reminder and local guardrail, not a complete security boundary.
