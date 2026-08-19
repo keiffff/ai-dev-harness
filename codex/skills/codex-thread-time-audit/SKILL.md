@@ -19,7 +19,7 @@ The user's goal is usually to see gaps within the same day, so preserve each `st
    python3 scripts/extract_codex_thread_times.py --start 2026-06-09 --end 2026-06-15 --output /path/to/output.html --markdown-output /path/to/output.md
    ```
 
-   This reads `$CODEX_HOME/sessions/**/*.jsonl` and `$CODEX_HOME/archived_sessions/*.jsonl`, extracts only user-owned top-level turns, excludes `thread_source: subagent`, and renders a browser-friendly daily HTML report. Keep Markdown only as an optional secondary artifact. Date-only ranges use an 08:00 local-time day boundary by default, so `--start 2026-07-14 --end 2026-07-14` covers `2026-07-14 08:00` through `2026-07-15 08:00`.
+   This reads `$CODEX_HOME/sessions/**/*.jsonl` and `$CODEX_HOME/archived_sessions/*.jsonl`, extracts only user-owned top-level turns, and excludes sessions with structural subagent evidence (`parent_thread_id` or `source.subagent`). Do not exclude a session solely because it has `thread_source: subagent`; directly operated Desktop/VS Code sessions can carry that stale flag. The script renders a browser-friendly daily HTML report. Keep Markdown only as an optional secondary artifact. Date-only ranges use an 08:00 local-time day boundary by default, so `--start 2026-07-14 --end 2026-07-14` covers `2026-07-14 08:00` through `2026-07-15 08:00`.
 
 2. Use `list_threads` / `read_thread` only as a fallback or to supplement missing titles. Discover thread tools with `tool_search` when thread tools are not already callable.
 3. If using `read_thread`, read enough pages to cover the requested period. If the user says "6/8 to now", interpret it in the current local timezone and use concrete dates in the answer.

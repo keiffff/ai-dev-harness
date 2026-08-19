@@ -40,6 +40,30 @@ Create a destination task only when the user's latest message explicitly asks to
 
 Do not treat remarks such as "this is getting long" as task-creation authority. Never use a transcript-preserving fork for context relief because it carries the bloated history forward. Do not archive, delete, compact, rename, or otherwise mutate the source task.
 
+## Gate On Workspace State
+
+Treat conversation context and filesystem state as separate handoff surfaces. A complete packet does not preserve uncommitted files.
+
+Before creating the destination, inspect the source checkout read-only and record:
+
+- the exact checkout path and `HEAD`;
+- tracked, staged, and untracked changes;
+- required ignored artifacts, such as repository-local specifications, only when already known to be part of the task;
+- whether each required artifact is available from a durable commit or another verified checkpoint.
+
+Worktrees are normal isolation. A destination may use a different worktree, but never assume that `working-tree` initialization, a source worktree path, or task creation has transferred dirty state. A temporary Codex worktree path is not a durable artifact.
+
+If the source is dirty and the destination will not share the exact checkout, require a recoverable checkpoint before creation. Accept only one of:
+
+- an existing commit containing all required state;
+- a user-authorized Git checkpoint;
+- a user-approved local snapshot that explicitly covers required tracked, untracked, and ignored files; or
+- a documented host transfer mechanism that explicitly covers required tracked, untracked, and ignored files and retains or rolls back the source until destination verification succeeds.
+
+Creation options such as `startingState: working-tree` are not a recoverable checkpoint by themselves.
+
+Do not commit, stash, create a branch, or snapshot files without the authority required for that mutation. If no recoverable checkpoint exists, stop and explain that context can be handed off but workspace state cannot yet be transferred safely.
+
 ## Build The Continuation Packet
 
 Write a compact operational packet for the destination. Preserve only information that changes what the next task should do:
@@ -52,6 +76,12 @@ Write a compact operational packet for the destination. Preserve only informatio
 
 ## Current state
 <What is complete, what is in progress, and the safe checkpoint reached.>
+
+## Workspace checkpoint
+- Source checkout: `<path>`
+- Source HEAD: `<commit>`
+- Expected changes: <tracked, staged, untracked, and required ignored-file inventory>
+- Recovery source: <durable commit, approved snapshot, or verified host transfer>
 
 ## Decisions and rejected alternatives
 - <Decision, rationale, and any condition that would justify reopening it.>
@@ -76,11 +106,12 @@ Keep the initial packet operational rather than historical. If a fuller conversa
 ## Create The Fresh Task
 
 1. Discover callable Codex thread-management capabilities.
-2. Create a genuinely new task with the continuation packet in its initial prompt.
-3. Keep it on the same project and current user-visible checkout when the host supports that. Do not create a branch, commit, switch checkout, or manufacture a worktree solely for migration.
-4. Instruct the destination to restate the objective, current state, unresolved points, and proposed first action, then wait without tools or edits.
-5. Verify that creation and initial delivery succeeded before reporting success.
-6. Leave the source task intact as the recoverable record.
+2. Pass the workspace checkpoint, exact `HEAD`, and expected dirty-state inventory in the continuation packet when filesystem state matters.
+3. Create a genuinely new task with the continuation packet in its initial prompt. Keep it on the same project and follow the host's normal worktree policy; do not create a branch, commit, or switch checkout solely for migration.
+4. Instruct the destination to verify its checkout read-only before work: confirm the expected repository, report cwd, and compare `HEAD`, dirty-state inventory, and required artifacts. It must stop on any mismatch rather than reconstruct or continue.
+5. Instruct the destination to restate the objective, current state, unresolved points, workspace verification, and proposed first action, then wait without edits.
+6. Verify task creation, initial delivery, and workspace verification before reporting a complete handoff. If only task creation is verified, report `task created; workspace verification pending`, not success.
+7. Leave the source task and its checkout intact until the destination verification succeeds. Never claim that uncommitted changes were transferred from creation parameters alone.
 
 If direct creation is unavailable or fails, do not claim success. Return the complete continuation packet and, when useful, save a temporary Markdown backup outside the repository. Give one concise instruction for starting the destination manually.
 
@@ -89,5 +120,5 @@ If direct creation is unavailable or fails, do not claim success. Return the com
 Use this instruction at the end of the initial prompt:
 
 ```text
-Before continuing, restate the objective, current state, unresolved points, and proposed first action. Do not call tools or edit files yet. Wait for the user to confirm or correct your understanding.
+Before continuing, use read-only checks to compare the destination checkout, HEAD, expected dirty-state inventory, and required artifacts with this packet. If anything is missing, stop and report a workspace handoff failure; do not reconstruct files or continue implementation. Then restate the objective, current state, unresolved points, workspace verification result, and proposed first action. Do not edit files yet. Wait for the user to confirm or correct your understanding.
 ```

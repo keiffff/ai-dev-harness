@@ -60,10 +60,11 @@ def project_from_cwd(cwd):
     return parts[-1] if parts else cwd
 
 
-def is_subagent_source(source, thread_source):
-    if thread_source == "subagent":
-        return True
-    return isinstance(source, dict) and "subagent" in source
+def is_subagent_source(source, parent_thread_id=None):
+    # Some directly operated Desktop/VS Code sessions carry a stale
+    # thread_source="subagent" flag. Require structural evidence so those
+    # user-owned turns are not dropped from activity reports.
+    return bool(parent_thread_id) or (isinstance(source, dict) and "subagent" in source)
 
 
 def load_titles(codex_home):
@@ -112,7 +113,7 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides):
         meta_id = None
         cwd = None
         source = None
-        thread_source = None
+        parent_thread_id = None
         for line in lines[:20]:
             try:
                 item = json.loads(line)
@@ -123,10 +124,10 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides):
                 meta_id = payload.get("id") or meta_id
                 cwd = payload.get("cwd") or cwd
                 source = payload.get("source")
-                thread_source = payload.get("thread_source")
+                parent_thread_id = payload.get("parent_thread_id")
                 break
 
-        if is_subagent_source(source, thread_source):
+        if is_subagent_source(source, parent_thread_id):
             stats["skipped_subagent_files"] += 1
             continue
 
