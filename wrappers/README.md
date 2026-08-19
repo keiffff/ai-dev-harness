@@ -32,5 +32,6 @@ Copy examples to a local bin directory and adapt:
 - repository-specific history protection
 - organization-specific approval requirements
 - xAI API key lookup from the local environment or macOS Keychain
+- an absolute `CLAUDE_STRATEGIC_CLI` path so escalated execution cannot select a different Claude CLI from `PATH`
 
 Keep project-specific rules out of this repository unless they are rewritten as reusable patterns.

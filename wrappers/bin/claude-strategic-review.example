@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -9,6 +10,7 @@ from pathlib import Path
 
 
 DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_CLAUDE_CLI = "claude"
 DEFAULT_TIMEOUT_SECONDS = 600
 HEARTBEAT_SECONDS = 30
 
@@ -68,11 +70,70 @@ def timeout_seconds() -> int:
     return value
 
 
-def run_review(prompt: str, token: str, timeout: int) -> str:
+def resolve_claude_cli() -> str:
+    configured = os.environ.get("CLAUDE_STRATEGIC_CLI")
+    if configured:
+        candidate = Path(configured).expanduser()
+        if not candidate.is_absolute():
+            stop("CLAUDE_STRATEGIC_CLI must be an absolute path.")
+        if not candidate.is_file() or not os.access(candidate, os.X_OK):
+            stop(f"CLAUDE_STRATEGIC_CLI is not executable: {candidate}", 1)
+        return str(candidate)
+
+    default = Path(DEFAULT_CLAUDE_CLI).expanduser()
+    if default.is_absolute():
+        if not default.is_file() or not os.access(default, os.X_OK):
+            stop(f"Configured Claude CLI is not executable: {default}", 1)
+        return str(default)
+
+    resolved = shutil.which(DEFAULT_CLAUDE_CLI)
+    if not resolved:
+        stop("claude command was not found.", 1)
+    return resolved
+
+
+def require_safe_mode(claude_cli: str) -> None:
+    try:
+        help_result = subprocess.run(
+            [claude_cli, "--help"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        stop(f"Failed to inspect Claude CLI at {claude_cli}: {error}", 1)
+
+    help_text = f"{help_result.stdout}\n{help_result.stderr}"
+    if help_result.returncode == 0 and "--safe-mode" in help_text:
+        return
+
+    try:
+        version_result = subprocess.run(
+            [claude_cli, "--version"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+        version = (version_result.stdout or version_result.stderr).strip()
+    except (OSError, subprocess.TimeoutExpired):
+        version = "version unavailable"
+    stop(
+        f"Claude CLI at {claude_cli} does not support required --safe-mode "
+        f"({version or 'version unavailable'}). Set CLAUDE_STRATEGIC_CLI to a "
+        "supported absolute path.",
+        1,
+    )
+
+
+def run_review(prompt: str, token: str, timeout: int, claude_cli: str) -> str:
     env = os.environ.copy()
     env["CLAUDE_CODE_OAUTH_TOKEN"] = token
     command = [
-        "claude",
+        claude_cli,
         "-p",
         "--model",
         os.environ.get("CLAUDE_STRATEGIC_MODEL", DEFAULT_MODEL),
@@ -157,10 +218,13 @@ def main() -> None:
     if not prompt.strip():
         stop("--prompt-file must not be empty.")
 
+    claude_cli = resolve_claude_cli()
+    require_safe_mode(claude_cli)
     output = run_review(
         prompt,
         load_oauth_token(),
         timeout_seconds(),
+        claude_cli,
     )
     sys.stdout.write(output)
 
