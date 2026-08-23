@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-  print -u2 "Usage: git-user-approved add|commit|rebase|submodule|push [args...]"
+  print -u2 "Usage: git-user-approved add|commit|merge|rebase|submodule|push [args...]"
   exit 2
 fi
 
@@ -34,6 +34,42 @@ case "$1" in
       esac
     done
     exec git commit "$@"
+    ;;
+  merge)
+    shift
+    case "${1:-}" in
+      --abort|--continue|--quit)
+        if [[ $# -ne 1 ]]; then
+          print -u2 "Usage: git-user-approved merge --abort|--continue|--quit"
+          exit 2
+        fi
+        exec git merge "$1"
+        ;;
+    esac
+    if [[ "${1:-}" != "--confirm-user-requested" ]]; then
+      print -u2 "Merge requires an explicit latest user request and --confirm-user-requested."
+      exit 2
+    fi
+    shift
+    target_count=0
+    for arg in "$@"; do
+      case "$arg" in
+        --no-edit|--ff-only|--no-ff)
+          ;;
+        -*)
+          print -u2 "Refusing unsupported merge option: $arg"
+          exit 2
+          ;;
+        *)
+          (( target_count += 1 ))
+          ;;
+      esac
+    done
+    if [[ "$target_count" -ne 1 ]]; then
+      print -u2 "Usage: git-user-approved merge --confirm-user-requested [--no-edit|--ff-only|--no-ff] <upstream>"
+      exit 2
+    fi
+    exec git merge "$@"
     ;;
   rebase)
     shift
@@ -91,7 +127,7 @@ case "$1" in
     exec git push "$@"
     ;;
   *)
-    print -u2 "git-user-approved only allows add, commit, rebase, submodule update, or push."
+    print -u2 "git-user-approved only allows add, commit, merge, rebase, submodule update, or push."
     exit 2
     ;;
 esac

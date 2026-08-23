@@ -15,7 +15,7 @@ wrapper は、AI agent に期待する実行境界を command level で表現し
 
 ## Included Examples
 
-- `bin/git-user-approved.example`: explicit-path add, no implicit push, no amend/commit-a fallback
+- `bin/git-user-approved.example`: explicit-path add, explicitly requested single-upstream merge, no implicit push, no amend/commit-a fallback
 - `bin/gh-readonly.example`: read-only GitHub CLI commands only
 - `bin/aws-readonly.example`: read-only AWS CLI commands with secret/token and broad data-plane reads blocked by default
 - `bin/gcloud-readonly.example`: explicit read-only Google Cloud CLI allowlist with secret/token access blocked

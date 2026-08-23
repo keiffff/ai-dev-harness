@@ -9,15 +9,15 @@ Use the current user-visible worktree. This skill defines the publication proced
 
 ## Authorization
 
-- Perform commit, push, PR branch update, or submodule sync only when the latest user request explicitly asks for that operation.
+- Perform commit, merge, push, PR branch update, or submodule sync only when the latest user request explicitly asks for that operation. A request to incorporate the latest base/default branch authorizes merging that named branch into the current branch.
 - Rebase only when the user explicitly requests it or when it is the necessary, safe integration step within an explicitly requested push or PR branch update.
 - Read-only Git commands are allowed when relevant.
-- Do not carry commit or push authorization into a later user turn.
+- Do not carry commit, merge, or push authorization into a later user turn.
 - Use English commit messages.
 
 ## Wrapper Boundary
 
-Use `/Users/kei/.local/bin/git-user-approved` for `add`, `commit`, `rebase`, `submodule update`, and `push`. Do not use raw mutation commands.
+Use `/Users/kei/.local/bin/git-user-approved` for `add`, `commit`, `merge`, `rebase`, `submodule update`, and `push`. Do not use raw mutation commands.
 
 If the wrapper is blocked by the sandbox, rerun the same wrapper command through the approval flow. Do not switch to another Git path.
 
@@ -30,6 +30,15 @@ If the wrapper is blocked by the sandbox, rerun the same wrapper command through
 5. Commit with `git-user-approved commit -m "<English subject>"`.
 
 Do not use `git commit -a`, `git commit --amend`, implicit all-file staging, or a temporary clone to create the commit.
+
+## Merge
+
+1. Fetch and verify the named base/default branch, current branch, and worktree state.
+2. Use `git-user-approved merge --confirm-user-requested --no-edit <upstream>` for an explicitly requested non-rewriting integration.
+3. If the merge conflicts, inspect and resolve only in-scope conflicts, then use `git-user-approved merge --continue`. Use `git-user-approved merge --abort` when the requested integration cannot be completed safely.
+4. Run relevant verification after a successful merge.
+
+A merge request authorizes the merge commit created by that integration. It does not authorize unrelated commits, a push, a rebase, or force-updating remote history.
 
 ## Push
 
@@ -51,4 +60,4 @@ Use the GitHub connector or `gh-readonly` for PR metadata and diffs. Do not use 
 
 ## Completion
 
-Report the commit SHA, subject, pushed branch, and clean or remaining worktree state. Keep normal Git execution commentary minimal.
+Report the resulting HEAD, completed operation, pushed branch when applicable, and clean or remaining worktree state. Keep normal Git execution commentary minimal.

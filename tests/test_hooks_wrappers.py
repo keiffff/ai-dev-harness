@@ -150,6 +150,17 @@ class WrapperTests(unittest.TestCase):
             self.assertNotEqual(run(['push', '--confirm-user-requested', 'origin', ':main']).returncode, 0)
             self.assertEqual(run(['push', '--confirm-user-requested', '--force-with-lease=refs/heads/main:abc', 'origin', 'HEAD:main']).returncode, 0)
 
+    def test_git_wrapper_requires_explicit_merge_confirmation(self):
+        script = ROOT / 'wrappers' / 'bin' / 'git-user-approved.example'
+        run = lambda args: self.run_with_fake_bin(script, 'git', args)
+        self.assertNotEqual(run(['merge', '--no-edit', 'origin/staging']).returncode, 0)
+        result = run(['merge', '--confirm-user-requested', '--no-edit', 'origin/staging'])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), ['merge', '--no-edit', 'origin/staging'])
+        self.assertNotEqual(run(['merge', '--confirm-user-requested', '--squash', 'origin/staging']).returncode, 0)
+        self.assertNotEqual(run(['merge', '--confirm-user-requested', 'origin/staging', 'origin/main']).returncode, 0)
+        self.assertEqual(run(['merge', '--abort']).returncode, 0)
+
     def run_claude_wrapper(
         self,
         claude_script: str,
