@@ -54,6 +54,11 @@ class CompactionHandoffReminderTests(unittest.TestCase):
         self.assertEqual(hook_output["hookEventName"], "SessionStart")
         self.assertIn("codex-thread-handoff", hook_output["additionalContext"])
         self.assertIn("explicit user approval", hook_output["additionalContext"])
+        self.assertIn("cover the whole root task", hook_output["additionalContext"])
+        self.assertIn(
+            "unless the user explicitly asks to split",
+            hook_output["additionalContext"],
+        )
         self.assertIn("Do not interrupt", hook_output["additionalContext"])
 
     def test_tracks_sessions_independently(self):

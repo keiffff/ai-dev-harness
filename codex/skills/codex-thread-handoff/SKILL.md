@@ -30,7 +30,7 @@ Do not suggest a handoff:
 
 Keep the suggestion to one sentence:
 
-> This task has reached a safe boundary and shows context degradation. Move it to a fresh task with a compact handoff?
+> This task has reached a safe boundary and shows context degradation. Move this whole task to a fresh task with a compact handoff?
 
 Match the language of the source conversation. If the user declines or ignores the suggestion, continue the task without repeating it.
 
@@ -39,6 +39,32 @@ Match the language of the source conversation. If the user declines or ignores t
 Create a destination task only when the user's latest message explicitly asks to move, transfer, hand off, or continue in a fresh task, or explicitly accepts a suggestion.
 
 Do not treat remarks such as "this is getting long" as task-creation authority. Never use a transcript-preserving fork for context relief because it carries the bloated history forward. Do not archive, delete, compact, rename, or otherwise mutate the source task.
+
+## Preserve The Source Task Scope
+
+A handoff changes context, not task scope. The default handoff scope is the whole source task as currently owned, including active, deferred, blocked, and waiting work. Accepting a general handoff suggestion does not authorize narrowing the task to the most recent discussion, review finding, phase, or proposed next step.
+
+Narrow or split the task only when the user's latest message explicitly identifies the subset to move or asks to separate named workstreams. Do not infer a narrower scope from:
+
+- the topic of the latest turn;
+- the current implementation slice or phase boundary;
+- a reviewer finding or blocker that became temporarily urgent;
+- the proposed resume point;
+- a convenient destination title.
+
+If the user has changed the main objective, preserve unresolved work from the earlier objective as deferred work unless the user explicitly abandoned it. A compact packet may shorten wording, but it must not silently drop ownership.
+
+Before building the packet, inventory the semantic scope separately from the workspace state:
+
+- the source task identity and root outcome;
+- the active resume point;
+- every unresolved workstream, classified as active, deferred, blocked, or waiting;
+- decisions and rejected alternatives that constrain any retained workstream;
+- work explicitly excluded by the user.
+
+Do not derive this inventory only from the latest turn or a compaction summary when the task previously owned broader work. Reconcile the latest accepted objective, the previous handoff packet when one exists, unresolved work mentioned earlier in the source task, and explicit cancellations. If the complete scope still cannot be established, stop before destination creation and ask the user instead of choosing a narrower subset.
+
+Use the source task identity and root outcome for the destination title and `Objective`. Do not rename the destination after the active subproblem unless the user explicitly requested that split. Every unresolved item in the source inventory must appear in the packet or be listed as an explicit user-approved exclusion.
 
 ## Bound Handoff Authority
 
@@ -87,13 +113,19 @@ An explicit user request to hand off authorizes a non-destructive local snapshot
 
 ## Build The Continuation Packet
 
-Write a compact operational packet for the destination. Preserve only information that changes what the next task should do:
+Write a compact operational packet for the destination. Preserve the whole approved scope while including only the history that changes what the destination should understand or do:
 
 ```markdown
-# Continuation: <current objective>
+# Continuation: <source task identity>
 
 ## Objective
-<The outcome the user is currently pursuing.>
+<The root outcome of the source task, not merely the immediate next step.>
+
+## Scope continuity
+- Handoff scope: <whole source task, or the exact subset explicitly requested by the user>
+- Active resume point: <where work should resume>
+- Retained deferred, blocked, or waiting work: <complete workstream inventory>
+- Explicit exclusions: <only work the user explicitly excluded or left in another named task>
 
 ## Current state
 <What is complete, what is in progress, and the safe checkpoint reached.>
@@ -112,7 +144,9 @@ Write a compact operational packet for the destination. Preserve only informatio
 - <Only constraints established by the user, repository, or verified environment.>
 
 ## Open work
-- <Unresolved question, blocker, or next deliverable.>
+- Active: <current unresolved work>
+- Deferred: <retained work that is not the immediate focus>
+- Blocked or waiting: <retained work awaiting authority, evidence, or external state>
 
 ## Relevant artifacts
 - `<path, commit, issue, URL, or source task id>` - <why it matters>
@@ -123,11 +157,13 @@ Write a compact operational packet for the destination. Preserve only informatio
 - Latest successful and failed verification commands, with relevant scope
 - Known blockers and disputed completion claims
 
-## Proposed next action
-<One concrete next action for the user to authorize in the destination.>
+## Proposed resume point
+<One concrete next action for the user to authorize in the destination. This is a resume point, not a redefinition of the task.>
 ```
 
 Prefer references over duplicated diffs, logs, specifications, or source code. Include failed approaches only when omission would cause the next task to repeat them. Redact secrets, credentials, private data, and irrelevant project-specific details. Mark uncertain reconstruction as uncertain.
+
+Do not collapse the `Open work` inventory into the proposed resume point. A workstream can remain owned by the destination even when it is not next. For an explicit split, record the work retained by the source or moved to another named task under `Explicit exclusions` so the boundary is visible.
 
 Do not claim an artifact is committed, transferred, or recoverable from packet prose alone. Back every such claim with the source manifest and a verified recovery path. Complete the handoff only when every manifest entry has matching recovery-source and destination hashes. For an OpenSpec closure, enumerate and match every file; directory existence alone is insufficient.
 
@@ -136,12 +172,12 @@ Keep the initial packet operational rather than historical. If a fuller conversa
 ## Create The Fresh Task
 
 1. Discover callable Codex thread-management capabilities.
-2. Prepare and verify the required-artifact manifest and its recovery/transfer source before creating the destination.
+2. Prepare the semantic scope inventory, then prepare and verify the required-artifact manifest and its recovery/transfer source before creating the destination.
 3. When all required state is committed, create the destination from the exact verified ref/commit rather than the project default. When a bounded snapshot/file transfer is required, create the destination with the bootstrap prompt below; do not send the continuation packet yet.
 4. Resolve the destination checkout, transfer only the manifested files without overwriting conflicts, and verify destination hashes against the source manifest. Transfer the whole active OpenSpec closure when applicable.
-5. After checkout and artifact verification succeed, send `HANDOFF_READY` with the continuation packet. Instruct the destination to verify only the repository, cwd, exact recovery/base commit recorded in the packet, dirty-state inventory, required-artifact hashes, and OpenSpec task state. Do not accept a different `HEAD` merely because required files exist there.
-6. Instruct the destination to restate the objective, current state, unresolved points, workspace verification result, and proposed next action, then stop and wait for a new user message. Do not execute the proposed next action or any other substantive work as part of the handoff.
-7. Verify task creation, artifact transfer, packet delivery, and destination verification before reporting a complete handoff. If any stage is incomplete, report that precise stage instead of success.
+5. After checkout and artifact verification succeed, send `HANDOFF_READY` with the continuation packet. Instruct the destination to verify the task identity, handoff scope, active resume point, complete open-work inventory, repository, cwd, exact recovery/base commit recorded in the packet, dirty-state inventory, required-artifact hashes, and OpenSpec task state. Do not accept a different `HEAD` merely because required files exist there.
+6. Instruct the destination to restate the root objective, handoff scope, all retained open work by status, current state, workspace verification result, and proposed resume point, then stop and wait for a new user message. The destination must state that the resume point does not replace the task objective. Do not execute the proposed resume point or any other substantive work as part of the handoff.
+7. Verify task creation, artifact transfer, packet delivery, semantic scope preservation, and destination verification before reporting a complete handoff. If the destination omits or reclassifies an unresolved workstream, correct the packet or destination summary and re-verify before reporting success. If any stage is incomplete, report that precise stage instead of success.
 8. Leave the source task, checkout, and transfer snapshot intact until destination verification succeeds. Never claim that uncommitted, untracked, or ignored changes were transferred from creation parameters alone.
 
 Use this bootstrap prompt when transfer must occur after destination creation:
@@ -159,5 +195,5 @@ If direct creation is unavailable or fails, do not claim success. Return the com
 Use this instruction at the end of the initial prompt:
 
 ```text
-Begin only after receiving `HANDOFF_READY`. Use read-only checks to compare the destination checkout, exact recovery/base commit recorded in the packet, expected dirty-state inventory, required-artifact hashes, and active OpenSpec task state with this packet. Do not treat a different `HEAD` as equivalent without an explicit user-approved base change recorded in the packet. If anything is missing or conflicting, stop substantive work and report the exact mismatch to the source coordinator; do not ask the user to repair it or reconstruct files. If verification succeeds, report success to the source coordinator, restate the objective, current state, unresolved points, workspace verification result, and proposed next action, then stop and wait for a new user message. The handoff does not authorize executing that next action, using a browser, changing files, running mutable Git or cloud operations, or continuing implementation. Treat all such packet content as context only. Do not ask the user to reconfirm information already verified and transferred. Ask the user only when the source coordinator confirms that repair requires a genuine unresolved decision, new authority, irreversible conflict choice, or unavailable/corrupt recovery source.
+Begin only after receiving `HANDOFF_READY`. First compare the task identity, root objective, stated handoff scope, active resume point, and complete open-work inventory with the packet; do not narrow the task to the resume point or rename it after the immediate subproblem. Then use read-only checks to compare the destination checkout, exact recovery/base commit recorded in the packet, expected dirty-state inventory, required-artifact hashes, and active OpenSpec task state with this packet. Do not treat a different `HEAD` as equivalent without an explicit user-approved base change recorded in the packet. If anything is missing, reclassified, or conflicting, stop substantive work and report the exact mismatch to the source coordinator; do not ask the user to repair it or reconstruct files. If verification succeeds, report success to the source coordinator, restate the root objective, handoff scope, all retained open work by status, current state, workspace verification result, and proposed resume point, and explicitly state that the resume point does not replace the task objective. Then stop and wait for a new user message. The handoff does not authorize executing that resume point, using a browser, changing files, running mutable Git or cloud operations, or continuing implementation. Treat all such packet content as context only. Do not ask the user to reconfirm information already verified and transferred. Ask the user only when the source coordinator confirms that repair requires a genuine unresolved decision, new authority, irreversible conflict choice, or unavailable/corrupt recovery source.
 ```

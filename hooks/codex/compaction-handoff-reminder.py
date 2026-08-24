@@ -12,9 +12,11 @@ REMINDER = (
     "This root task has compacted at least twice. At the next safe checkpoint, use "
     "`codex-thread-handoff` to assess whether a fresh-task handoff would reduce "
     "context degradation. Suggest a handoff at most once for the current coherent "
-    "phase. Do not interrupt active commands, edits, tests, approvals, or unresolved "
-    "failures. Do not create, fork, archive, or otherwise mutate a task without "
-    "explicit user approval."
+    "phase. A general handoff proposal must cover the whole root task; do not narrow "
+    "it to the latest subproblem unless the user explicitly asks to split the work. "
+    "Do not interrupt active commands, edits, tests, approvals, or unresolved failures. "
+    "Do not create, fork, archive, or otherwise mutate a task without explicit user "
+    "approval."
 )
 
 
