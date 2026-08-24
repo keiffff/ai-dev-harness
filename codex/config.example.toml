@@ -44,25 +44,3 @@ type = "command"
 command = "/usr/bin/python3 /absolute/path/to/hooks/codex/compaction-handoff-reminder.py"
 timeout = 10
 statusMessage = "Checking task context health"
-
-# For Japanese prose responses, require one final editing pass before Codex sends
-# the answer. UserPromptSubmit stores only per-turn exemption flags; it does not
-# inject writing rules into every prompt. Stop performs at most one continuation.
-# Code-only, JSON, CSV, explicit exact/raw output, and [ja-output-bypass] are exempt.
-# Restart Codex and review/trust both hook definitions through `/hooks` after
-# adding or changing these commands.
-[[hooks.UserPromptSubmit]]
-
-[[hooks.UserPromptSubmit.hooks]]
-type = "command"
-command = "/usr/bin/python3 /absolute/path/to/hooks/codex/japanese-output-review.py"
-timeout = 10
-statusMessage = "Recording output requirements"
-
-[[hooks.Stop]]
-
-[[hooks.Stop.hooks]]
-type = "command"
-command = "/usr/bin/python3 /absolute/path/to/hooks/codex/japanese-output-review.py"
-timeout = 10
-statusMessage = "Reviewing Japanese output"
