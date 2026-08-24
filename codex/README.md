@@ -2,7 +2,7 @@
 
 Codex で AI agent を実務開発に組み込むための設定例と運用部品を置く場所です。
 
-`~/.codex` は実行時の配布先です。このディレクトリは、プロジェクト固有の事情を外した正本として管理します。
+`~/.codex` は実行時の配布先です。このディレクトリには、プロジェクト固有の事情を外した共通設定を置きます。
 
 ## Role
 
@@ -19,6 +19,6 @@ Codex には、repo 文脈を読んで実装、検証、差分確認、最終判
 
 ## Contents
 
-- `AGENTS.md`: Codex が常時読む共通ルールの正本
+- `AGENTS.md`: Codex が常時読む共通ルール
 - `config.example.toml`: approval、sandbox、model、tool 境界の設定例
 - `skills/`: 作業手順、review、debug、writing、advisor 呼び出しを管理する skill 群

@@ -53,9 +53,11 @@ Bad cases:
 - Do not include internal work logs, hypotheses, failed attempts, or tool execution details.
 - Avoid vague words such as `対応`, `修正`, `改善`, `考慮`, `反映`, `〜側`, `〜周り`, `〜する形`, `該当箇所`, and `既存処理` unless the sentence names the concrete behavior, screen, file, or user action.
 - Avoid compressed Japanese, chained nouns, literal English translations, and vague demonstratives.
+- Do not replace a concrete explanation with an English-derived abstract noun. Words such as `正本`, `投影`, `測定境界`, `比較終端`, and `外部契約` are not shortcuts for explaining who does what and how. Use them only when they are established terms for the intended reader.
 - Before introducing a new label, heading, or coined term, name what it refers to and whether it is a condition, state, event, value, record, purpose, or means. If the referent cannot be written plainly, do not introduce the label.
 - Do not use AI-like filler, ornamental structure, or generic claims when the document needs concrete technical meaning.
 - Keep only information the reader needs to understand the result or decide the next action.
+- When revising supplied prose, preserve the parts that already work. Change only what is unclear, unsupported, unnecessary, or inconsistent with the requested medium and tone.
 
 ## Format Rules
 
@@ -86,3 +88,5 @@ Before returning, check:
 - Are unchanged items omitted from changed-item lists?
 - Are `確認` or verification sections limited to reproducible checks?
 - Does the text avoid generic AI filler and decorative structure?
+- Can every abstract noun and compressed label be replaced with a clearer subject and verb? If so, replace it unless the term is established for the reader.
+- Did the revision preserve the source text's useful meaning and phrasing instead of rewriting it wholesale?

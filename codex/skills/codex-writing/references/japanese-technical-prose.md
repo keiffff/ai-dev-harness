@@ -13,6 +13,7 @@ This is not a generic humanizer. The goal is to make the document read like a co
 - Do not introduce filenames, function names, enum names, schema names, or identifiers unless the reader must refer to that exact name later.
 - Prefer behavior, contract, state, and decision over implementation touchpoints.
 - Use concrete nouns and verbs. Avoid vague wrappers such as `対応`, `反映`, `調整`, `考慮`, `形`, `周り`, `側`, `観点`, `担保`, and `整理` when they hide the actual behavior.
+- Do not translate an English concept into a compact Japanese noun and assume the relation is clear. Prefer a sentence that names the actor, action, target, and condition. Treat terms such as `正本`, `契約`, `投影`, `測定境界`, `比較終端`, `外部契約`, and `実効値` as suspect unless the intended reader already uses them with that meaning.
 - Avoid AI-like balance: do not add both-sides framing, generic caveats, or summary sentences unless they change the reader's decision.
 - Avoid decorative structure: do not force three bullets, paired contrasts, dramatic conclusion lines, or repeated `重要なのは...`.
 - Delete sentences that only restate section titles.

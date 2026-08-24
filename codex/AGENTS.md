@@ -1,6 +1,6 @@
 # AGENTS Harness
 
-このファイルは、Codex が常時読む共通 harness の正本です。プロジェクト固有のパス、顧客名、issue/PR番号、社内用語、secret はここに置かない。
+このファイルを、Codex が常時読む共通 harness の基準とする。プロジェクト固有のパス、顧客名、issue/PR番号、社内用語、secret はここに置かない。
 
 ## Conversation
 
