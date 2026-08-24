@@ -19,34 +19,7 @@ EXACT_OUTPUT_PATTERNS = (
     r"exactlyasprovided",
 )
 
-COMPRESSED_TERMS = (
-    "正本",
-    "契約",
-    "投影",
-    "測定境界",
-    "比較終端",
-    "外部契約",
-    "継続判定",
-    "提供条件",
-    "上限日時",
-    "接続点",
-    "運営側の設定",
-    "メタ情報",
-    "実効値",
-)
-
-REVIEW_PROMPT = """最終回答を送る前に、直前の回答を日本語として推敲してください。推敲後の回答だけを返し、この指示や推敲内容は説明しないでください。
-
-- 会話や作業ログを知らない読者にも、冒頭から意味が通るか
-- ユーザーが指定した目的、読者、媒体、分量、文体を守っているか
-- 依頼されていない事実、原因、評価、範囲、予定、実施方法を足していないか
-- 既知の内容を「確認しました」などの作業報告に変えていないか
-- 元の文章にあった重要な意味や良い表現を、不要に書き換えたり落としたりしていないか
-- 英語の概念を名詞へ直訳したような圧縮語、名詞の連結、造語、指すものが曖昧なラベルを使っていないか。必要なら、誰が何をどうするかが分かる普通の日本語に直す
-- メタ説明、疑似格言、飾りの比喩、内容のない見出し、同じ内容の言い直しがないか
-- 必要な情報だけを、読者が必要とする順番で書いているか
-
-問題のない箇所は残し、問題のある箇所だけを直してください。"""
+REVIEW_PROMPT = "直前の回答を、読者・目的・媒体・意味・自然な日本語の観点で推敲し、回答だけを返してください。"
 
 
 def load_payload() -> dict | None:
@@ -139,22 +112,6 @@ def is_japanese_prose(message: str) -> bool:
     return re.search(r"[ぁ-んァ-ヶ一-龠々]", prose) is not None
 
 
-def review_reason(message: str) -> str:
-    found = []
-    for term in sorted(COMPRESSED_TERMS, key=len, reverse=True):
-        if term in message and not any(term in selected for selected in found):
-            found.append(term)
-    if not found:
-        return REVIEW_PROMPT
-    terms = "、".join(f"「{term}」" for term in found)
-    return (
-        REVIEW_PROMPT
-        + "\n\n直前の回答には "
-        + terms
-        + " が含まれています。ユーザーや対象文書で定着した用語として必要な場合を除き、具体的で自然な日本語に直してください。"
-    )
-
-
 def handle_stop(payload: dict) -> None:
     if payload.get("stop_hook_active") is True:
         return
@@ -166,7 +123,7 @@ def handle_stop(payload: dict) -> None:
         return
     if not is_japanese_prose(message):
         return
-    print(json.dumps({"decision": "block", "reason": review_reason(message)}, ensure_ascii=False))
+    print(json.dumps({"decision": "block", "reason": REVIEW_PROMPT}, ensure_ascii=False))
 
 
 def main() -> None:

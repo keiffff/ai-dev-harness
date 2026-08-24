@@ -50,17 +50,18 @@ def stop_payload(message: str, active: bool = False, session_id: str = "session-
 
 
 class JapaneseOutputReviewTests(unittest.TestCase):
-    def test_blocks_first_japanese_prose_response_with_editing_instructions(self):
+    def test_blocks_first_japanese_prose_response_with_short_editing_instruction(self):
         with tempfile.TemporaryDirectory() as state_dir:
             result = run_hook(state_dir, stop_payload("調査結果です。運営側の設定を正本へ投影します。"))
 
         self.assertEqual(result.returncode, 0, result.stderr)
         output = json.loads(result.stdout)
         self.assertEqual(output["decision"], "block")
-        self.assertIn("推敲後の回答だけ", output["reason"])
-        self.assertIn("誰が何をどうするか", output["reason"])
-        self.assertIn("「正本」", output["reason"])
-        self.assertIn("「投影」", output["reason"])
+        self.assertEqual(
+            output["reason"],
+            "直前の回答を、読者・目的・媒体・意味・自然な日本語の観点で推敲し、回答だけを返してください。",
+        )
+        self.assertNotIn("\n", output["reason"])
 
     def test_allows_second_stop_after_one_continuation(self):
         with tempfile.TemporaryDirectory() as state_dir:
