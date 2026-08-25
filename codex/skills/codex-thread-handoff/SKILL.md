@@ -86,6 +86,14 @@ Before creating the destination, inspect the source checkout read-only and recor
 - required ignored artifacts, such as repository-local specifications;
 - whether each required artifact is available from a durable commit or another verified checkpoint.
 
+Classify source and destination changes before treating status differences as a handoff mismatch:
+
+- task-required artifacts;
+- user-owned or unknown changes;
+- known environment-generated files created by the destination bootstrap.
+
+Block on missing task artifacts and user-owned or unknown differences. A destination-only environment-generated file does not block the handoff when its owner and generation trigger are known, it is unrelated to the task, and the base commit plus required-artifact manifest still match. Record it as excluded environment state; do not transfer, edit, or delete it.
+
 Do not rely on ordinary `git status` to discover required ignored artifacts. Search the active task contract, conversation references, and repository-local instructions for artifact roots and change identifiers, then inspect those scoped paths with ignored-file-aware checks. For OpenSpec work, enumerate ignored and visible candidates directly under `openspec/changes/`, reconcile them with the task contract and recent OpenSpec commands, and then inspect the complete selected change tree. If multiple candidates remain and the active change cannot be established from source evidence, stop in the source before destination creation. Do not sweep unrelated ignored areas such as dependency caches or secrets.
 
 Build a required-artifact manifest before creating the destination:

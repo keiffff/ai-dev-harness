@@ -7,6 +7,17 @@ description: Debug failures by preserving evidence and fixing root causes. Use w
 
 When something fails, stop feature work. Preserve evidence, reproduce, localize, fix root cause, and guard against recurrence.
 
+## Evidence Gate
+
+Before running a query, browser flow, or diagnostic command:
+
+1. Name the conclusion it could support and the observations required for that conclusion.
+2. Confirm the selected data source contains those observations. Do not ask the user to run a proxy query that cannot answer the question.
+3. Match the reproduction surface to the reported device, browser, path, account, and state. A different surface may gather supporting data, but cannot verify reproduction or resolution.
+4. Remove input parameters that are not needed for the stated conclusion.
+
+If a primary path can fall back, record primary-path and fallback outcomes separately. A successful fallback does not verify the primary path.
+
 ## Triage Loop
 
 1. Capture the exact failing command, status, and important output.
@@ -25,6 +36,8 @@ Before reporting the failure fixed, identify the evidence in this shape:
 - Reproduced: the failing command or scenario and the observed failure.
 - Fixed: the root cause and the behavior/code path changed.
 - Verified: the same narrow check no longer fails, plus any broader check that was needed.
+
+For integrations with fallbacks, `Verified` must name which provider or primary path succeeded. Do not report the integration verified from an overall success status alone.
 
 If the same verification fails twice after attempted fixes, stop changing code and return to localization or ask for help with the preserved evidence.
 

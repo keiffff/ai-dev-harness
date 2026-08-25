@@ -163,8 +163,11 @@ Check before shared-environment deployment:
 - required SSM Parameters exist;
 - required Secrets exist;
 - deployment roles have read permissions;
+- Organizations SCPs, permission boundaries, resource policies, and service-specific profile access allow the real request path;
 - public AMIs, Lambda Layers, or external ARNs still exist;
 - cross-account resources are readable.
+
+When a provider, region, endpoint, or inference profile changes, require evidence from an approved real request before calling the integration verified. If the application can fall back, confirm the selected provider and fallback status separately; an overall successful job is insufficient.
 
 Use readonly wrappers for checks. Do not run AWS mutation commands from Codex.
 
@@ -196,3 +199,4 @@ Prefer:
 - Are global/edge resources in the required region?
 - Does temporary environment count multiply account-level resources?
 - Can post-CDK failures be retried without rerunning successful infrastructure updates?
+- Did the intended external provider succeed, rather than a fallback making the job look successful?

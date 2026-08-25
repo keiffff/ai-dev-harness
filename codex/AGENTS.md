@@ -29,7 +29,7 @@
 - 既存テスト、API、domain変換、null/undefined/省略挙動を契約候補として扱う。落ちたテストを削除・緩和・期待値変更だけで通さない。
 - optional、nullable、required、field omission、永続化形式、外部挙動、I/F名、spec意味を変える前に止まり、変更可否を確認する。
 - 規制対象、金銭、認証、権限、永続化、外部連携では、明示仕様にないfallback、default、合成データ、空オブジェクト補完を追加しない。
-- 既存データ互換が必要に見えても自動でbackward compatibilityを足さない。現行データ、読者、影響、互換なしの選択肢を整理する。
+- version、artifact名、互換経路、migration、fallbackを追加する前に、リリース済み契約、現行データ、またはユーザーの明示要求のどれが根拠か確認する。根拠がなければ追加しない。
 - repoにないdomain用語をコード、テスト、PR本文へ作らない。説明用の仮称は仮称と明示する。
 - 新しいhelper、wrapper、adapter、facade、mapper、policyは、所有責務、隠す境界、集約するinvariantを説明できる場合だけ追加する。
 

@@ -63,6 +63,17 @@ class ThreadHandoffSkillTests(unittest.TestCase):
             content,
         )
 
+    def test_destination_generated_environment_files_are_classified_before_blocking(self):
+        content = SKILL.read_text()
+
+        self.assertIn("known environment-generated files", content)
+        self.assertIn("Block on missing task artifacts", content)
+        self.assertIn(
+            "A destination-only environment-generated file does not block the handoff",
+            content,
+        )
+        self.assertIn("do not transfer, edit, or delete it", content)
+
 
 if __name__ == "__main__":
     unittest.main()

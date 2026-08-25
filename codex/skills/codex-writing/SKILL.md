@@ -43,8 +43,9 @@ Bad cases:
    - Implementation plans, OpenSpec design text, or non-decision technical notes: `references/design-doc-style.md`
    - Slack, chat, PdM, or team sharing drafts: `references/team-update-style.md`
 4. Draft the text directly in Codex.
-5. Run a self-review pass against the selected reference before returning.
-6. Remove any claim not supported by the user request, repository facts, or explicitly stated assumptions.
+5. For supplied prose, compare the draft with the source and verify that every change is required by the requested delta. Preserve unrequested structure, tone, causal detail, and useful wording.
+6. Run a self-review pass against the selected reference before returning.
+7. Remove any claim not supported by the user request, repository facts, or explicitly stated assumptions.
 
 ## Core Writing Rules
 
@@ -57,7 +58,7 @@ Bad cases:
 - Before introducing a new label, heading, or coined term, name what it refers to and whether it is a condition, state, event, value, record, purpose, or means. If the referent cannot be written plainly, do not introduce the label.
 - Do not use AI-like filler, ornamental structure, or generic claims when the document needs concrete technical meaning.
 - Keep only information the reader needs to understand the result or decide the next action.
-- When revising supplied prose, preserve the parts that already work. Change only what is unclear, unsupported, unnecessary, or inconsistent with the requested medium and tone.
+- When revising supplied prose, change only the requested delta or a concrete defect. Do not trade an unwanted rewrite for over-compression that removes the user's reasoning.
 
 ## Format Rules
 
@@ -89,4 +90,4 @@ Before returning, check:
 - Are `確認` or verification sections limited to reproducible checks?
 - Does the text avoid generic AI filler and decorative structure?
 - Can every abstract noun and compressed label be replaced with a clearer subject and verb? If so, replace it unless the term is established for the reader.
-- Did the revision preserve the source text's useful meaning and phrasing instead of rewriting it wholesale?
+- Can every changed or removed part be traced to the user's requested delta or a concrete defect?
