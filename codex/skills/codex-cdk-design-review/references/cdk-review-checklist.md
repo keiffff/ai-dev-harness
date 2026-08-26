@@ -134,10 +134,12 @@ Some resources require a specific region regardless of the application stack reg
 
 Check:
 - CloudFront, WAF, ACM certificates, Lambda@Edge, and monitoring resources for region requirements.
+- For a CloudFront alternate domain change, inspect exact and wildcard DNS, the distribution each resolves to, current alias ownership, certificate coverage, and the planned update order.
 - Does a Custom Resource receive the parent stack region by accident?
 - Are us-east-1 resources separated from ap-northeast-1 application stacks when required?
 
 Block when:
+- current exact or wildcard DNS resolves to another distribution and the rollout plan has not shown how alias ownership and DNS order avoid a conflict;
 - a global/edge resource is created in the application stack region without confirming AWS requirements;
 - cross-region ownership is hidden inside an application construct.
 

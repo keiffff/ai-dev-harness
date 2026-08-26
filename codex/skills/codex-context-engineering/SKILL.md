@@ -38,7 +38,7 @@ Load context in this order:
 Before saying that a mechanism does not exist, is broken, or needs a new stack, state, workflow, job, wrapper, or service, inspect:
 
 1. Owner: which module, stack, workflow, job, or service currently owns the responsibility.
-2. Trigger: what schedule, event, command, CI step, or API action starts it.
+2. Trigger: every schedule, event, implicit creation write, command, CI step, or API action that starts it or downstream work. Trace the full proposed sequence before calling an operational procedure safe.
 3. Discovery: how it finds targets, such as tags, database state, config, naming, or an explicit list.
 4. Boundary: what it intentionally includes and excludes.
 5. Execution evidence: recent state, logs, results, tests, or other evidence that it ran.

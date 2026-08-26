@@ -13,7 +13,7 @@ Before running a query, browser flow, or diagnostic command:
 
 1. Name the conclusion it could support and the observations required for that conclusion.
 2. Confirm the selected data source contains those observations. Do not ask the user to run a proxy query that cannot answer the question.
-3. Match the reproduction surface to the reported device, browser, path, account, and state. A different surface may gather supporting data, but cannot verify reproduction or resolution.
+3. Match the reproduction surface and observation resolution to the reported behavior. Transient rewinds, loops, flicker, or races require a timeline or recording; coarse spot checks cannot support "not reproduced." A different device, browser, path, account, or state may gather supporting data, but cannot verify reproduction or resolution.
 4. Remove input parameters that are not needed for the stated conclusion.
 
 If a primary path can fall back, record primary-path and fallback outcomes separately. A successful fallback does not verify the primary path.

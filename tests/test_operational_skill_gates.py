@@ -19,7 +19,16 @@ class OperationalSkillGateTests(unittest.TestCase):
 
         self.assertIn("Confirm the selected data source contains those observations", content)
         self.assertIn("Match the reproduction surface", content)
+        self.assertIn("coarse spot checks cannot support", content)
         self.assertIn("A successful fallback does not verify the primary path", content)
+
+    def test_operational_sequence_traces_implicit_triggers(self):
+        content = (
+            ROOT / "codex" / "skills" / "codex-context-engineering" / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("implicit creation write", content)
+        self.assertIn("before calling an operational procedure safe", content)
 
     def test_writing_revision_is_limited_to_the_requested_delta(self):
         content = (ROOT / "codex" / "skills" / "codex-writing" / "SKILL.md").read_text()
@@ -39,6 +48,20 @@ class OperationalSkillGateTests(unittest.TestCase):
 
         self.assertIn("Organizations SCPs", content)
         self.assertIn("an overall successful job is insufficient", content)
+
+    def test_cdk_preflight_checks_cloudfront_alias_and_dns_state(self):
+        content = (
+            ROOT
+            / "codex"
+            / "skills"
+            / "codex-cdk-design-review"
+            / "references"
+            / "cdk-review-checklist.md"
+        ).read_text()
+
+        self.assertIn("exact and wildcard DNS", content)
+        self.assertIn("current alias ownership", content)
+        self.assertIn("DNS order avoid a conflict", content)
 
 
 if __name__ == "__main__":
