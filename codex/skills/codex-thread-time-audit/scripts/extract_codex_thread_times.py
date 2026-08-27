@@ -2,6 +2,7 @@
 import argparse
 import html
 import json
+import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path, PurePosixPath
@@ -99,7 +100,26 @@ def iter_session_files(codex_home):
         yield from archived.glob("*.jsonl")
 
 
-def extract_rows(codex_home, start_ts, end_ts, titles, overrides):
+def count_task_starts_in_window(lines, start_ts, end_ts):
+    count = 0
+    for line in lines:
+        try:
+            item = json.loads(line)
+        except Exception:
+            continue
+        payload = item.get("payload") or {}
+        if item.get("type") != "event_msg" or payload.get("type") != "task_started":
+            continue
+        timestamp = item.get("timestamp")
+        started = payload.get("started_at")
+        if started is None and timestamp:
+            started = parse_iso(timestamp).timestamp()
+        if started is not None and start_ts <= started < end_ts:
+            count += 1
+    return count
+
+
+def extract_rows(codex_home, start_ts, end_ts, titles, overrides, session_scope="top-level"):
     rows = []
     seen = set()
     stats = Counter()
@@ -127,8 +147,16 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides):
                 parent_thread_id = payload.get("parent_thread_id")
                 break
 
-        if is_subagent_source(source, parent_thread_id):
-            stats["skipped_subagent_files"] += 1
+        structural_subagent = is_subagent_source(source, parent_thread_id)
+        if structural_subagent:
+            subagent_task_starts = count_task_starts_in_window(lines, start_ts, end_ts)
+            if subagent_task_starts:
+                stats["structural_subagent_files"] += 1
+                stats["structural_subagent_task_starts"] += subagent_task_starts
+        if structural_subagent and session_scope == "top-level":
+            if subagent_task_starts:
+                stats["skipped_subagent_files"] += 1
+                stats["skipped_subagent_task_starts"] += subagent_task_starts
             continue
 
         stats["parsed_files"] += 1
@@ -153,6 +181,18 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides):
                 cwd = payload.get("cwd") or cwd
                 continue
 
+            # Newer Codex session logs record the user prompt as a
+            # response_item message instead of event_msg:user_message.
+            # Accept either representation so a format migration does not
+            # silently drop otherwise complete top-level turns.
+            if item.get("type") == "response_item":
+                if payload.get("type") == "message" and payload.get("role") == "user":
+                    if active and active[-1] in tasks:
+                        tasks[active[-1]]["user_evidence"].add("response_item.message.user")
+                    elif ts_num is not None and start_ts <= ts_num < end_ts:
+                        stats["unmatched_user_signals"] += 1
+                continue
+
             if item.get("type") != "event_msg":
                 continue
 
@@ -164,46 +204,102 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides):
                     "start": payload.get("started_at") or ts_num,
                     "end": None,
                     "complete_type": None,
-                    "user_messages": 0,
+                    "user_evidence": set(),
                 }
                 active.append(turn_id)
             elif event_type == "user_message":
                 if active and active[-1] in tasks:
-                    tasks[active[-1]]["user_messages"] += 1
+                    tasks[active[-1]]["user_evidence"].add("event_msg.user_message")
+                elif ts_num is not None and start_ts <= ts_num < end_ts:
+                    stats["unmatched_user_signals"] += 1
             elif event_type in ("task_complete", "turn_aborted"):
                 turn_id = payload.get("turn_id")
                 if turn_id in tasks:
                     tasks[turn_id]["end"] = payload.get("completed_at") or payload.get("aborted_at") or ts_num
                     tasks[turn_id]["complete_type"] = event_type
+                elif ts_num is not None and start_ts <= ts_num < end_ts:
+                    stats["completion_without_task_start"] += 1
                 if turn_id in active:
                     active = [candidate for candidate in active if candidate != turn_id]
 
         for task in tasks.values():
-            if not task["user_messages"]:
-                continue
             started = task["start"]
             completed = task["end"]
             if started is None or not (start_ts <= started < end_ts):
                 continue
+            stats["raw_task_starts"] += 1
+            if not task["user_evidence"]:
+                stats["tasks_without_known_user_evidence"] += 1
+            elif len(task["user_evidence"]) == 1:
+                evidence = next(iter(task["user_evidence"]))
+                stats[f"tasks_with_{evidence}"] += 1
+            else:
+                stats["tasks_with_both_known_user_formats"] += 1
             key = (meta_id, task["turn_id"], round(started, 3), round(completed or 0, 3))
             if key in seen:
+                stats["duplicate_task_rows"] += 1
                 continue
             seen.add(key)
             title = overrides.get(meta_id) or titles.get(meta_id) or f"未題 ({meta_id or path.stem})"
             rows.append(
                 {
                     "session_id": meta_id or path.stem,
+                    "turnId": task["turn_id"],
                     "project": project_from_cwd(cwd),
                     "thread": title,
                     "startedAt": started,
                     "completedAt": completed,
                     "status": "進行中" if completed is None else ("中断" if task["complete_type"] == "turn_aborted" else "completed"),
+                    "sessionKind": "subagent" if structural_subagent else "top-level",
+                    "parentThreadId": parent_thread_id,
+                    "userEvidence": sorted(task["user_evidence"]),
                 }
             )
 
     rows.sort(key=lambda row: row["startedAt"])
     stats["rows"] = len(rows)
     return rows, stats
+
+
+def build_diagnostics(stats, start, end, timezone, session_scope):
+    raw_task_starts = stats["raw_task_starts"]
+    accounted = stats["rows"] + stats["duplicate_task_rows"]
+    unaccounted = raw_task_starts - accounted
+    review_reasons = []
+    if unaccounted:
+        review_reasons.append("raw task starts and output rows do not reconcile")
+    if stats["tasks_without_known_user_evidence"]:
+        review_reasons.append("some task starts have no known user-message marker")
+    if stats["unmatched_user_signals"]:
+        review_reasons.append("some user-message markers were not associated with a known task start")
+    if stats["completion_without_task_start"]:
+        review_reasons.append("some completion events were not associated with a known task start")
+    if session_scope == "all" and stats["structural_subagent_files"]:
+        review_reasons.append("subagent logs may contain inherited parent history; review provenance before reporting")
+    return {
+        "schemaVersion": 1,
+        "window": {"start": start.isoformat(), "end": end.isoformat(), "timezone": timezone},
+        "sessionScope": session_scope,
+        "coverage": {
+            "rawTaskStarts": raw_task_starts,
+            "outputRows": stats["rows"],
+            "duplicateTaskRows": stats["duplicate_task_rows"],
+            "unaccountedTaskStarts": unaccounted,
+            "tasksWithoutKnownUserEvidence": stats["tasks_without_known_user_evidence"],
+            "tasksWithEventUserEvidenceOnly": stats["tasks_with_event_msg.user_message"],
+            "tasksWithResponseUserEvidenceOnly": stats["tasks_with_response_item.message.user"],
+            "tasksWithBothKnownUserFormats": stats["tasks_with_both_known_user_formats"],
+            "unmatchedUserSignals": stats["unmatched_user_signals"],
+            "completionWithoutTaskStart": stats["completion_without_task_start"],
+            "structuralSubagentFiles": stats["structural_subagent_files"],
+            "structuralSubagentTaskStarts": stats["structural_subagent_task_starts"],
+            "skippedSubagentFiles": stats["skipped_subagent_files"],
+            "skippedSubagentTaskStarts": stats["skipped_subagent_task_starts"],
+        },
+        "status": "review_required" if review_reasons else "ok",
+        "reviewReasons": review_reasons,
+        "sourceBoundary": "This verifies extraction from readable local JSONL files; it cannot prove that upstream Codex activity was written locally.",
+    }
 
 
 def render_markdown(rows, tz, stats, day_boundary_hour):
@@ -517,7 +613,7 @@ def render_html(rows, tz, stats, start_label, end_label, break_threshold_minutes
 <body>
 <main>
   <h1>Codex Thread Times</h1>
-  <p class="sub">{html.escape(start_label)} - {html.escape(end_label)} / {html.escape(str(tz))} / day boundary {html.escape(format_boundary_hour(day_boundary_hour))} / user-owned top-level turns</p>
+  <p class="sub">{html.escape(start_label)} - {html.escape(end_label)} / {html.escape(str(tz))} / day boundary {html.escape(format_boundary_hour(day_boundary_hour))} / selected Codex task turns</p>
   <p class="summary">取得件数: {stats['rows']} turn</p>
   <p class="note">休憩候補は、前turn終了から次turn開始まで{break_threshold_minutes:.0f}分以上空いた箇所です。すべてタブでは全体、プロジェクトタブではそのプロジェクト内の空きを表示します。目視確認や別作業の可能性があるため、休憩確定ではありません。</p>
   <p class="note">「↳ 同PJ並行」は同じプロジェクトで前のturnが終了する前に始まったturn、「↳ 並行」は別プロジェクトを含む重なりです。</p>
@@ -561,7 +657,7 @@ def render_html(rows, tz, stats, start_label, end_label, break_threshold_minutes
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract user-owned Codex thread turn times from local session JSONL files.")
+    parser = argparse.ArgumentParser(description="Extract recorded Codex task turn times from local session JSONL files.")
     parser.add_argument("--start", required=True, help="Start date/datetime in output timezone, inclusive")
     parser.add_argument("--end", required=True, help="End date/datetime in output timezone, inclusive when date-only")
     parser.add_argument("--timezone", default="Asia/Tokyo")
@@ -571,6 +667,8 @@ def main():
     parser.add_argument("--html-output", help="HTML output path")
     parser.add_argument("--markdown-output", help="Markdown output path")
     parser.add_argument("--json-output", help="Normalized JSON rows output path")
+    parser.add_argument("--diagnostics-output", help="Coverage diagnostics JSON path. Defaults beside --json-output when omitted.")
+    parser.add_argument("--session-scope", choices=("all", "top-level"), default="top-level", help="Capture top-level sessions or all session files. The all scope is diagnostic because subagent logs can inherit parent history.")
     parser.add_argument("--break-threshold-minutes", type=float, default=15.0, help="Highlight global gaps of at least this many minutes as break candidates")
     parser.add_argument("--day-boundary-hour", type=float, default=8.0, help="Hour in output timezone where a report day starts. Date-only ranges use this boundary.")
     args = parser.parse_args()
@@ -581,7 +679,8 @@ def main():
     end = parse_date(args.end, tz, end=True, day_boundary_hour=args.day_boundary_hour)
     titles = load_titles(codex_home)
     overrides = load_overrides(args.title_overrides)
-    rows, stats = extract_rows(codex_home, start.timestamp(), end.timestamp(), titles, overrides)
+    rows, stats = extract_rows(codex_home, start.timestamp(), end.timestamp(), titles, overrides, args.session_scope)
+    diagnostics = build_diagnostics(stats, start, end, args.timezone, args.session_scope)
 
     markdown = render_markdown(rows, tz, stats, args.day_boundary_hour)
     html_output = render_html(rows, tz, stats, args.start, args.end, args.break_threshold_minutes, args.day_boundary_hour)
@@ -597,6 +696,21 @@ def main():
         Path(args.markdown_output).write_text(markdown, encoding="utf-8")
     if args.json_output:
         Path(args.json_output).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    diagnostics_output = args.diagnostics_output
+    if not diagnostics_output and args.json_output:
+        diagnostics_output = str(Path(args.json_output).with_suffix(".diagnostics.json"))
+    if diagnostics_output:
+        Path(diagnostics_output).write_text(json.dumps(diagnostics, ensure_ascii=False, indent=2), encoding="utf-8")
+    coverage = diagnostics["coverage"]
+    print(
+        "coverage "
+        f"status={diagnostics['status']} "
+        f"raw_task_starts={coverage['rawTaskStarts']} "
+        f"output_rows={coverage['outputRows']} "
+        f"unaccounted={coverage['unaccountedTaskStarts']} "
+        f"unknown_user_evidence={coverage['tasksWithoutKnownUserEvidence']}",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":
