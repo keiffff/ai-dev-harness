@@ -85,6 +85,16 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(run_hook('local-safety-policy.py', payload='{not json'))
         self.assertAllowed(run_hook('local-safety-policy.py', payload=''))
 
+    def test_combined_shell_hook_preserves_each_policy_boundary(self):
+        self.assertBlocked(run_hook('shell-policy.py', payload='{not json'))
+        self.assertAllowed(run_hook('shell-policy.py', payload=''))
+        self.assertBlocked(run_hook('shell-policy.py', 'git push origin main'))
+        self.assertBlocked(run_hook('shell-policy.py', f'{AWS} s3 ls'))
+        self.assertBlocked(run_hook('shell-policy.py', f'{GH} pr view 1'))
+        self.assertBlocked(run_hook('shell-policy.py', f'{GCLOUD} projects list'))
+        self.assertBlocked(run_hook('shell-policy.py', f'{RM} {RF} /tmp/example'))
+        self.assertAllowed(run_hook('shell-policy.py', 'pnpm test'))
+
     def test_aws_hook_blocks_shell_bypasses_and_raw_cli_variants(self):
         self.assertBlocked(run_hook('aws-policy.py', f'command {AWS} sts get-caller-identity'))
         self.assertBlocked(run_hook('aws-policy.py', f'command sh -c "{AWS} s3 ls"'))

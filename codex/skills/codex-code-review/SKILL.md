@@ -1,6 +1,6 @@
 ---
 name: codex-code-review
-description: Review code changes with a bug-first stance. Use for "review" requests, before reporting implementation complete, after AI-generated code, or when checking a diff for correctness, tests, architecture, security, performance, and scope control.
+description: Review code changes for bugs, regressions, missing tests, architecture, security, performance, and scope before completion.
 ---
 
 # Codex Code Review

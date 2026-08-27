@@ -1,6 +1,6 @@
 ---
 name: codex-doubt-review
-description: Challenge non-trivial Codex decisions with bounded adversarial review. Use when correctness depends on assumptions, module boundaries, ordering, idempotency, migrations, production risk, or a confident answer would be expensive to debug later.
+description: Challenge non-trivial decisions when correctness depends on assumptions, boundaries, ordering, idempotency, migrations, or production risk.
 ---
 
 # Codex Doubt Review

@@ -1,6 +1,6 @@
 ---
 name: codex-decision-doc
-description: Use when drafting or revising design docs that should capture decisions, rationale, tradeoffs, compatibility, risks, non-goals, and open questions rather than implementation details. Prefer user-provided or repository-local design doc formats when present, and use the fallback structure only when no project format exists. Use for decision-oriented design docs, ADR-like docs, RFC-like docs, architecture notes, migration rationale, and docs under docs/designDocs. Do not use for PR bodies, release notes, README prose, Slack/team drafts, detailed implementation specs, OpenSpec artifacts, or ordinary chat answers.
+description: Draft decision-oriented design docs, ADRs, RFCs, and migration rationale with tradeoffs, compatibility, risks, non-goals, and open questions. Use codex-writing for ordinary prose.
 ---
 
 # Codex Decision Doc

@@ -1,6 +1,6 @@
 ---
 name: claude-fable-strategic-review
-description: Use Claude Fable 5 as an explicit experimental strategic reviewer when the user specifically asks to try Fable, Fable 5, the strongest Claude reviewer, or a deeper long-horizon strategic review. Do not use by default, for ordinary strategic review, chat answers, prose drafting, implementation, debugging, tests, repository edits, or final decisions.
+description: Use Claude Fable 5 only when the user explicitly requests Fable for a high-value strategic review. Codex retains repo work and final judgment.
 ---
 
 # Claude Fable Strategic Review

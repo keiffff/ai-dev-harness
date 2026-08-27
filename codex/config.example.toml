@@ -45,6 +45,16 @@ command = "/usr/bin/python3 /absolute/path/to/hooks/codex/compaction-handoff-rem
 timeout = 10
 statusMessage = "Checking task context health"
 
+# Run Git, cloud CLI, and local shell safety checks through one hook process.
+[[hooks.PreToolUse]]
+matcher = "^Bash$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/shell-policy.py"
+timeout = 10
+statusMessage = "Checking shell safety policy"
+
 # Keep Browser installed, but block Browser runtime calls unless the latest
 # user message includes the native Browser plugin mention. Do not infer
 # permission from natural-language keywords.

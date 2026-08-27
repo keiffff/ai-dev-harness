@@ -1,6 +1,6 @@
 ---
 name: codex-writing
-description: Draft and edit prose deliverables directly with Codex using Japanese technical-writing references. Use when the user asks for PR descriptions, Markdown summaries, Slack/team updates, release notes, README prose, reply drafts, announcements, UI copy, or other prose deliverables. Use codex-decision-doc instead for decision-oriented design docs, ADR/RFC-like docs, migration rationale, or docs under docs/designDocs. Do not use for ordinary chat answers, implementation, debugging, tests, refactoring, or repository edits unrelated to prose.
+description: Draft or revise PR text, summaries, team updates, release notes, README prose, replies, announcements, and UI copy. Use codex-decision-doc for decision records.
 ---
 
 # Codex Writing

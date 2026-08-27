@@ -1,6 +1,6 @@
 ---
 name: chrome-devtools-on-demand
-description: Manage Chrome DevTools MCP as an on-demand debugging capability. Use when a task needs Chrome DevTools network, console, performance, page inspection, or browser debugging, and Codex should avoid always-on Chrome automation or main Chrome debugger attachment.
+description: Enable isolated Chrome DevTools MCP only for network, console, performance, or page debugging, then disable it when finished.
 ---
 
 # Chrome DevTools On Demand

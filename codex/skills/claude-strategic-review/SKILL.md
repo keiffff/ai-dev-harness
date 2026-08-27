@@ -1,6 +1,6 @@
 ---
 name: claude-strategic-review
-description: Use Claude CLI as a strategic reviewer when the user asks for a broader perspective, alternative approach, architecture or migration strategy review, long-term maintainability review, or "is this actually the right direction?" feedback. Do not use for ordinary chat answers, prose drafting, implementation, debugging, tests, repository edits, or final decisions.
+description: Ask Claude CLI for a bounded strategic second opinion on architecture, migration, or maintainability. Codex retains repo work and final judgment.
 ---
 
 # Claude Strategic Review

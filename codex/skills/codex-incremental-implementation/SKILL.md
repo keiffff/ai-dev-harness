@@ -1,6 +1,6 @@
 ---
 name: codex-incremental-implementation
-description: Implement changes in focused, verifiable slices. Use for multi-file changes, OpenSpec task execution, refactors, or features where Codex should avoid large speculative edits and keep verification tied to each meaningful increment.
+description: Implement multi-file changes, refactors, or approved OpenSpec tasks in focused slices with verification after each meaningful increment.
 ---
 
 # Codex Incremental Implementation

@@ -1,6 +1,6 @@
 ---
 name: codex-context-engineering
-description: Gather and pack just enough repository context for Codex work. Use for repository, cloud, or operational investigation; evidence-first reporting; existing-pattern research; or before claiming a mechanism is absent or broken or proposing a new owner. Also use before implementation or review when relevant tests, OpenSpec docs, PR branches, or failure evidence must be understood without flooding context.
+description: Investigate repositories and operations with focused, evidence-first context. Use before implementation or review, or before claiming a mechanism is absent or broken.
 ---
 
 # Codex Context Engineering

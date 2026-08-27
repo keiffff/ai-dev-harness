@@ -1,6 +1,6 @@
 ---
 name: codex-debugging-loop
-description: Debug failures by preserving evidence and fixing root causes. Use when tests, builds, CI, API calls, local commands, browser behavior, or runtime logs show unexpected failure and Codex should stop guessing.
+description: Reproduce unexpected test, build, CI, API, command, browser, or runtime failures and fix the evidenced root cause.
 ---
 
 # Codex Debugging Loop

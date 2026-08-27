@@ -6,6 +6,29 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class OperationalSkillGateTests(unittest.TestCase):
+    def test_skill_descriptions_keep_discovery_context_bounded(self):
+        descriptions = []
+        for skill in (ROOT / "codex" / "skills").glob("*/SKILL.md"):
+            description = next(
+                line.removeprefix("description: ")
+                for line in skill.read_text().splitlines()
+                if line.startswith("description: ")
+            )
+            descriptions.append(description)
+
+        self.assertLessEqual(sum(map(len, descriptions)), 3000)
+        self.assertLessEqual(max(map(len, descriptions)), 200)
+
+    def test_expensive_advisors_require_explicit_invocation(self):
+        for skill_name in (
+            "claude-fable-strategic-review",
+            "gpt-sol-strategic-review",
+        ):
+            metadata = (
+                ROOT / "codex" / "skills" / skill_name / "agents" / "openai.yaml"
+            ).read_text()
+            self.assertIn("allow_implicit_invocation: false", metadata)
+
     def test_unreleased_compatibility_requires_evidence(self):
         content = (ROOT / "codex" / "AGENTS.md").read_text()
 

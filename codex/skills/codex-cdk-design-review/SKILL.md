@@ -1,6 +1,6 @@
 ---
 name: codex-cdk-design-review
-description: Review AWS CDK design and diffs before implementation, PR, or shared-environment deployment. Use when CDK, CloudFormation stacks, constructs, cross-stack references, physical names, SSM Parameters, Secrets, VPC/Security Groups, CloudFront/WAF/ACM regions, ephemeral/preview/shared environments, cdk synth/diff failures, cdk-nag, or infrastructure ownership questions are involved. This skill prevents changes that pass in isolated temporary environments but fail in shared or production-like environments because of fixed names, Export dependencies, resource ownership, retained resources, environment fallback, region/VPC mismatch, quotas, or post-deploy coupling. Do not use for non-CDK AWS operations or for executing deploys.
+description: Review AWS CDK changes for shared-environment ownership, names, cross-stack dependencies, region, VPC, quotas, and deployment coupling. Do not deploy.
 ---
 
 # Codex CDK Design Review

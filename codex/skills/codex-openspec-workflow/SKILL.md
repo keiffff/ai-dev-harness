@@ -1,6 +1,6 @@
 ---
 name: codex-openspec-workflow
-description: Create, apply, review, or archive OpenSpec changes using the current artifact-driven workflow. Use when the user asks to create an OpenSpec proposal or input, implement approved OpenSpec tasks, compare an implementation with OpenSpec, or archive a completed change. Do not use for ordinary implementation without OpenSpec artifacts.
+description: Create, apply, review, or archive OpenSpec changes. Use only when OpenSpec artifacts are requested or already govern the work.
 ---
 
 # Codex OpenSpec Workflow

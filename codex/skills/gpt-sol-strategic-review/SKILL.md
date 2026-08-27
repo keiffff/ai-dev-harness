@@ -1,6 +1,6 @@
 ---
 name: gpt-sol-strategic-review
-description: Use GPT-5.6 Sol as an explicit OpenAI strategic advisor when the user asks for Sol, a strongest OpenAI reviewer, or a high-stakes second opinion. Do not use by default, for ordinary chat answers, prose drafting, implementation, debugging, tests, repository edits, Git actions, or final decisions.
+description: Use GPT-5.6 Sol only when the user explicitly requests Sol for a high-stakes strategic review. Codex retains repo work and final judgment.
 ---
 
 # GPT Sol Strategic Review

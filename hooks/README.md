@@ -15,6 +15,8 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 - shell interpreter、command substitution、process substitution、multiline shell、shell grouping、xargs、sudo を保守的に拒否する
 - Browser runtime は、現在のユーザーメッセージで Browser plugin を明示指定した場合だけ許可する
 
+`shell-policy.py` は、Git、AWS、GCP、GitHub CLI、local safety の各検査を1回のPreToolUse hookから呼び出します。個別policyは単体testと責務分離のため残しますが、同じshell呼び出しへ5本のhookを登録しません。
+
 ## Browser Permission Gate
 
 `browser-policy.py` は Browser plugin を常時有効にしたまま、Browser runtime を使う Node REPL 呼び出しだけを実行前に検査します。現在のユーザーメッセージにCodex標準の Browser plugin 指定がなければ拒否します。自然文の語句や不満の表現から許可を推測しません。過去のターンで許可されていても、現在のメッセージへ許可を持ち越しません。

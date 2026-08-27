@@ -1,6 +1,6 @@
 ---
 name: codex-thread-time-audit
-description: Extract and report Codex thread work times by project, thread, and day. Use when the user asks for Codex chat/thread history times, work activity by project, start/end times, daily work logs, or wants to know when they were operating across Codex projects. Prefer turn-level startedAt/completedAt intervals instead of thread-level createdAt/updatedAt summaries.
+description: Report Codex work times by project, task, and day from turn-level start and completion intervals.
 ---
 
 # Codex Thread Time Audit

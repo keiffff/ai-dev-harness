@@ -1,6 +1,6 @@
 ---
 name: codex-frontend-ui
-description: Use when Codex needs frontend UI strategy, visual direction, UI implementation guidance, design-system adherence, or visual QA for web UI, React components, HTML reports, mocks, dashboards, Storybook stories, Tailwind, shadcn/ui, Base UI, MUI, Figma-derived designs, responsive layout, typography, spacing, overflow, or screenshot review. Use before or during UI work when the task could affect visual quality or existing design consistency.
+description: Guide or review frontend UI strategy, implementation, design-system adherence, responsive behavior, and visual quality.
 ---
 
 # Codex Frontend UI

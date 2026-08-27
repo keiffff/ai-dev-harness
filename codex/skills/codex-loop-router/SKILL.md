@@ -1,6 +1,6 @@
 ---
 name: codex-loop-router
-description: Route Codex work to the smallest useful workflow. Use when a task could be specification, implementation, debugging, review, prose, frontend UI, X research, OpenSpec, strategic review, or subagent work, and Codex should choose the right loop without loading every detailed skill.
+description: Choose the smallest applicable workflow only when the request's route is ambiguous. Do not perform the work itself.
 ---
 
 # Codex Loop Router

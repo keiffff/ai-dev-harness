@@ -1,6 +1,6 @@
 ---
 name: grok-x-research
-description: Use Grok through a bounded xAI X Search wrapper to discover recent X posts, threads, named-account statements, emerging incidents, practitioner reactions, competing claims, and direct source URLs. Use when current X-specific evidence materially helps research. Do not use for ordinary Web research, repository work, implementation, strategic decisions, exhaustive statistics, or final factual verification.
+description: Discover recent X posts, named-account statements, incidents, reactions, and source URLs through bounded Grok X Search. Verify material claims separately.
 ---
 
 # Grok X Research

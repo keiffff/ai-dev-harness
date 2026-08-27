@@ -1,6 +1,6 @@
 ---
 name: codex-git-publish
-description: Safely stage, commit, integrate remote changes, push, or update a PR branch through the user-approved Git wrapper. Use only when the user's latest request explicitly asks for a Git mutation such as commit, push, PR branch update, or submodule synchronization. Do not infer mutation permission from implementation work or an earlier request.
+description: Stage, commit, push, update a PR branch, or sync submodules through the approved Git wrapper only when the latest user message explicitly requests it.
 ---
 
 # Codex Git Publish

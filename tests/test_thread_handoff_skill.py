@@ -6,9 +6,15 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "codex" / "skills" / "codex-thread-handoff" / "SKILL.md"
 
 
+def handoff_instructions() -> str:
+    skill_dir = SKILL.parent
+    files = [SKILL, *sorted((skill_dir / "references").glob("*.md"))]
+    return "\n".join(path.read_text() for path in files)
+
+
 class ThreadHandoffSkillTests(unittest.TestCase):
     def test_handoff_stops_after_transfer_and_read_only_verification(self):
-        content = SKILL.read_text()
+        content = handoff_instructions()
 
         self.assertIn(
             "A handoff authorizes only destination-task creation, context transfer, "
@@ -22,7 +28,7 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         self.assertNotIn("then immediately execute that first action", content)
 
     def test_handoff_preserves_whole_task_scope_unless_user_explicitly_splits_it(self):
-        content = SKILL.read_text()
+        content = handoff_instructions()
 
         self.assertIn("A handoff changes context, not task scope.", content)
         self.assertIn(
@@ -51,7 +57,7 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         )
 
     def test_destination_verifies_semantic_scope_as_well_as_workspace_state(self):
-        content = SKILL.read_text()
+        content = handoff_instructions()
 
         self.assertIn("semantic scope preservation", content)
         self.assertIn(
@@ -64,7 +70,7 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         )
 
     def test_destination_generated_environment_files_are_classified_before_blocking(self):
-        content = SKILL.read_text()
+        content = handoff_instructions()
 
         self.assertIn("known environment-generated files", content)
         self.assertIn("Block on missing task artifacts", content)
@@ -73,6 +79,14 @@ class ThreadHandoffSkillTests(unittest.TestCase):
             content,
         )
         self.assertIn("do not transfer, edit, or delete it", content)
+
+    def test_execution_detail_is_loaded_only_after_acceptance(self):
+        content = SKILL.read_text()
+
+        self.assertIn("For timing advice or a suggestion, use only this file.", content)
+        self.assertIn("references/prepare-transfer.md", content)
+        self.assertIn("references/verify-destination.md", content)
+        self.assertNotIn("## Build The Required-Artifact Manifest", content)
 
 
 if __name__ == "__main__":

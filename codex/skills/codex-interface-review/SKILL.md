@@ -1,6 +1,6 @@
 ---
 name: codex-interface-review
-description: Review API, schema, module boundary, state, and I/F decisions. Use when adding or changing request/response contracts, OpenAPI, Prisma/schema enums, reducer/action contracts, persisted data shape, public types, or cross-layer behavior.
+description: Review changes to APIs, schemas, persisted data, public types, state contracts, and module or cross-layer boundaries.
 ---
 
 # Codex Interface Review
