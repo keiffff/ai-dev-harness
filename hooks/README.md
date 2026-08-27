@@ -13,6 +13,13 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 - `.env` や credential file の表示を止める
 - `rm -rf`、`git clean`、recursive chmod/chown などの破壊的操作を止める
 - shell interpreter、command substitution、process substitution、multiline shell、shell grouping、xargs、sudo を保守的に拒否する
+- Browser runtime は、現在のユーザーメッセージで Browser plugin を明示指定した場合だけ許可する
+
+## Browser Permission Gate
+
+`browser-policy.py` は Browser plugin を常時有効にしたまま、Browser runtime を使う Node REPL 呼び出しだけを実行前に検査します。現在のユーザーメッセージにCodex標準の Browser plugin 指定がなければ拒否します。自然文の語句や不満の表現から許可を推測しません。過去のターンで許可されていても、現在のメッセージへ許可を持ち越しません。
+
+このhookは `browser-client.mjs`、`setupBrowserRuntime`、標準的な Browser binding の呼び出しを対象にします。一度 Browser runtime を初期化したtaskでは、binding名を変えた迂回を防ぐため、以後の Node REPL 呼び出しも同じ許可対象として扱います。Browserを使っていないtaskの通常の Node REPL 利用は対象外です。Browser plugin の手動有効化・無効化を運用手順にはしません。
 
 ## Japanese Output
 

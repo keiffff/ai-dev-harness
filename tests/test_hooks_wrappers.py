@@ -43,6 +43,37 @@ def run_hook(script_name: str, command: str | None = None, payload: str | None =
     )
 
 
+def browser_hook(user_messages: list[str], code: str, prior_browser_runtime: bool = False) -> subprocess.CompletedProcess[str]:
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', encoding='utf-8') as transcript:
+        if prior_browser_runtime:
+            transcript.write(json.dumps({
+                'type': 'event_msg',
+                'payload': {
+                    'type': 'item_completed',
+                    'item': {
+                        'type': 'McpToolCall',
+                        'server': 'node_repl',
+                        'tool': 'js',
+                        'arguments': {'code': 'const agent = await setupBrowserRuntime();'},
+                    },
+                },
+            }) + '\n')
+        for message in user_messages:
+            transcript.write(json.dumps({
+                'type': 'response_item',
+                'payload': {
+                    'type': 'message',
+                    'role': 'user',
+                    'content': [{'type': 'input_text', 'text': message}],
+                },
+            }) + '\n')
+        transcript.flush()
+        return run_hook('browser-policy.py', payload=json.dumps({
+            'transcript_path': transcript.name,
+            'tool_input': {'code': code},
+        }))
+
+
 class HookPolicyTests(unittest.TestCase):
     def assertBlocked(self, result: subprocess.CompletedProcess[str]) -> None:
         self.assertEqual(result.returncode, 2, result.stderr + result.stdout)
@@ -100,6 +131,18 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(run_hook('local-safety-policy.py', 'echo $API_TOKEN'))
         self.assertAllowed(run_hook('local-safety-policy.py', 'pnpm test'))
 
+    def test_browser_hook_requires_explicit_permission_in_latest_user_message(self):
+        setup = 'const { setupBrowserRuntime } = await import("/plugin/scripts/browser-client.mjs");'
+        self.assertBlocked(browser_hook(['このURLの内容を調べて'], setup))
+        self.assertBlocked(browser_hook(['Browserを使って確認して'], setup))
+        self.assertBlocked(browser_hook(['Chromeで画面を開いて'], setup))
+        self.assertAllowed(browser_hook(['[@Browser](plugin://browser@openai-bundled) で確認して'], setup))
+        self.assertBlocked(browser_hook(['[@Browser](plugin://browser@openai-bundled) で確認して', '次はrepoを調べて'], setup))
+
+    def test_browser_hook_blocks_reused_browser_bindings_but_allows_other_node_code(self):
+        self.assertBlocked(browser_hook(['repoを読んで'], 'await pageAlias.doSomething();', prior_browser_runtime=True))
+        self.assertAllowed(browser_hook(['[@Browser](plugin://browser@openai-bundled) で続けて'], 'await pageAlias.doSomething();', prior_browser_runtime=True))
+        self.assertAllowed(browser_hook(['計算して'], '2 + 2'))
 
 class WrapperTests(unittest.TestCase):
     def run_with_fake_bin(self, script: Path, fake_name: str, args: list[str]) -> subprocess.CompletedProcess[str]:

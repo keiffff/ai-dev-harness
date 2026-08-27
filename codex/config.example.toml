@@ -44,3 +44,15 @@ type = "command"
 command = "/usr/bin/python3 /absolute/path/to/hooks/codex/compaction-handoff-reminder.py"
 timeout = 10
 statusMessage = "Checking task context health"
+
+# Keep Browser installed, but block Browser runtime calls unless the latest
+# user message includes the native Browser plugin mention. Do not infer
+# permission from natural-language keywords.
+[[hooks.PreToolUse]]
+matcher = "(?i).*node[_-]?repl.*js.*"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/browser-policy.py"
+timeout = 10
+statusMessage = "Checking explicit Browser permission"
