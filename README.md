@@ -6,7 +6,7 @@ AI agent を実務開発の生産工程に組み込むための開発ハーネ�
 
 各プロジェクトで得た失敗や改善は、顧客名、リポジトリ名、issue/PR 番号、固有パスを外し、再利用できる形に抽象化して残します。
 
-![AI Agent Development Harness](assets/agent-development-harness.png)
+![AI Agent Development Harness](assets/agent-development-harness.svg)
 
 ## Concept
 
