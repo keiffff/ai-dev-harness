@@ -13,6 +13,7 @@ Before gathering context:
 1. Set the output ceiling from the user's request: confirmed facts only, facts plus direct interpretation, recommendations, or a decision/design workflow.
 2. If the answer may claim that a mechanism is absent or broken, or may propose a new owner, inspect the existing owner and execution path first.
 3. If the answer compares cost, volume, duration, or impact, look for direct telemetry before estimating.
+4. If a phrase such as "today's conversations," "the earlier task," or "that issue" has multiple plausible referents, do not default to the current task or nearest topic. Resolve it with one direct lookup when possible; otherwise raise an ANDON and ask for the target before starting a broad log search.
 
 Do not turn a request to investigate or confirm facts into unsolicited recommendations, implementation scope, or next actions. Check that the response includes every requested element, such as field definitions, counts, periods, targets, or comparison conditions.
 

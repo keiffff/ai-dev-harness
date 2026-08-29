@@ -25,7 +25,7 @@ Keep the suggestion to one sentence and match the conversation language:
 
 > This task has reached a safe boundary and shows context degradation. Move this whole task to a fresh task with a compact handoff?
 
-If the user declines or ignores it, continue without repeating it.
+If the user declines or ignores it, continue without repeating it for the same observed compaction. Each later compaction is new degradation evidence and may justify one new suggestion at the next safe checkpoint.
 
 ## Require Explicit Authority
 

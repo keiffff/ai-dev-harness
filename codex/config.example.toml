@@ -32,10 +32,11 @@ default_subagent_reasoning_effort = "medium"
 # AWS_READONLY_WRAPPER=$HOME/.local/bin/aws-readonly
 # GCLOUD_READONLY_WRAPPER=$HOME/.local/bin/gcloud-readonly
 
-# After the second compaction in one task, ask Codex to assess a fresh-task
-# handoff at the next safe checkpoint. The hook only injects context; it never
-# creates or mutates a task. After adding or changing this command, restart
-# Codex and trust the exact hook definition through `/hooks` before relying on it.
+# After the second and each later compaction in one task, ask Codex to reassess
+# a fresh-task handoff at the next safe checkpoint. The hook only injects
+# context; it never creates or mutates a task. After adding or changing this
+# command, restart Codex and trust the exact hook definition through `/hooks`
+# before relying on it.
 [[hooks.SessionStart]]
 matcher = "^compact$"
 

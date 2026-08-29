@@ -88,6 +88,12 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         self.assertIn("references/verify-destination.md", content)
         self.assertNotIn("## Build The Required-Artifact Manifest", content)
 
+    def test_later_compaction_can_trigger_a_new_handoff_suggestion(self):
+        content = SKILL.read_text()
+
+        self.assertIn("same observed compaction", content)
+        self.assertIn("Each later compaction is new degradation evidence", content)
+
 
 if __name__ == "__main__":
     unittest.main()

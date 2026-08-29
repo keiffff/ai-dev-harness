@@ -9,10 +9,12 @@ from typing import Optional
 DEFAULT_STATE_DIR = Path.home() / ".codex" / "hook-state" / "compaction-handoff"
 STATE_DIR_ENV = "CODEX_HANDOFF_STATE_DIR"
 REMINDER = (
-    "This root task has compacted at least twice. At the next safe checkpoint, use "
+    "This root task has compacted at least twice. Reassess context health after each "
+    "additional compaction. At the next safe checkpoint, use "
     "`codex-thread-handoff` to assess whether a fresh-task handoff would reduce "
-    "context degradation. Suggest a handoff at most once for the current coherent "
-    "phase. A general handoff proposal must cover the whole root task; do not narrow "
+    "context degradation. Suggest a handoff at most once for each observed compaction; "
+    "a later compaction is new degradation evidence. A general handoff proposal must "
+    "cover the whole root task; do not narrow "
     "it to the latest subproblem unless the user explicitly asks to split the work. "
     "Do not interrupt active commands, edits, tests, approvals, or unresolved failures. "
     "Do not create, fork, archive, or otherwise mutate a task without explicit user "
@@ -41,14 +43,13 @@ def load_state(path: Path) -> dict:
     try:
         value = json.loads(path.read_text())
     except (OSError, ValueError, TypeError):
-        return {"compaction_count": 0, "reminder_emitted": False}
+        return {"compaction_count": 0}
     if not isinstance(value, dict):
-        return {"compaction_count": 0, "reminder_emitted": False}
+        return {"compaction_count": 0}
     count = value.get("compaction_count", 0)
-    emitted = value.get("reminder_emitted", False)
-    if not isinstance(count, int) or count < 0 or not isinstance(emitted, bool):
-        return {"compaction_count": 0, "reminder_emitted": False}
-    return {"compaction_count": count, "reminder_emitted": emitted}
+    if not isinstance(count, int) or count < 0:
+        return {"compaction_count": 0}
+    return {"compaction_count": count}
 
 
 def save_state(path: Path, state: dict) -> bool:
@@ -76,9 +77,7 @@ def main() -> None:
     path = state_path(session_id)
     state = load_state(path)
     state["compaction_count"] += 1
-    should_remind = state["compaction_count"] >= 2 and not state["reminder_emitted"]
-    if should_remind:
-        state["reminder_emitted"] = True
+    should_remind = state["compaction_count"] >= 2
     if not save_state(path, state) or not should_remind:
         return
 

@@ -29,7 +29,7 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 
 ## Context Handoff Reminder
 
-`compaction-handoff-reminder.py` は、同じ task で2回目の compaction が起きたときだけ、次の安全な区切りで `codex-thread-handoff` を使って移行要否を確認するよう Codex へ context を渡します。
+`compaction-handoff-reminder.py` は、同じ task で2回目以降の compaction が起きるたびに、次の安全な区切りで `codex-thread-handoff` を使って移行要否を確認するよう Codex へ context を渡します。通知後も task を続けるか、fresh task へ移すかは、その時点のユーザーと Codex が判断します。
 
 hook 自体は task の作成、fork、archive を行いません。実行中の command、編集、test、approval、未解決の失敗も中断させません。提案と task 操作は、引き続き `codex-thread-handoff` の制約とユーザーの明示承認に従います。
 

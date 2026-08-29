@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import subprocess
@@ -38,7 +39,7 @@ def run_hook(state_dir: str, session_id: str = "session-1", source: str = "compa
 
 
 class CompactionHandoffReminderTests(unittest.TestCase):
-    def test_reminds_once_on_second_compaction(self):
+    def test_reminds_on_second_and_later_compactions(self):
         with tempfile.TemporaryDirectory() as state_dir:
             first = run_hook(state_dir)
             second = run_hook(state_dir)
@@ -48,18 +49,32 @@ class CompactionHandoffReminderTests(unittest.TestCase):
         self.assertEqual(first.stdout, "")
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(third.returncode, 0, third.stderr)
-        self.assertEqual(third.stdout, "")
-        output = json.loads(second.stdout)
-        hook_output = output["hookSpecificOutput"]
-        self.assertEqual(hook_output["hookEventName"], "SessionStart")
-        self.assertIn("codex-thread-handoff", hook_output["additionalContext"])
-        self.assertIn("explicit user approval", hook_output["additionalContext"])
-        self.assertIn("cover the whole root task", hook_output["additionalContext"])
-        self.assertIn(
-            "unless the user explicitly asks to split",
-            hook_output["additionalContext"],
-        )
-        self.assertIn("Do not interrupt", hook_output["additionalContext"])
+        for result in (second, third):
+            output = json.loads(result.stdout)
+            hook_output = output["hookSpecificOutput"]
+            self.assertEqual(hook_output["hookEventName"], "SessionStart")
+            self.assertIn("codex-thread-handoff", hook_output["additionalContext"])
+            self.assertIn("explicit user approval", hook_output["additionalContext"])
+            self.assertIn("cover the whole root task", hook_output["additionalContext"])
+            self.assertIn(
+                "unless the user explicitly asks to split",
+                hook_output["additionalContext"],
+            )
+            self.assertIn("at most once for each observed compaction", hook_output["additionalContext"])
+            self.assertIn("Do not interrupt", hook_output["additionalContext"])
+
+    def test_reads_existing_state_with_legacy_reminder_field(self):
+        with tempfile.TemporaryDirectory() as state_dir:
+            session_key = hashlib.sha256(b"session-1").hexdigest()
+            path = Path(state_dir) / f"{session_key}.json"
+            path.write_text(json.dumps({
+                "compaction_count": 2,
+                "reminder_emitted": True,
+            }))
+            result = run_hook(state_dir)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotEqual(result.stdout, "")
 
     def test_tracks_sessions_independently(self):
         with tempfile.TemporaryDirectory() as state_dir:

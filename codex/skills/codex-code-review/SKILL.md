@@ -27,6 +27,18 @@ Before reviewing, read the accepted contract and, when available, the current ta
 6. Check performance only where relevant: N+1, unbounded loops, render churn, large payloads.
 7. Compare verification run against risk.
 
+## Uncertain Boundary ANDON
+
+Do not turn every review into an exhaustive distributed-systems analysis. Apply this gate only when the current change makes an important decision from indirect evidence such as time, ordering, status, existence, naming, or another cross-boundary value, or when recovery after failure cannot be established from the available contract and evidence.
+
+First inspect the smallest producer, representation, and recovery path that can answer the question. If that direct check cannot establish the meaning or recovery contract:
+
+- do not invent an identifier, fallback, retry, compatibility path, or extra test as a presumed fix;
+- state the confirmed facts, the unresolved assumption, the decision needed, and the possible impact;
+- return an ANDON instead of approving the change or expanding its scope.
+
+For a consequential repo-local change involving ordering, state transitions, idempotency, an external boundary, or production risk, use one bounded `codex-doubt-review` cycle when it can test the unresolved assumption. The main Codex retains the final judgment and ANDON decision.
+
 ## Finding Style
 
 - Lead with real bugs and regressions.

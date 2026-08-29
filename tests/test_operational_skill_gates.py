@@ -53,6 +53,41 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("implicit creation write", content)
         self.assertIn("before calling an operational procedure safe", content)
 
+    def test_ambiguous_references_stop_before_broad_log_search(self):
+        agents = (ROOT / "codex" / "AGENTS.md").read_text()
+        context = (
+            ROOT / "codex" / "skills" / "codex-context-engineering" / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("広いログ調査へ進む前にANDON", agents)
+        self.assertIn("one direct lookup", context)
+        self.assertIn("before starting a broad log search", context)
+
+    def test_concise_output_keeps_explicit_breakdowns(self):
+        content = (ROOT / "codex" / "AGENTS.md").read_text()
+
+        self.assertIn("明示された件数、内訳、対象、比較条件は省かない", content)
+
+    def test_review_raises_andon_instead_of_inventing_recovery(self):
+        review = (
+            ROOT / "codex" / "skills" / "codex-code-review" / "SKILL.md"
+        ).read_text()
+        doubt = (
+            ROOT / "codex" / "skills" / "codex-doubt-review" / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("Uncertain Boundary ANDON", review)
+        self.assertIn("do not invent an identifier, fallback, retry", review)
+        self.assertIn("use one bounded `codex-doubt-review` cycle", review)
+        self.assertIn("at most three", doubt)
+        self.assertIn("recommend an ANDON", doubt)
+
+    def test_failure_patterns_distinguish_indirect_observation(self):
+        content = (ROOT / "docs" / "failure-patterns.md").read_text()
+
+        self.assertIn("間接的な観測を確定事実として扱う", content)
+        self.assertIn("補完実装へ進まずANDON", content)
+
     def test_writing_revision_is_limited_to_the_requested_delta(self):
         content = (ROOT / "codex" / "skills" / "codex-writing" / "SKILL.md").read_text()
 
