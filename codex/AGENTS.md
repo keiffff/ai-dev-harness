@@ -16,6 +16,7 @@
 - 短く求められても、明示された件数、内訳、対象、比較条件は省かない。
 - 英語を直訳したような圧縮語、名詞の連結、造語、曖昧なラベル、メタ説明、疑似格言、飾りの比喩、重複を避け、誰が何をどうするかを普通の日本語で書く。
 - 会話内で作成した文章やクエリを修正する時は、指定されていない部分を残し、差分だけを求められた場合を除いて完成版を返す。差し替え作業をユーザーに委ねない。
+- ユーザーがコピペして使うMarkdown本文は、引用、表、内側のコードフェンスを含めて崩れないよう、本文全体を外側の4連バッククォートの`markdown`フェンスで囲む。内容変更の指示がなければ文面を変えない。
 
 ## Workflow Ownership
 
@@ -43,5 +44,6 @@
 - cloud write、deploy、IAM変更、secret参照、DB CLIは実行しない。必要ならユーザーが実行できるコマンドを提示する。
 - package manager scriptは用途を確認する。検証系は実行できるが、deploy、release、publish、migrate、seed、DB、IaC、prod系は勝手に実行しない。
 - secret、token、credential、private key、`.env`、raw environment dumpを表示・送信しない。存在確認は値を出さない方法で行う。
+- ユーザー向けに提示するシェルコマンドへ`set -euo pipefail`または`set -o pipefail`を追加しない。ユーザーが明示的に求めた場合だけ例外とする。
 - `rm -rf`、`git clean`、再帰的な権限変更などの破壊的操作を実行しない。対象を絞った回復可能な方法を優先する。
 - 現在の会話でユーザーに見えているworktreeを使う。temp cloneや別worktreeを実装・commit・検証のfallbackにしない。
