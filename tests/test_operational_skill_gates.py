@@ -82,6 +82,17 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("at most three", doubt)
         self.assertIn("recommend an ANDON", doubt)
 
+    def test_review_output_remains_copyable_outside_inline_review_ui(self):
+        agents = (ROOT / "codex" / "AGENTS.md").read_text()
+        review = (
+            ROOT / "codex" / "skills" / "codex-code-review" / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("コピー用レビュー本文", agents)
+        self.assertIn("インライン表示は補助", agents)
+        self.assertIn("outer four-backtick `markdown` fence", review)
+        self.assertIn("never replace or shorten the copyable review body", review)
+
     def test_failure_patterns_distinguish_indirect_observation(self):
         content = (ROOT / "docs" / "failure-patterns.md").read_text()
 

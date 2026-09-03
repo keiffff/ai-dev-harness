@@ -47,6 +47,15 @@ For a consequential repo-local change involving ordering, state transitions, ide
 - If no issues are found, say so and name residual test/risk gaps.
 - For structural issues, propose the move: extract helper, remove branch, use existing policy, split module, make boundary explicit.
 
+## Copyable Review Output
+
+Return one complete review body that the user can copy without reconstructing content from rendered Markdown, inline comments, or review cards.
+
+- Put the complete review body inside an outer four-backtick `markdown` fence so headings, lists, links, and nested three-backtick fences remain literal and copyable.
+- Include every finding with its priority and file/line reference when available, followed by the brief assessment and residual test or risk gaps.
+- When there are no findings, include the no-findings result and any residual gaps inside the same copyable body.
+- Structured or inline code comments may supplement the review, but they never replace or shorten the copyable review body.
+
 ## Scope Guard
 
 - Do not ask for unrelated cleanup in a review.
