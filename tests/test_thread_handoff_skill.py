@@ -94,6 +94,32 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         self.assertIn("same observed compaction", content)
         self.assertIn("Each later compaction is new degradation evidence", content)
 
+    def test_destination_starts_from_immutable_commit_not_moving_branch(self):
+        content = handoff_instructions()
+
+        self.assertIn("pass the immutable exact commit SHA", content)
+        self.assertIn(
+            "Do not pass a branch name, remote-tracking branch, or other moving ref",
+            content,
+        )
+        self.assertIn("require its `HEAD` to equal the exact commit", content)
+
+    def test_committed_tree_does_not_require_hand_copied_file_manifest(self):
+        content = handoff_instructions()
+
+        self.assertIn("Do not enumerate or hand-copy hashes", content)
+        self.assertIn("derive hashes mechanically", content)
+        self.assertIn("exact matching commit proves its committed tree", content)
+        self.assertIn("additional required-artifact hashes", content)
+
+    def test_async_creation_and_optional_archive_do_not_burden_user(self):
+        content = handoff_instructions()
+
+        self.assertIn("resolve the real task with bounded backoff", content)
+        self.assertIn("do not make the user poll", content)
+        self.assertIn("only when the user explicitly requested source archival", content)
+        self.assertIn("never require the user to perform cleanup", content)
+
 
 if __name__ == "__main__":
     unittest.main()

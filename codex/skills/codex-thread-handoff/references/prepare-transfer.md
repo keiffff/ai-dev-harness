@@ -19,11 +19,14 @@ Do not rely on ordinary `git status` for ignored artifacts. Search the active co
 
 ## Build The Required-Artifact Manifest
 
-For every required file:
+An exact commit identifies the complete committed tree. Do not enumerate or hand-copy hashes for files already contained in the verified recovery commit. Verify those files through the exact commit and destination `HEAD`; add a committed file to the manifest only when there is a specific reason to verify it independently.
 
-- classify it as committed, staged, tracked-dirty, untracked, or ignored;
+Build the manifest only for task-required state outside that commit, such as staged, tracked-dirty, untracked, ignored, external, or snapshot-backed artifacts. For every manifest entry:
+
+- classify it as staged, tracked-dirty, untracked, ignored, external, snapshot-backed, or exceptionally committed;
 - record its recovery source and hash;
-- verify committed claims with `git ls-tree`, `git cat-file`, or `git show`;
+- derive hashes mechanically with the relevant Git or checksum command and preserve the command output; do not transcribe or infer hashes from prose;
+- verify exceptionally committed claims with `git rev-parse <commit>:<path>`, `git ls-tree`, `git cat-file`, or `git show`;
 - record the transfer method for non-committed artifacts;
 - later record and compare the destination hash.
 
@@ -64,7 +67,7 @@ Use this structure:
 - Source HEAD: `<commit>`
 - Expected changes: <tracked, staged, untracked, required ignored inventory>
 - Recovery source: <commit, approved snapshot, or verified transfer>
-- Required-artifact manifest: <path, classification, recovery source and hash, destination hash, transfer method>
+- Required-artifact manifest: <only state outside the exact recovery commit, plus any exceptional committed checks; path, classification, recovery source and mechanically derived hash, destination hash, transfer method>
 
 ## Decisions and rejected alternatives
 - <Decision, rationale, and reopening condition.>
@@ -94,6 +97,6 @@ Prefer references over copied diffs, logs, specs, or source code. Include failed
 
 Do not collapse the `Open work` inventory into the proposed resume point. For an explicit split, record work retained elsewhere under `Explicit exclusions`.
 
-Packet prose is not proof that an artifact is committed or transferred. Complete the handoff only after recovery-source and destination hashes match for every manifest entry.
+Packet prose is not proof that an artifact is committed or transferred. The exact matching commit proves its committed tree. Complete the handoff only after the destination `HEAD` matches that commit and recovery-source and destination hashes match for every additional manifest entry.
 
 Keep the initial packet operational rather than historical. If a fuller transcript backup is useful, keep it separate instead of injecting it into the destination.

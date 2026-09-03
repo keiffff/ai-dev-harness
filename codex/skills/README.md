@@ -26,7 +26,7 @@ skill は、プロンプトを長くするための文章ではありません�
 | `gpt-sol-strategic-review` | Sol を明示的に使う高リスク・高価値の second opinion | OpenAI 側の強い advisor として使う | 普段の実装や文章生成に使わない |
 | `chrome-devtools-on-demand` | network、console、performance、page inspection が必要な browser debug | 必要な時だけ DevTools MCP を起動する | 常時 browser automation を前提にしない |
 | `codex-thread-time-audit` | Codex thread の作業時間や日次稼働を集計したいとき | thread turn から開始・終了時刻を抽出して集計する | thread-level created/updated だけで雑に集計しない |
-| `codex-thread-handoff` | 長期化、compaction、工程境界、反復修正でfresh taskへの移行が有効なとき | 移行を一度だけ提案し、明示承認後にcompactなcontinuation packetで新規taskへ引き継ぐ | 提案だけでtaskを作成したり、全履歴をforkしたり、source taskをarchiveしない |
+| `codex-thread-handoff` | 長期化、compaction、工程境界、反復修正でfresh taskへの移行が有効なとき | 移行を一度だけ提案し、明示承認後にexact commitとcompactなcontinuation packetで新規taskへ引き継ぐ | 提案だけでtaskを作成したり、全履歴をforkしたりしない。source taskのarchiveは明示された設定・依頼がある場合のみ行う |
 | `grok-x-research` | X の最新投稿、特定アカウントの発言、障害初動、実務者の反応を調べるとき | X 専用 scout としてURL、対立意見、citation、費用を返す | 通常Web調査、最終検証、設計判断、repo変更を任せない |
 
 ## How To Choose

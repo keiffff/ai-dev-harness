@@ -29,7 +29,15 @@ If the user declines or ignores it, continue without repeating it for the same o
 
 ## Require Explicit Authority
 
-Create a destination only when the latest user message explicitly asks to move, transfer, hand off, or continue in a fresh task, or accepts the suggestion. Remarks such as "this is getting long" are not authority. Never use a transcript-preserving fork for context relief, and do not archive, delete, compact, rename, or otherwise mutate the source task.
+Create a destination only when the latest user message explicitly asks to move, transfer, hand off, or continue in a fresh task, or accepts the suggestion. Remarks such as "this is getting long" are not authority. Never use a transcript-preserving fork for context relief, and do not delete, compact, rename, or otherwise mutate the source task.
+
+Archive the source only after destination verification and only when the user explicitly requested source archival for this handoff or has a verified standing preference to archive successfully handed-off tasks. Otherwise leave it unchanged. Archival is cleanup after success, never a substitute for verification.
+
+## Preflight Task Coordination
+
+After explicit acceptance, verify that the current task can call the capabilities needed to create and verify the destination before reading execution references, inspecting workspace state, building a packet, or writing a backup. Require destination creation, destination reading or waiting, and follow-up delivery; check the actual callable tools rather than inferring availability from app guidance or this skill.
+
+If any required capability is unavailable, stop immediately. Do not inspect the workspace, build or save a continuation packet, create a snapshot, or offer a subagent as a substitute. Report the missing capability and give one concise instruction to ask a coordinator task that exposes Codex task-management tools to hand off this source task by task ID. Produce a manual handoff document only when the user explicitly requests that fallback.
 
 ## Preserve The Source Task Scope
 
@@ -51,14 +59,14 @@ Use the source task identity and root outcome for the destination title and obje
 
 ## Bound Handoff Authority
 
-A handoff authorizes only destination-task creation, context transfer, required-artifact transfer, and read-only destination verification. It does not authorize substantive work in the destination, browser, credentials, external services, cloud use, implementation, or Git mutation. Source-task permissions do not transfer.
+A handoff authorizes only destination-task creation, context transfer, required-artifact transfer, and read-only destination verification. Selecting or correcting the destination checkout to the exact recovery commit is part of context transfer. It does not authorize substantive work in the destination, browser, credentials, external services, cloud use, implementation, commit, branch creation, rebase, push, or other unrelated Git mutation. Source-task permissions do not transfer. Source archival requires the separate authority described above.
 
 After destination verification, restate the transferred state and proposed resume point, then stop and wait for a new user message. Treat all such packet content as context only.
 
 ## Load Execution Detail Progressively
 
 - For timing advice or a suggestion, use only this file.
-- After explicit acceptance, read [references/prepare-transfer.md](references/prepare-transfer.md) to inspect workspace state and build the continuation packet.
+- After explicit acceptance and a successful task-coordination preflight, read [references/prepare-transfer.md](references/prepare-transfer.md) to inspect workspace state and build the continuation packet.
 - Before creating or verifying the destination, also read [references/verify-destination.md](references/verify-destination.md).
 
 Do not load the execution references merely to decide whether to suggest a handoff.
