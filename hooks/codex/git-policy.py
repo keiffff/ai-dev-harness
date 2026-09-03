@@ -7,7 +7,7 @@ from typing import Optional
 from hook_utils import extract_command, first_command_name, is_approved_wrapper_segment, is_invalid_payload, load_payload, normalize_command_tokens, split_segments, unsafe_shell_reason
 
 APPROVED_WRAPPER = os.environ.get("GIT_USER_APPROVED_WRAPPER", os.path.expanduser("~/.local/bin/git-user-approved"))
-BLOCKED_SUBCOMMANDS = {"commit", "push"}
+BLOCKED_SUBCOMMANDS = {"checkout", "commit", "push", "switch"}
 
 
 def deny(message: str) -> None:
@@ -39,7 +39,7 @@ def git_subcommand(tokens: list[str]) -> Optional[str]:
 
 
 def has_blocked_git_fallback(command: str) -> bool:
-    pattern = re.compile(r"(^|[;&|]\s*)(command\s+|\S*/)?git(?:\s+(?:-[A-Za-z]+|--[A-Za-z0-9-]+(?:=\S+)?)(?:\s+\S+)?)*\s+(commit|push)\b")
+    pattern = re.compile(r"(^|[;&|]\s*)(command\s+|\S*/)?git(?:\s+(?:-[A-Za-z]+|--[A-Za-z0-9-]+(?:=\S+)?)(?:\s+\S+)?)*\s+(checkout|commit|push|switch)\b")
     return bool(pattern.search(command))
 
 
@@ -68,7 +68,11 @@ def main() -> None:
     if reason:
         deny(reason)
     if is_blocked_git_command(command):
-        deny("Blocked raw git commit/push. Use " + APPROVED_WRAPPER + " commit|push only after the user explicitly asks for commit or push.")
+        deny(
+            "Blocked raw git checkout/commit/push/switch. Use "
+            + APPROVED_WRAPPER
+            + " for the supported Git mutation after the user explicitly asks for it."
+        )
 
 
 if __name__ == "__main__":

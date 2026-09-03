@@ -1,6 +1,6 @@
 ---
 name: codex-git-publish
-description: Stage, commit, push, update a PR branch, or sync submodules through the approved Git wrapper only when the latest user message explicitly requests it.
+description: Create or switch branches, stage, commit, push, update a PR branch, or sync submodules through the approved Git wrapper only when the latest user message explicitly requests it.
 ---
 
 # Codex Git Publish
@@ -9,17 +9,26 @@ Use the current user-visible worktree. This skill defines the publication proced
 
 ## Authorization
 
-- Perform commit, merge, push, PR branch update, or submodule sync only when the latest user request explicitly asks for that operation. A request to incorporate the latest base/default branch authorizes merging that named branch into the current branch.
+- Perform branch creation or switching, commit, merge, push, PR branch update, or submodule sync only when the latest user request explicitly asks for that operation. A request to incorporate the latest base/default branch authorizes merging that named branch into the current branch.
 - Rebase only when the user explicitly requests it or when it is the necessary, safe integration step within an explicitly requested push or PR branch update.
 - Read-only Git commands are allowed when relevant.
-- Do not carry commit, merge, or push authorization into a later user turn.
+- Do not carry Git mutation authorization into a later user turn.
 - Use English commit messages.
 
 ## Wrapper Boundary
 
-Use `/Users/kei/.local/bin/git-user-approved` for `add`, `commit`, `merge`, `rebase`, `submodule update`, and `push`. Do not use raw mutation commands.
+Use `/Users/kei/.local/bin/git-user-approved` for `add`, `commit`, `merge`, `rebase`, `switch`, `submodule update`, and `push`. Do not use raw mutation commands.
 
 If the wrapper is blocked by the sandbox, rerun the same wrapper command through the approval flow. Do not switch to another Git path.
+
+## Branch Creation And Switching
+
+1. Confirm the latest user message explicitly names or authorizes the target branch.
+2. Inspect the current branch, HEAD, and worktree state.
+3. Create a branch from the current HEAD with `git-user-approved switch --confirm-user-requested --create <branch>`.
+4. Switch to an existing branch with `git-user-approved switch --confirm-user-requested <branch>`.
+
+The wrapper does not support `checkout`, forced recreation, detaching HEAD, discarding changes, or an implicit start point. Do not fall back to raw `git switch`, `git checkout`, or `git branch`.
 
 ## Commit
 

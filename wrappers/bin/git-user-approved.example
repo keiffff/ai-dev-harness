@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-  print -u2 "Usage: git-user-approved add|commit|merge|rebase|submodule|push [args...]"
+  print -u2 "Usage: git-user-approved add|commit|merge|rebase|switch|submodule|push [args...]"
   exit 2
 fi
 
@@ -87,6 +87,22 @@ case "$1" in
     done
     exec git rebase "$@"
     ;;
+  switch)
+    shift
+    if [[ "${1:-}" != "--confirm-user-requested" ]]; then
+      print -u2 "Switch requires an explicit latest user request and --confirm-user-requested."
+      exit 2
+    fi
+    shift
+    if [[ $# -eq 1 && "$1" != -* ]]; then
+      exec git switch "$1"
+    fi
+    if [[ $# -eq 2 && ("$1" == "-c" || "$1" == "--create") && "$2" != -* ]]; then
+      exec git switch "$@"
+    fi
+    print -u2 "Usage: git-user-approved switch --confirm-user-requested [-c|--create] <branch>"
+    exit 2
+    ;;
   submodule)
     shift
     if [[ $# -lt 2 || "$1" != "update" ]]; then
@@ -127,7 +143,7 @@ case "$1" in
     exec git push "$@"
     ;;
   *)
-    print -u2 "git-user-approved only allows add, commit, merge, rebase, submodule update, or push."
+    print -u2 "git-user-approved only allows add, commit, merge, rebase, switch, submodule update, or push."
     exit 2
     ;;
 esac

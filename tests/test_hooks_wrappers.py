@@ -130,6 +130,15 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(run_hook('git-policy.py', '/approved/git-user-approved add README.md ; git push origin main'))
         self.assertAllowed(run_hook('git-policy.py', '/approved/git-user-approved push --confirm-user-requested origin HEAD:main'))
 
+    def test_git_hook_blocks_raw_branch_switching(self):
+        self.assertBlocked(run_hook('git-policy.py', 'git switch -c HBE-301_medication-statement-create-api'))
+        self.assertBlocked(run_hook('git-policy.py', 'git checkout -b HBE-301_medication-statement-create-api'))
+        self.assertBlocked(run_hook('git-policy.py', 'git -C /tmp/example switch -c HBE-301_medication-statement-create-api'))
+        self.assertAllowed(run_hook(
+            'git-policy.py',
+            '/approved/git-user-approved switch --confirm-user-requested --create HBE-301_medication-statement-create-api',
+        ))
+
     def test_local_safety_blocks_shell_bypasses_and_destructive_forms(self):
         self.assertBlocked(run_hook('local-safety-policy.py', f'command {RM} {RF} /tmp/example'))
         self.assertBlocked(run_hook('local-safety-policy.py', f'printf x | xargs {RM} {RF}'))
@@ -228,6 +237,34 @@ class WrapperTests(unittest.TestCase):
         self.assertNotEqual(run(['merge', '--confirm-user-requested', '--squash', 'origin/staging']).returncode, 0)
         self.assertNotEqual(run(['merge', '--confirm-user-requested', 'origin/staging', 'origin/main']).returncode, 0)
         self.assertEqual(run(['merge', '--abort']).returncode, 0)
+
+    def test_git_wrapper_requires_explicit_switch_confirmation(self):
+        script = ROOT / 'wrappers' / 'bin' / 'git-user-approved.example'
+        run = lambda args: self.run_with_fake_bin(script, 'git', args)
+        self.assertNotEqual(run(['switch', '--create', 'HBE-301_medication-statement-create-api']).returncode, 0)
+        created = run([
+            'switch',
+            '--confirm-user-requested',
+            '--create',
+            'HBE-301_medication-statement-create-api',
+        ])
+        self.assertEqual(created.returncode, 0, created.stderr)
+        self.assertEqual(
+            created.stdout.splitlines(),
+            ['switch', '--create', 'HBE-301_medication-statement-create-api'],
+        )
+        existing = run(['switch', '--confirm-user-requested', 'main'])
+        self.assertEqual(existing.returncode, 0, existing.stderr)
+        self.assertEqual(existing.stdout.splitlines(), ['switch', 'main'])
+        self.assertNotEqual(run(['switch', '--confirm-user-requested', '--detach', 'main']).returncode, 0)
+        self.assertNotEqual(run(['switch', '--confirm-user-requested', '--create', '-invalid']).returncode, 0)
+        self.assertNotEqual(run([
+            'switch',
+            '--confirm-user-requested',
+            '--create',
+            'new-branch',
+            'origin/main',
+        ]).returncode, 0)
 
     def run_claude_wrapper(
         self,
