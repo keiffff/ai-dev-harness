@@ -49,13 +49,15 @@ def checkpoint_command(tokens: list[str]) -> bool:
     tokens = normalize_command_tokens(tokens)
     if not tokens:
         return False
+    candidate = ""
     if first_command_name(tokens) == "decision-checkpoint.py":
-        return True
-    return (
-        first_command_name(tokens) in {"python", "python3"}
-        and len(tokens) >= 2
-        and os.path.basename(tokens[1]) == "decision-checkpoint.py"
-    )
+        candidate = tokens[0]
+    elif first_command_name(tokens) in {"python", "python3"} and len(tokens) >= 2:
+        candidate = tokens[1]
+    if not candidate:
+        return False
+    expected = Path(__file__).with_name("decision-checkpoint.py").resolve()
+    return Path(candidate).expanduser().resolve() == expected
 
 
 def git_subcommand(tokens: list[str]) -> str:
@@ -109,17 +111,6 @@ def requires_checkpoint(payload: dict) -> bool:
     return False
 
 
-def strings(value):
-    if isinstance(value, str):
-        yield value
-    elif isinstance(value, dict):
-        for nested in value.values():
-            yield from strings(nested)
-    elif isinstance(value, list):
-        for nested in value:
-            yield from strings(nested)
-
-
 def valid_checkpoint(value: object) -> bool:
     if not isinstance(value, dict) or value.get("schemaVersion") != 1:
         return False
@@ -134,6 +125,26 @@ def valid_checkpoint(value: object) -> bool:
     if not isinstance(evidence, list) or not all(isinstance(item, str) for item in evidence):
         return False
     return transition not in {"REVISE", "SUSPEND"} or bool(evidence)
+
+
+def checkpoint_execution_output(item: object) -> str:
+    if not isinstance(item, dict) or item.get("type") != "CommandExecution":
+        return ""
+    if item.get("status") != "completed" or item.get("exit_code") != 0:
+        return ""
+    command = item.get("command")
+    if not isinstance(command, list) or not command or not all(isinstance(token, str) for token in command):
+        return ""
+    if first_command_name(command) in {"sh", "bash", "zsh", "dash", "ksh"}:
+        if len(command) != 3 or command[1] not in {"-c", "-lc"}:
+            return ""
+        segments = split_segments(command[2])
+        if segments is None or len(segments) != 1 or not checkpoint_command(segments[0]):
+            return ""
+    elif not checkpoint_command(command):
+        return ""
+    stdout = item.get("stdout")
+    return stdout if isinstance(stdout, str) else ""
 
 
 def current_turn_has_checkpoint(transcript_path: str) -> bool:
@@ -158,14 +169,16 @@ def current_turn_has_checkpoint(transcript_path: str) -> bool:
                 if entry.get("type") == "response_item" and payload.get("type") == "message" and payload.get("role") == "user":
                     found = False
                     continue
-                for text in strings(payload):
-                    for match in MARKER_RE.finditer(text):
-                        try:
-                            candidate = json.loads(match.group(1))
-                        except json.JSONDecodeError:
-                            continue
-                        if valid_checkpoint(candidate):
-                            found = True
+                if entry.get("type") != "event_msg" or payload.get("type") != "item_completed":
+                    continue
+                stdout = checkpoint_execution_output(payload.get("item"))
+                for match in MARKER_RE.finditer(stdout):
+                    try:
+                        candidate = json.loads(match.group(1))
+                    except json.JSONDecodeError:
+                        continue
+                    if valid_checkpoint(candidate):
+                        found = True
     except UnicodeError:
         return False
     return found

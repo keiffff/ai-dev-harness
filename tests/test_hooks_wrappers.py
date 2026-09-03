@@ -43,7 +43,12 @@ def run_hook(script_name: str, command: str | None = None, payload: str | None =
     )
 
 
-def browser_hook(user_messages: list[str], code: str, prior_browser_runtime: bool = False) -> subprocess.CompletedProcess[str]:
+def browser_hook(
+    user_messages: list[str],
+    code: str,
+    prior_browser_runtime: bool = False,
+    tool_name: str = "mcp__node_repl__js",
+) -> subprocess.CompletedProcess[str]:
     with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', encoding='utf-8') as transcript:
         if prior_browser_runtime:
             transcript.write(json.dumps({
@@ -70,6 +75,7 @@ def browser_hook(user_messages: list[str], code: str, prior_browser_runtime: boo
         transcript.flush()
         return run_hook('browser-policy.py', payload=json.dumps({
             'transcript_path': transcript.name,
+            'tool_name': tool_name,
             'tool_input': {'code': code},
         }))
 
@@ -149,6 +155,7 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(run_hook('local-safety-policy.py', 'echo $' + f'({CAT} {ENV_FILE})'))
         self.assertBlocked(run_hook('local-safety-policy.py', 'echo $API_TOKEN'))
         self.assertAllowed(run_hook('local-safety-policy.py', 'pnpm test'))
+        self.assertAllowed(run_hook('local-safety-policy.py', 'python3 -c "print(1)"'))
 
     def test_browser_hook_requires_explicit_permission_in_latest_user_message(self):
         setup = 'const { setupBrowserRuntime } = await import("/plugin/scripts/browser-client.mjs");'
@@ -165,9 +172,16 @@ class HookPolicyTests(unittest.TestCase):
             '[Design Doc](plugin://browser@openai-bundled?mention=tab-v1&source=extension'
             '&browserId=example&tabId=123) を確認して'
         )
-        self.assertBlocked(browser_hook([tab_mention], 'await cua.getState();'))
-        self.assertBlocked(browser_hook([tab_mention], 'let tab = await cua.getTab("123", { browser: "1" });'))
-        self.assertAllowed(browser_hook([f'{tab_mention}\nbrowser-control: allow'], 'await cua.getState();'))
+        cua_tool = 'mcp__cua_repl__js'
+        self.assertBlocked(browser_hook([tab_mention], 'await cua.getState();', tool_name=cua_tool))
+        self.assertBlocked(browser_hook([tab_mention], 'await cua["getState"]();', tool_name=cua_tool))
+        self.assertBlocked(browser_hook([tab_mention], 'const ui = cua; await ui.getState();', tool_name=cua_tool))
+        self.assertBlocked(browser_hook([tab_mention], '2 + 2', tool_name=cua_tool))
+        self.assertAllowed(browser_hook(
+            [f'{tab_mention}\nbrowser-control: allow'],
+            'await cua["getState"]();',
+            tool_name=cua_tool,
+        ))
 
     def test_browser_hook_registration_covers_node_and_cua_repl(self):
         config = (ROOT / 'codex' / 'config.example.toml').read_text(encoding='utf-8')
@@ -226,6 +240,34 @@ class WrapperTests(unittest.TestCase):
             self.assertNotEqual(run(['push', '--confirm-user-requested', '--force', 'origin', 'HEAD:main']).returncode, 0)
             self.assertNotEqual(run(['push', '--confirm-user-requested', 'origin', ':main']).returncode, 0)
             self.assertEqual(run(['push', '--confirm-user-requested', '--force-with-lease=refs/heads/main:abc', 'origin', 'HEAD:main']).returncode, 0)
+
+    def test_git_wrapper_rejects_rebase_exec_forms(self):
+        script = ROOT / 'wrappers' / 'bin' / 'git-user-approved.example'
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Path(tmp) / 'git'
+            fake.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+            fake.chmod(0o755)
+            env = os.environ.copy()
+            env['PATH'] = tmp + os.pathsep + env.get('PATH', '')
+
+            def run(args: list[str]) -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    [str(script), *args],
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=env,
+                    check=False,
+                )
+
+            for args in (
+                ['rebase', '-x', 'touch /tmp/example', 'origin/main'],
+                ['rebase', '-xtouch /tmp/example', 'origin/main'],
+                ['rebase', '--exec', 'touch /tmp/example', 'origin/main'],
+                ['rebase', '--exec=touch /tmp/example', 'origin/main'],
+            ):
+                self.assertNotEqual(run(args).returncode, 0, args)
+            self.assertEqual(run(['rebase', 'origin/main']).returncode, 0)
 
     def test_git_wrapper_requires_explicit_merge_confirmation(self):
         script = ROOT / 'wrappers' / 'bin' / 'git-user-approved.example'

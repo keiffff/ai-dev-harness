@@ -31,6 +31,64 @@ def write_jsonl(path, rows):
 
 
 class ThreadTimeAuditExtractorTests(unittest.TestCase):
+    def test_each_turn_uses_its_matching_turn_context_cwd(self):
+        extractor = load_extractor()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            codex_home = Path(temp_dir)
+            session_id = "session-project-switch"
+            write_jsonl(
+                codex_home / "sessions" / "2026" / "08" / "25" / "rollout.jsonl",
+                [
+                    {
+                        "timestamp": "2026-08-25T00:00:00Z",
+                        "type": "session_meta",
+                        "payload": {"id": session_id, "cwd": "/workspace/initial", "source": "vscode"},
+                    },
+                    {
+                        "timestamp": "2026-08-25T00:00:01Z",
+                        "type": "event_msg",
+                        "payload": {"type": "task_started", "turn_id": "first", "started_at": 1001},
+                    },
+                    {
+                        "timestamp": "2026-08-25T00:00:02Z",
+                        "type": "turn_context",
+                        "payload": {"turn_id": "first", "cwd": "/workspace/project-a"},
+                    },
+                    {
+                        "timestamp": "2026-08-25T00:00:03Z",
+                        "type": "event_msg",
+                        "payload": {"type": "task_complete", "turn_id": "first", "completed_at": 1003},
+                    },
+                    {
+                        "timestamp": "2026-08-25T00:00:04Z",
+                        "type": "event_msg",
+                        "payload": {"type": "task_started", "turn_id": "second", "started_at": 1004},
+                    },
+                    {
+                        "timestamp": "2026-08-25T00:00:05Z",
+                        "type": "turn_context",
+                        "payload": {"turn_id": "second", "cwd": "/workspace/project-b"},
+                    },
+                    {
+                        "timestamp": "2026-08-25T00:00:06Z",
+                        "type": "event_msg",
+                        "payload": {"type": "task_complete", "turn_id": "second", "completed_at": 1006},
+                    },
+                ],
+            )
+
+            rows, stats = extractor.extract_rows(
+                codex_home,
+                1000,
+                1100,
+                {session_id: "fixture"},
+                {},
+                "top-level",
+            )
+
+            self.assertEqual([row["project"] for row in rows], ["project-a", "project-b"])
+            self.assertEqual(stats["tasks_with_session_cwd_fallback"], 0)
+
     def test_task_start_is_recorded_across_user_marker_formats(self):
         extractor = load_extractor()
         with tempfile.TemporaryDirectory() as temp_dir:

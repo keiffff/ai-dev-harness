@@ -14,6 +14,7 @@ BROWSER_CODE_MARKERS = (
     ".browsers.getDefault(",
     ".browsers.getForUrl(",
     "cua.",
+    "cua[",
 )
 
 
@@ -29,6 +30,18 @@ def extract_code(payload: dict) -> str:
         if isinstance(code, str):
             return code
     return ""
+
+
+def invoked_tool_name(payload: dict) -> str:
+    for key in ("tool_name", "tool", "name"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            return value.casefold()
+    return ""
+
+
+def is_cua_tool(payload: dict) -> bool:
+    return "cua_repl" in invoked_tool_name(payload)
 
 
 def transcript_context(transcript_path: str) -> tuple[str, bool]:
@@ -93,7 +106,7 @@ def main() -> None:
         deny("Blocked invalid hook payload.")
 
     message, browser_runtime_seen = transcript_context(str(payload.get("transcript_path") or ""))
-    if not is_browser_code(extract_code(payload)) and not browser_runtime_seen:
+    if not is_cua_tool(payload) and not is_browser_code(extract_code(payload)) and not browser_runtime_seen:
         return
 
     if not explicitly_requests_browser(message):

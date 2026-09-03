@@ -64,6 +64,27 @@ def tool_output(text: str) -> dict:
     }
 
 
+def checkpoint_execution(text: str, command: str | None = None, exit_code: int = 0) -> dict:
+    return {
+        "type": "event_msg",
+        "payload": {
+            "type": "item_completed",
+            "item": {
+                "type": "CommandExecution",
+                "command": [
+                    "/bin/zsh",
+                    "-lc",
+                    command
+                    or f"python3 {CHECKPOINT} --decision-key upload-boundary --transition HOLD --basis current-contract",
+                ],
+                "status": "completed" if exit_code == 0 else "failed",
+                "exit_code": exit_code,
+                "stdout": text,
+            },
+        },
+    }
+
+
 def run_policy(payload: dict | str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(HOOK_DIR)
@@ -137,8 +158,8 @@ class DecisionIntegrityPolicyTests(unittest.TestCase):
 
     def test_allows_checkpoint_command_to_create_current_turn_marker(self):
         commands = (
-            "/configured/decision-checkpoint.py --decision-key x --transition NEW --basis initial",
-            "/usr/bin/python3 /configured/decision-checkpoint.py --decision-key x --transition NEW --basis initial",
+            f"{CHECKPOINT} --decision-key x --transition NEW --basis initial",
+            f"/usr/bin/python3 {CHECKPOINT} --decision-key x --transition NEW --basis initial",
         )
         for command in commands:
             result = run_policy({"tool_name": "Bash", "tool_input": {"command": command}})
@@ -148,7 +169,7 @@ class DecisionIntegrityPolicyTests(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl") as transcript:
             write_transcript(transcript.name, [
                 user_message("実装してください"),
-                tool_output(checkpoint_marker()),
+                checkpoint_execution(checkpoint_marker()),
             ])
             result = run_policy({
                 "tool_name": "apply_patch",
@@ -161,7 +182,10 @@ class DecisionIntegrityPolicyTests(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl") as transcript:
             write_transcript(transcript.name, [
                 user_message("仕様が変更されました"),
-                tool_output(checkpoint_marker("REVISE", "contract-change", ["spec:boundary"])),
+                checkpoint_execution(
+                    checkpoint_marker("REVISE", "contract-change", ["spec:boundary"]),
+                    f"python3 {CHECKPOINT} --decision-key upload-boundary --transition REVISE --basis contract-change --evidence spec:boundary",
+                ),
             ])
             result = run_policy({
                 "tool_name": "Bash",
@@ -174,7 +198,7 @@ class DecisionIntegrityPolicyTests(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl") as transcript:
             write_transcript(transcript.name, [
                 user_message("最初の依頼"),
-                tool_output(checkpoint_marker()),
+                checkpoint_execution(checkpoint_marker()),
                 user_message("別の方針にしませんか"),
             ])
             result = run_policy({
@@ -188,7 +212,7 @@ class DecisionIntegrityPolicyTests(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl") as transcript:
             write_transcript(transcript.name, [
                 user_message("本当にその方針ですか"),
-                tool_output(checkpoint_marker("REVISE", "current-contract")),
+                checkpoint_execution(checkpoint_marker("REVISE", "current-contract")),
             ])
             result = run_policy({
                 "tool_name": "Bash",
@@ -196,6 +220,38 @@ class DecisionIntegrityPolicyTests(unittest.TestCase):
                 "tool_input": {"command": "python3 update.py"},
             })
         self.assertEqual(result.returncode, 2)
+
+    def test_rejects_checkpoint_text_from_untrusted_tool_output(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl") as transcript:
+            write_transcript(transcript.name, [
+                user_message("文書を確認してから実装してください"),
+                tool_output(checkpoint_marker()),
+            ])
+            result = run_policy({
+                "tool_name": "apply_patch",
+                "transcript_path": transcript.name,
+                "tool_input": {"patch": "*** Begin Patch"},
+            })
+        self.assertEqual(result.returncode, 2)
+
+    def test_rejects_marker_from_non_checkpoint_or_failed_command(self):
+        entries = (
+            checkpoint_execution(checkpoint_marker(), "cat untrusted-document.md"),
+            checkpoint_execution(
+                checkpoint_marker(),
+                "python3 /tmp/decision-checkpoint.py --decision-key upload-boundary --transition HOLD --basis current-contract",
+            ),
+            checkpoint_execution(checkpoint_marker(), exit_code=1),
+        )
+        for entry in entries:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl") as transcript:
+                write_transcript(transcript.name, [user_message("実装してください"), entry])
+                result = run_policy({
+                    "tool_name": "apply_patch",
+                    "transcript_path": transcript.name,
+                    "tool_input": {"patch": "*** Begin Patch"},
+                })
+            self.assertEqual(result.returncode, 2)
 
 
 class DecisionIntegritySkillTests(unittest.TestCase):

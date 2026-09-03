@@ -178,7 +178,12 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides, session_scope=
                 continue
 
             if item.get("type") == "turn_context":
-                cwd = payload.get("cwd") or cwd
+                turn_cwd = payload.get("cwd")
+                cwd = turn_cwd or cwd
+                turn_id = payload.get("turn_id")
+                if turn_id in tasks and turn_cwd:
+                    tasks[turn_id]["cwd"] = turn_cwd
+                    tasks[turn_id]["cwd_source"] = "turn_context"
                 continue
 
             # Newer Codex session logs record the user prompt as a
@@ -205,6 +210,8 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides, session_scope=
                     "end": None,
                     "complete_type": None,
                     "user_evidence": set(),
+                    "cwd": cwd,
+                    "cwd_source": "session_meta" if cwd else "missing",
                 }
                 active.append(turn_id)
             elif event_type == "user_message":
@@ -241,11 +248,13 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides, session_scope=
                 continue
             seen.add(key)
             title = overrides.get(meta_id) or titles.get(meta_id) or f"未題 ({meta_id or path.stem})"
+            if task["cwd_source"] != "turn_context":
+                stats["tasks_with_session_cwd_fallback"] += 1
             rows.append(
                 {
                     "session_id": meta_id or path.stem,
                     "turnId": task["turn_id"],
-                    "project": project_from_cwd(cwd),
+                    "project": project_from_cwd(task["cwd"]),
                     "thread": title,
                     "startedAt": started,
                     "completedAt": completed,
@@ -274,6 +283,8 @@ def build_diagnostics(stats, start, end, timezone, session_scope):
         review_reasons.append("some user-message markers were not associated with a known task start")
     if stats["completion_without_task_start"]:
         review_reasons.append("some completion events were not associated with a known task start")
+    if stats["tasks_with_session_cwd_fallback"]:
+        review_reasons.append("some turns used session cwd because turn_context cwd was unavailable")
     if session_scope == "all" and stats["structural_subagent_files"]:
         review_reasons.append("subagent logs may contain inherited parent history; review provenance before reporting")
     return {

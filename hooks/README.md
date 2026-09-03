@@ -10,20 +10,22 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 
 - Git の commit/push は approved wrapper に寄せる
 - AWS/GCP/GitHub CLI は raw command ではなく read-only wrapper に寄せる
-- `.env` や credential file の表示を止める
+- `.env` や credential file を直接表示する代表的なshell commandを止める
 - `rm -rf`、`git clean`、recursive chmod/chown などの破壊的操作を止める
 - shell interpreter、command substitution、process substitution、multiline shell、shell grouping、xargs、sudo を保守的に拒否する
 - Browser / CUA runtime は、現在のユーザーメッセージに一回限りの許可行 `browser-control: allow` がある場合だけ許可する
 
 `shell-policy.py` は、Git、AWS、GCP、GitHub CLI、local safety の各検査を1回のPreToolUse hookから呼び出します。個別policyは単体testと責務分離のため残しますが、同じshell呼び出しへ5本のhookを登録しません。
 
-`decision-integrity-policy.py` は、書き込みを伴うshellまたは`apply_patch`の前に、現在のユーザーturnで`decision-checkpoint.py`が有効な判断状態を記録したか検査します。`NEW`、`HOLD`、`REVISE`、`SUSPEND`の遷移と許可された根拠種別を機械的に確認し、checkpointなしの変更を拒否します。自然言語の意味や判断の正しさをhookだけで推測するものではありません。
+`decision-integrity-policy.py` は、書き込みを伴うshellまたは`apply_patch`の前に、現在のユーザーturnで`decision-checkpoint.py`が有効な判断状態を記録したか検査します。成功したcheckpoint commandの実行結果だけを受け付け、文書や一般tool出力に同じ文字列が含まれていてもcheckpointとは扱いません。`NEW`、`HOLD`、`REVISE`、`SUSPEND`の遷移と許可された根拠種別を機械的に確認し、checkpointなしの変更を拒否します。自然言語の意味や判断の正しさをhookだけで推測するものではありません。
 
 ## Browser Permission Gate
 
 `browser-policy.py` は Browser plugin を常時有効にしたまま、Browser runtime を使う Node REPL と CUA REPL の呼び出しを実行前に検査します。現在のユーザーメッセージに独立した行として `browser-control: allow` がなければ拒否します。Browser pluginや既存タブへのmentionは参照指定として扱い、それだけでは操作を許可しません。自然文の語句や不満の表現から許可を推測せず、過去のターンの許可も持ち越しません。
 
-このhookは `browser-client.mjs`、`setupBrowserRuntime`、標準的な Browser binding、`cua.*` の呼び出しを対象にします。一度 Browser runtime を初期化したtaskでは、binding名を変えた迂回を防ぐため、以後の対象REPL呼び出しも同じ許可対象として扱います。Browserを使っていないtaskの通常の Node REPL 利用は対象外です。Browser plugin の手動有効化・無効化を運用手順にはしません。
+このhookは CUA REPL toolを呼び出し内容にかかわらず対象にします。Node REPLでは、`browser-client.mjs`、`setupBrowserRuntime`、標準的な Browser bindingを対象にし、一度 Browser runtime を初期化したtaskでは、binding名を変えた迂回を防ぐため、以後の対象REPL呼び出しも同じ許可対象として扱います。Browserを使っていないtaskの通常の Node REPL 利用は対象外です。Browser plugin の手動有効化・無効化を運用手順にはしません。
+
+`local-safety-policy.py` は任意のPython、Node.js、Rubyなどのソースコードを解析するDLPではありません。開発用interpreterを一律に禁止すると通常のtest、生成、検証を妨げるため、既知のshell経由の誤表示だけを止めます。secretはCodexから読めるworkspaceへ置かず、sandbox、OSの権限、secret managerを実際の読み取り境界として使います。
 
 ## Japanese Output
 

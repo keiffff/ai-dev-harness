@@ -79,7 +79,7 @@ case "$1" in
     fi
     for arg in "$@"; do
       case "$arg" in
-        -i|--interactive|--exec|--root)
+        -i|-i*|--interactive|--interactive=*|-x|-x*|--exec|--exec=*|--root)
           print -u2 "Refusing interactive, exec, or root rebase: $arg"
           exit 2
           ;;
