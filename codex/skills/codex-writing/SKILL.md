@@ -69,7 +69,7 @@ Bad cases:
 - Release notes: describe only user-visible changes; omit filenames, functions, tests, architecture, and implementation strategy; keep items short and scannable.
 - UI copy: say what happened and what the user can do next; avoid unnecessary technical terms; for destructive actions, name the object and clearly state that the action cannot be undone.
 - Reply drafts: match the requested audience and tone; do not add commitments, dates, or facts that were not provided.
-- Slack or chat sharing drafts: use plain text with short section labels and simple bullet lists. Do not use Markdown headings (`#`, `##`, `###`), code formatting backticks, bold markers (`**`), tables, or fenced code blocks unless the user explicitly requests Markdown.
+- Slack or chat sharing drafts: use plain text with short section labels and simple bullet lists. Preserve requested bullet nesting instead of flattening it. Do not wrap the draft in an outer fenced code block, and do not use Markdown headings (`#`, `##`, `###`), code formatting backticks, bold markers (`**`), tables, or blockquotes unless the user explicitly requests Markdown.
 - Markdown deliverables: use Markdown only when the user explicitly asks for Markdown, PR text, GitHub issue text, README prose, or another Markdown-native output.
 
 ## Reference Use

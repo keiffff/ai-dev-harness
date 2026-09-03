@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Decision Integrity"
+  short_description: "Prevent unsupported reversals under pressure"
+  default_prompt: "Use $codex-decision-integrity to check whether this existing judgment should hold, change, or be suspended."

@@ -21,6 +21,7 @@ Use this skill as a thin dispatch layer. Do not implement from this skill direct
 | "Solで", "GPT-5.6 Solで", strongest OpenAI reviewer | `gpt-sol-strategic-review` | Explicit high-stakes OpenAI advisor route only. Do not use by default. |
 | "Fable 5で", "Fableで", stronger Claude reviewer | `claude-fable-strategic-review` | Explicit experimental Claude route only. Do not use by default. |
 | Non-trivial decision under uncertainty | `codex-doubt-review` | Use bounded adversarial review. Prefer Claude strategic review for broad second opinion. |
+| user pushback, conflicting evidence, proposed reversal of an existing judgment | `codex-decision-integrity` | Classify the new input and choose `HOLD`, `REVISE`, or `SUSPEND` before changing course. |
 | "レビューして", pre-final diff review | `codex-code-review` | Findings first. Review behavior, tests, structure, risks. |
 | decision-oriented design doc, ADR/RFC-like doc, migration rationale, docs/designDocs | `codex-decision-doc` | Preserve project format when present; focus on decisions, rationale, alternatives, compatibility, risks, and non-goals. |
 | PR body, release note, Markdown summary, reply draft, Slack/team prose, README prose | `codex-writing` | Codex writes directly using the relevant writing reference and self-review pass. |

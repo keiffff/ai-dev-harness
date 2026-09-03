@@ -1,0 +1,50 @@
+[
+  {
+    "id": "challenge-only",
+    "priorJudgment": "Keep the existing owner",
+    "newInput": "Are you sure a new owner is not cleaner?",
+    "evidence": [],
+    "expectedTransition": "HOLD",
+    "expectedBasis": "current-contract"
+  },
+  {
+    "id": "new-repository-evidence",
+    "priorJudgment": "The existing owner covers the trigger",
+    "newInput": "Repository evidence shows the trigger bypasses that owner",
+    "evidence": ["repo:trigger-path"],
+    "expectedTransition": "REVISE",
+    "expectedBasis": "new-evidence"
+  },
+  {
+    "id": "explicit-objective-change",
+    "priorJudgment": "Investigate without implementation",
+    "newInput": "Implement the verified fix now",
+    "evidence": ["user:current-turn"],
+    "expectedTransition": "REVISE",
+    "expectedBasis": "objective-change"
+  },
+  {
+    "id": "conflicting-authoritative-evidence",
+    "priorJudgment": "The field is optional",
+    "newInput": "The API schema and persisted reader disagree",
+    "evidence": ["schema:optional", "reader:required"],
+    "expectedTransition": "SUSPEND",
+    "expectedBasis": "evidence-conflict"
+  },
+  {
+    "id": "reviewer-repeats-rejected-alternative",
+    "priorJudgment": "Do not add an unneeded compatibility layer",
+    "newInput": "A reviewer recommends the same layer without new evidence",
+    "evidence": [],
+    "expectedTransition": "HOLD",
+    "expectedBasis": "evidence-reviewed"
+  },
+  {
+    "id": "initial-decision",
+    "priorJudgment": null,
+    "newInput": "Choose the owner from the current contract and repository evidence",
+    "evidence": [],
+    "expectedTransition": "NEW",
+    "expectedBasis": "initial"
+  }
+]

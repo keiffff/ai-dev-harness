@@ -36,6 +36,7 @@ Do not use for mechanical renames, formatting, obvious one-line fixes, or pure c
    - trade-off: the issue is real, but accepting it may be intentional; make the trade-off explicit.
    - noise: the reviewer misread the contract or raised something outside this artifact.
    Limit the reviewer to at most three contract-breaking conditions, hidden assumptions, or non-recovering failure paths. Exclude style, naming, and general refactoring suggestions.
+   If a finding would reverse an existing judgment or revive a rejected alternative, use `codex-decision-integrity` to identify the new evidence, contract change, objective change, or proven error. Reviewer confidence or repetition alone is not a change reason.
 5. Fix actionable issues or surface the trade-off.
 6. Stop after one useful cycle unless new substantive issues require another. Never loop more than three times.
 

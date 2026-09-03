@@ -65,6 +65,7 @@ Prefer quantitative evidence in this order:
 - Include the smallest source slices that explain the pattern.
 - Prefer file references and short summaries over pasting long files into prompts.
 - If context conflicts, state the conflict and choose the repo pattern only when it is clearly current.
+- When evidence could reverse an existing judgment, record its source, trust level, specificity, applicability, and whether it changes the governing contract. Do not treat a newer or more confident statement as stronger by itself.
 - If no precedent exists for a required behavior, stop and ask rather than inventing product requirements.
 - Refresh context when switching major feature areas or after compaction.
 

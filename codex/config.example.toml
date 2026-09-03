@@ -56,6 +56,18 @@ command = "/usr/bin/python3 /absolute/path/to/hooks/codex/shell-policy.py"
 timeout = 10
 statusMessage = "Checking shell safety policy"
 
+# Require a current-turn decision checkpoint before write-bearing shell or
+# apply_patch operations. This checks the transition contract, not whether the
+# model's semantic judgment is correct.
+[[hooks.PreToolUse]]
+matcher = "(?i)^(Bash|apply[_-]?patch)$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/decision-integrity-policy.py"
+timeout = 10
+statusMessage = "Checking decision integrity"
+
 # Keep Browser installed, but block Browser runtime calls unless the latest
 # user message includes the native Browser plugin mention. Do not infer
 # permission from natural-language keywords.

@@ -11,7 +11,9 @@ The output should be ready to paste unless the user explicitly asks for Markdown
 - No bold markers.
 - No tables.
 - No fenced code blocks.
+- No blockquotes unless the user asks for a quoted passage.
 - Use short labels and plain bullets.
+- When the user asks for hierarchical bullets, keep the nesting visible and do not flatten the items into one level.
 
 Example labels:
 

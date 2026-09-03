@@ -17,6 +17,8 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 
 `shell-policy.py` は、Git、AWS、GCP、GitHub CLI、local safety の各検査を1回のPreToolUse hookから呼び出します。個別policyは単体testと責務分離のため残しますが、同じshell呼び出しへ5本のhookを登録しません。
 
+`decision-integrity-policy.py` は、書き込みを伴うshellまたは`apply_patch`の前に、現在のユーザーturnで`decision-checkpoint.py`が有効な判断状態を記録したか検査します。`NEW`、`HOLD`、`REVISE`、`SUSPEND`の遷移と許可された根拠種別を機械的に確認し、checkpointなしの変更を拒否します。自然言語の意味や判断の正しさをhookだけで推測するものではありません。
+
 ## Browser Permission Gate
 
 `browser-policy.py` は Browser plugin を常時有効にしたまま、Browser runtime を使う Node REPL 呼び出しだけを実行前に検査します。現在のユーザーメッセージにCodex標準の Browser plugin 指定がなければ拒否します。自然文の語句や不満の表現から許可を推測しません。過去のターンで許可されていても、現在のメッセージへ許可を持ち越しません。
@@ -43,6 +45,7 @@ command hook は、設定へ追加しただけでは実行されません。追�
 
 - `/hooks` で対象hookが `Active` になり、`Review` が0である
 - 実際の1回目のcompaction後に `~/.codex/hook-state/compaction-handoff/` へstateファイルが作られる
+- decision integrityでは、read-only commandがcheckpointなしで通り、write-bearing commandが拒否され、有効なcheckpoint後に同じturnの書き込みが通る
 
 スクリプトへの模擬入力やunit testだけでは、Codex lifecycleへの接続、trust、実行を確認したことにはなりません。
 

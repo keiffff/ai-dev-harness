@@ -70,7 +70,7 @@ Use this structure:
 - Required-artifact manifest: <only state outside the exact recovery commit, plus any exceptional committed checks; path, classification, recovery source and mechanically derived hash, destination hash, transfer method>
 
 ## Decisions and rejected alternatives
-- <Decision, rationale, and reopening condition.>
+- <Decision key, current judgment, governing evidence, rejected alternatives, and reopening condition. Record the last `HOLD`, `REVISE`, or `SUSPEND` transition when it matters to continuation.>
 
 ## Active constraints and preferences
 - <Only verified user, repository, and environment constraints.>
