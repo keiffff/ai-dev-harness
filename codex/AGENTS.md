@@ -50,6 +50,7 @@
 - commit、push、PR branch更新、submodule syncは、最新のユーザー依頼に明示された場合だけ行う。rebaseは明示依頼時、または依頼済みpush/branch更新に必要な安全な統合時だけ行う。過去ターンの許可を持ち越さない。
 - Git mutationには`git-user-approved`、GitHub・AWS・GCPのreadにはreadonly wrapperを使う。raw CLIや別経路へ迂回しない。
 - readonly wrapperや明示されたCLI・APIが認証または権限エラーで失敗しても、browser、connector、別account、別credentialへ迂回しない。必要な認証手順またはblockerを返し、ユーザーの明示指示を待つ。
+- BrowserやCUAで既存ブラウザ、既存タブ、in-app browserを読み取り・操作するのは、最新のユーザーメッセージに独立した行として`browser-control: allow`がある場合だけにする。Browser pluginやタブのmention、URL、自然文での参照指定だけを許可として扱わない。ローカルファイル、read-only CLI、専用connectorで確認できる場合はそちらを使う。この許可は次のturnへ持ち越さない。
 - cloud write、deploy、IAM変更、secret参照、DB CLIは実行しない。必要ならユーザーが実行できるコマンドを提示する。
 - package manager scriptは用途を確認する。検証系は実行できるが、deploy、release、publish、migrate、seed、DB、IaC、prod系は勝手に実行しない。
 - secret、token、credential、private key、`.env`、raw environment dumpを表示・送信しない。存在確認は値を出さない方法で行う。

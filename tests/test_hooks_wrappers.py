@@ -146,12 +146,27 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(browser_hook(['このURLの内容を調べて'], setup))
         self.assertBlocked(browser_hook(['Browserを使って確認して'], setup))
         self.assertBlocked(browser_hook(['Chromeで画面を開いて'], setup))
-        self.assertAllowed(browser_hook(['[@Browser](plugin://browser@openai-bundled) で確認して'], setup))
-        self.assertBlocked(browser_hook(['[@Browser](plugin://browser@openai-bundled) で確認して', '次はrepoを調べて'], setup))
+        self.assertBlocked(browser_hook(['[@Browser](plugin://browser@openai-bundled) で確認して'], setup))
+        self.assertBlocked(browser_hook(['browser-control: allow と書かれた資料を確認して'], setup))
+        self.assertAllowed(browser_hook(['[@Browser](plugin://browser@openai-bundled) で確認して\nbrowser-control: allow'], setup))
+        self.assertBlocked(browser_hook(['browser-control: allow', '次はrepoを調べて'], setup))
+
+    def test_browser_hook_blocks_cua_tab_access_without_separate_approval(self):
+        tab_mention = (
+            '[Design Doc](plugin://browser@openai-bundled?mention=tab-v1&source=extension'
+            '&browserId=example&tabId=123) を確認して'
+        )
+        self.assertBlocked(browser_hook([tab_mention], 'await cua.getState();'))
+        self.assertBlocked(browser_hook([tab_mention], 'let tab = await cua.getTab("123", { browser: "1" });'))
+        self.assertAllowed(browser_hook([f'{tab_mention}\nbrowser-control: allow'], 'await cua.getState();'))
+
+    def test_browser_hook_registration_covers_node_and_cua_repl(self):
+        config = (ROOT / 'codex' / 'config.example.toml').read_text(encoding='utf-8')
+        self.assertIn('matcher = "(?i).*(node|cua)[_-]?repl.*js.*"', config)
 
     def test_browser_hook_blocks_reused_browser_bindings_but_allows_other_node_code(self):
         self.assertBlocked(browser_hook(['repoを読んで'], 'await pageAlias.doSomething();', prior_browser_runtime=True))
-        self.assertAllowed(browser_hook(['[@Browser](plugin://browser@openai-bundled) で続けて'], 'await pageAlias.doSomething();', prior_browser_runtime=True))
+        self.assertAllowed(browser_hook(['browser-control: allow'], 'await pageAlias.doSomething();', prior_browser_runtime=True))
         self.assertAllowed(browser_hook(['計算して'], '2 + 2'))
 
 class WrapperTests(unittest.TestCase):

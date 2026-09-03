@@ -68,11 +68,11 @@ command = "/usr/bin/python3 /absolute/path/to/hooks/codex/decision-integrity-pol
 timeout = 10
 statusMessage = "Checking decision integrity"
 
-# Keep Browser installed, but block Browser runtime calls unless the latest
-# user message includes the native Browser plugin mention. Do not infer
-# permission from natural-language keywords.
+# Keep Browser installed, but block Browser and CUA runtime calls unless the
+# latest user message includes the exact one-turn approval line documented in
+# AGENTS.md. A native Browser tab mention is a reference, not permission.
 [[hooks.PreToolUse]]
-matcher = "(?i).*node[_-]?repl.*js.*"
+matcher = "(?i).*(node|cua)[_-]?repl.*js.*"
 
 [[hooks.PreToolUse.hooks]]
 type = "command"

@@ -6,13 +6,14 @@ from pathlib import Path
 from hook_utils import is_invalid_payload, load_payload
 
 
-BROWSER_PLUGIN_MENTION = "plugin://browser@openai-bundled"
+BROWSER_APPROVAL_LINE = "browser-control: allow"
 BROWSER_CODE_MARKERS = (
     "browser-client.mjs",
     "setupBrowserRuntime(",
     ".browsers.get(",
     ".browsers.getDefault(",
     ".browsers.getForUrl(",
+    "cua.",
 )
 
 
@@ -60,7 +61,11 @@ def transcript_context(transcript_path: str) -> tuple[str, bool]:
                 item = payload.get("item")
                 if entry.get("type") != "event_msg" or not isinstance(item, dict):
                     continue
-                if item.get("type") != "McpToolCall" or item.get("server") != "node_repl" or item.get("tool") != "js":
+                if (
+                    item.get("type") != "McpToolCall"
+                    or item.get("server") not in {"node_repl", "cua_repl"}
+                    or item.get("tool") != "js"
+                ):
                     continue
                 arguments = item.get("arguments")
                 if isinstance(arguments, dict) and is_browser_code(str(arguments.get("code") or "")):
@@ -71,7 +76,8 @@ def transcript_context(transcript_path: str) -> tuple[str, bool]:
 
 
 def explicitly_requests_browser(message: str) -> bool:
-    return BROWSER_PLUGIN_MENTION in message.casefold()
+    approval = BROWSER_APPROVAL_LINE.casefold()
+    return any(line.strip().casefold() == approval for line in message.splitlines())
 
 
 def is_browser_code(code: str) -> bool:
@@ -91,7 +97,10 @@ def main() -> None:
         return
 
     if not explicitly_requests_browser(message):
-        deny("Blocked Browser use because the latest user message did not explicitly request a browser.")
+        deny(
+            "Blocked Browser control because the latest user message did not include "
+            f"the exact approval line: {BROWSER_APPROVAL_LINE}"
+        )
 
 
 if __name__ == "__main__":
