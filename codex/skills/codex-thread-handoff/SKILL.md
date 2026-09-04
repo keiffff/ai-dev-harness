@@ -35,9 +35,11 @@ Archive the source only after destination verification and only when the user ex
 
 ## Preflight Task Coordination
 
-After explicit acceptance, verify that the current task can call the capabilities needed to create and verify the destination before reading execution references, inspecting workspace state, building a packet, or writing a backup. Require destination creation, destination reading or waiting, and follow-up delivery; check the actual callable tools rather than inferring availability from app guidance or this skill.
+After explicit acceptance, verify that the current task can call the capabilities needed to create and verify the destination before reading execution references, inspecting workspace state, building a packet, or writing a backup. Require destination creation and destination reading or waiting; check the actual callable tools rather than inferring availability from app guidance or this skill. Require follow-up delivery and a supported way to resolve asynchronous creation only when task-required artifacts must be transferred after creation.
 
 If any required capability is unavailable, stop immediately. Do not inspect the workspace, build or save a continuation packet, create a snapshot, or offer a subagent as a substitute. Report the missing capability and give one concise instruction to ask a coordinator task that exposes Codex task-management tools to hand off this source task by task ID. Produce a manual handoff document only when the user explicitly requests that fallback.
+
+Create at most one destination for an approved handoff. A successful or setup-in-progress creation response consumes that attempt. Retain its `threadId` or `clientThreadId`; do not call destination creation again because the task is absent from a listing, verification is delayed, the user asks for speed, or a worktree appeared without a visible task. A new destination requires a later user message that explicitly requests another creation after being told that the earlier destination may still exist.
 
 ## Preserve The Source Task Scope
 

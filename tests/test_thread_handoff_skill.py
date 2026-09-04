@@ -115,10 +115,58 @@ class ThreadHandoffSkillTests(unittest.TestCase):
     def test_async_creation_and_optional_archive_do_not_burden_user(self):
         content = handoff_instructions()
 
-        self.assertIn("resolve the real task with bounded backoff", content)
+        self.assertIn("Bound post-creation coordination to at most 60 seconds", content)
+        self.assertIn("one supported identifier-resolution wait", content)
         self.assertIn("do not make the user poll", content)
         self.assertIn("only when the user explicitly requested source archival", content)
         self.assertIn("never require the user to perform cleanup", content)
+
+    def test_committed_handoff_sends_packet_and_ready_in_initial_creation(self):
+        content = handoff_instructions()
+
+        self.assertIn("Create exactly one destination", content)
+        self.assertIn(
+            "put the complete continuation packet, `HANDOFF_READY`, and the "
+            "destination-first-response instructions in the initial prompt",
+            content,
+        )
+        self.assertIn(
+            "Do not split a committed-tree handoff into a bootstrap prompt and a "
+            "follow-up message",
+            content,
+        )
+        self.assertNotIn("Bootstrap only.", content)
+
+    def test_pending_async_creation_is_not_rediscovered_or_recreated(self):
+        content = handoff_instructions()
+
+        self.assertIn(
+            "A successful or setup-in-progress creation response consumes that attempt",
+            content,
+        )
+        self.assertIn("Retain its `threadId` or `clientThreadId`", content)
+        self.assertIn(
+            "Do not infer the destination from task titles, recent worktrees, filesystem "
+            "timestamps, session logs, or repeated `list_threads` calls",
+            content,
+        )
+        self.assertIn("Do not call destination creation again", content)
+        self.assertIn("report the handoff as incomplete", content)
+
+    def test_post_creation_artifacts_require_resolvable_follow_up_before_creation(self):
+        content = handoff_instructions()
+
+        self.assertIn("`HANDOFF_PENDING_ARTIFACTS`", content)
+        self.assertIn(
+            "require follow-up delivery and a supported `clientThreadId`-to-`threadId` "
+            "resolution path before creation",
+            content,
+        )
+        self.assertIn(
+            "stop before creation instead of starting a destination that cannot receive "
+            "the artifacts",
+            content,
+        )
 
 
 if __name__ == "__main__":
