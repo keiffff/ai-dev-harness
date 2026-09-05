@@ -32,11 +32,16 @@ If there are multiple causes, keep them separate. Do not force them into one roo
 
 ## Reader Load
 
+- Design the reader's path before choosing sections or visuals: establish what the reader needs to conclude, which facts make that conclusion credible, and the order in which those facts become meaningful.
+- Give facts different visual weight according to their role. Lead with the few values that establish the decision; keep supporting measurements close to the claim they support instead of presenting every observed value at the same level.
+- If a local correction changes the meaning or emphasis of the document, revisit the surrounding narrative and remove obsolete explanations. Do not accumulate patches that preserve a broken structure.
+- Keep one causal chain together. Do not explain the same mechanism separately as a current-state diagram, an incident table, a comparison chart, and an effects summary when one integrated explanation would be clearer.
 - Do not make the reader remember names that never appear again.
 - Put definitions before the place where the reader needs them.
 - If a term is project-specific, define it once in operational terms.
 - If a detail is only evidence for Codex, keep it out of the final prose.
 - Prefer a short explanation with one exact example over a broad abstract paragraph.
+- Avoid unsolicited preventive framing such as `〜しない`, `〜ではない`, and `〜を意味しない`. Use it only when the reader is likely to make that exact mistake or when scope, contract, or safety depends on the distinction. Otherwise state the actual behavior, purpose, or expected result directly.
 
 ## AI-Smell Checks
 

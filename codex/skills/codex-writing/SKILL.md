@@ -51,6 +51,9 @@ Bad cases:
 
 - Assume the reader has not seen the implementation session.
 - Put the reader-visible result first, then add necessary context.
+- Before drafting sections, decide what the reader should understand, in what order, and which causal chain leads to the conclusion. Treat this document-level structure as more important than preserving local wording, headings, tables, or figures.
+- When feedback exposes a problem in hierarchy, causality, or information density, reassess the whole document instead of patching only the cited sentence or section. Remove or merge existing material when that restores one continuous explanation.
+- Do not distribute one causal chain across separate tables, figures, and prose that require the reader to reconstruct the relationship. Use each visual only when it makes that relationship easier to understand, and avoid repeating the same claim in multiple forms.
 - Do not include internal work logs, hypotheses, failed attempts, or tool execution details.
 - Avoid vague words such as `対応`, `修正`, `改善`, `考慮`, `反映`, `〜側`, `〜周り`, `〜する形`, `該当箇所`, and `既存処理` unless the sentence names the concrete behavior, screen, file, or user action.
 - Avoid compressed Japanese, chained nouns, literal English translations, and vague demonstratives.
@@ -58,6 +61,7 @@ Bad cases:
 - Before introducing a new label, heading, or coined term, name what it refers to and whether it is a condition, state, event, value, record, purpose, or means. If the referent cannot be written plainly, do not introduce the label.
 - Do not use AI-like filler, ornamental structure, or generic claims when the document needs concrete technical meaning.
 - Keep only information the reader needs to understand the result or decide the next action.
+- Do not add preventive negative statements such as `〜しない`, `〜ではない`, or `〜を意味しない` unless they prevent a likely reader misunderstanding or define a required scope, contract, or safety boundary. State what happens and what the reader should understand in affirmative terms. Put necessary non-goals in one scoped section instead of repeating them through the body.
 - When revising supplied prose, change only the requested delta or a concrete defect. Do not trade an unwanted rewrite for over-compression that removes the user's reasoning.
 
 ## Format Rules
@@ -84,6 +88,9 @@ Before returning, check:
 
 - Is every concrete claim supported?
 - Does the text expose only the details the reader needs?
+- Can the reader follow the main claim and its cause without assembling it from separate sections or visuals?
+- Did local feedback reveal a document-level problem that still exists elsewhere?
+- Can a negative or preventive sentence be removed or replaced with a direct statement of what happens?
 - Do new labels, headings, and coined terms have a clear referent and role before they are used?
 - Are file names, identifiers, and implementation layers present only when they matter?
 - Are unchanged items omitted from changed-item lists?
