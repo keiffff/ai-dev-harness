@@ -4,7 +4,7 @@
 
 ## 中心
 
-Sol main agent / Codex が repo 文脈、実装、差分確認、テスト確認、最終判断を持つ。
+Astra main agent / Codex が repo 文脈、実装、差分確認、テスト確認、最終判断を持つ。
 
 subagent や advisor は補助であり、最終判断、I/F判断、互換性判断、fallback判断、Git操作は main agent に残す。
 

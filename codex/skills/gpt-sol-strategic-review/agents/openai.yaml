@@ -1,6 +1,0 @@
-interface:
-  display_name: "GPT Sol Strategic Review"
-  short_description: "Explicit high-stakes Sol review"
-  default_prompt: "Use $gpt-sol-strategic-review to challenge this plan's assumptions and risks."
-policy:
-  allow_implicit_invocation: false

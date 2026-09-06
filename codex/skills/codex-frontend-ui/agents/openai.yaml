@@ -1,4 +1,4 @@
 interface:
   display_name: "Codex Frontend UI"
-  short_description: "Plan build or review web UI with visual QA and design-system discipline"
-  default_prompt: "Use $codex-frontend-ui to choose the UI mode and handle the frontend visual workflow."
+  short_description: "Build and review UI within existing design constraints"
+  default_prompt: "Use $codex-frontend-ui to build or review this UI using its design constraints and appropriate visual verification."

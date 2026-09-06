@@ -1,44 +1,22 @@
 ---
 name: codex-interface-review
-description: Review changes to APIs, schemas, persisted data, public types, state contracts, and module or cross-layer boundaries.
+description: Check API, schema, persisted-data and state contracts before design or implementation review, including omission, compatibility and ownership.
 ---
 
 # Codex Interface Review
 
-Use this skill before committing to an interface shape. Good interfaces are explicit, additive where possible, and hard to misuse.
+Use these criteria for an interface decision or a changed contract. Main can apply them directly; an independent reviewer uses the same criteria when `codex-doubt-review` is warranted. A second agent solely for I/F review is not required.
 
-## Review Axes
+## Contract Criteria
 
-- Contract: typed input/output, allowed values, defaults, nullability, errors.
-- Boundary: validation at system edges, trust internal typed data, parse external responses.
-- Compatibility: additive changes preferred; breaking behavior must be intentional.
-- Observability: every observable behavior can become a contract.
-- State: transitions, ordering, idempotency, duplicate handling, rollback behavior.
-- Naming: match existing repo vocabulary and avoid ambiguous terms.
-- Referent before label: every new field, enum value, state, condition, event, and boolean name must have a concrete referent and one role. If a name mixes condition/state/event/value/record/purpose/means, request a rename or split.
-- Tests: contract tests or reducer/usecase tests cover the new observable behavior.
+- Inputs and outputs: allowed values, validation, errors, defaults, and the distinct meanings of missing, null, empty and unknown values.
+- Consumers: who can send/read each shape, and what they can observe after an operation.
+- State: allowed transitions, ordering, duplicate handling, idempotency and recovery where relevant.
+- Ownership: which layer validates, normalizes, persists and exposes the value; check the producer as well as the consumer.
+- Compatibility: name affected existing records, readers and released clients. Add compatibility only for an established need, not an unreleased intermediate design.
+- Naming: use repository vocabulary and a concrete referent; flag ambiguity when it changes behavior or consumer interpretation.
+- Synchronization: generated schemas/artifacts and contract tests reflect the accepted shape.
 
-## Questions To Answer
+When OpenSpec applies, compare these contracts across proposal, design, spec and implementation. Surface an unapproved change or missing contract decision under AGENTS.md. Routine implementation choices within the accepted contract stay with main.
 
-- What exactly is the consumer allowed to send or call?
-- What exactly can the consumer observe afterward?
-- What happens for empty, invalid, duplicate, old, missing, or unknown values?
-- Which layer owns validation and normalization?
-- Is this a new concept or an extension of an existing one?
-- What concrete thing does each new name point to, and is it a condition, state, event, value, record, purpose, or means?
-- Does a generated artifact need to stay in sync?
-
-## OpenSpec Fit
-
-For OpenSpec work, check that proposal/design/spec agree on:
-- I/F names and enum values
-- operation-specific behavior
-- target and non-target objects
-- persistence and migration behavior
-- unresolved questions
-
-If implementation pressure requires changing the contract, stop and ask before editing.
-
-## Claude Sidecar
-
-Use `claude-strategic-review` when the interface has long-term maintenance risk, affects multiple teams, or could be hard to migrate later. Claude provides review material only; Codex makes the final decision.
+For findings, use `codex-code-review`'s reporting contract when producing a code review. A design-only answer should state the proposed contract, evidence and unresolved decisions without forcing a diff-review format.

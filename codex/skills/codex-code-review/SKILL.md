@@ -1,93 +1,36 @@
 ---
 name: codex-code-review
-description: Review code changes for bugs, regressions, missing tests, architecture, security, performance, and scope before completion.
+description: Review changes against accepted behavior, prioritizing actionable regressions, test scope, and a complete copyable review body.
 ---
 
 # Codex Code Review
 
-Use a code-review stance: findings first, ordered by severity, grounded in file/line references when possible.
+Main owns the review judgment. This skill supplies review criteria; it does not require a separate agent for each criterion.
 
-## Decision Context
+## Review Baseline
 
-Before reviewing, read the accepted contract and, when available, the current task's explicitly rejected ideas and unresolved decisions from the conversation, OpenSpec, design doc, or PR context.
+Read the accepted behavior, relevant diff, tests, and any explicitly rejected alternatives. Judge correctness, authorization/data handling, ownership, failure paths and performance where the change creates a concrete risk.
 
-- Treat accepted behavior as the review baseline.
-- Do not re-raise a rejected defensive mechanism, abstraction, compatibility path, or test as a finding unless new evidence changes the risk.
-- When reopening a rejected idea, name the new evidence.
-- If the accepted design itself appears unsafe, report that separately as a design decision to revisit rather than disguising it as an implementation bug.
-- Do not require a formal decision ledger for a simple change; use durable artifacts when the decision must survive compaction or handoff.
+A finding needs an affected operation, a violated contract or evidenced failure, and a relevant location. Separate implementation defects from an accepted design decision worth revisiting. Reopen a rejected fallback, abstraction, compatibility path or test only with new evidence. Avoid speculative hardening and unrelated cleanup.
 
-## Review Order
+For changed API/schema/state/persistence contracts, use `codex-interface-review` for those criteria rather than duplicating them here.
 
-1. Understand the intended behavior and contract.
-2. Review tests first: do they cover behavior and regressions?
-3. Review implementation for correctness, edge cases, state, and error paths.
-4. Check architecture: ownership boundaries, shared modules, duplicate helpers, unnecessary abstraction.
-5. Check security and data handling: input validation, secrets, auth, untrusted external data.
-6. Check performance only where relevant: N+1, unbounded loops, render churn, large payloads.
-7. Compare verification run against risk.
+## Test Scope
+
+Check whether new tests protect observable behavior or a known regression. Prefer the boundary that owns the behavior. Internal helper calls, mock choreography, unused defensive paths and duplicate coverage are not independent reasons for tests.
+
+Keep mock interactions or negative assertions when the interaction or absence is itself an accepted contract, such as no unauthorized write, duplicate charge, repeated external call, or stale user-visible state. Tests for an intentionally removed implementation concept may go with that concept; preserve tests of behavior still promised to consumers.
 
 ## Uncertain Boundary ANDON
 
-Do not turn every review into an exhaustive distributed-systems analysis. Apply this gate only when the current change makes an important decision from indirect evidence such as time, ordering, status, existence, naming, or another cross-boundary value, or when recovery after failure cannot be established from the available contract and evidence.
+When a consequential decision relies on indirect evidence such as time, ordering, status, existence or naming, inspect the smallest producer, representation, decision point, failure state and recovery path. If the contract remains unresolved, do not invent an identifier, fallback, retry, compatibility path or extra test as the presumed fix. Report the facts, missing decision and impact.
 
-First inspect the smallest producer, representation, and recovery path that can answer the question. If that direct check cannot establish the meaning or recovery contract:
-
-- do not invent an identifier, fallback, retry, compatibility path, or extra test as a presumed fix;
-- state the confirmed facts, the unresolved assumption, the decision needed, and the possible impact;
-- return an ANDON instead of approving the change or expanding its scope.
-
-For a consequential repo-local change involving ordering, state transitions, idempotency, an external boundary, or production risk, use one bounded `codex-doubt-review` cycle when it can test the unresolved assumption. The main Codex retains the final judgment and ANDON decision.
-
-## Finding Style
-
-- Lead with real bugs and regressions.
-- Avoid long nit lists.
-- Distinguish required fixes from optional suggestions.
-- If no issues are found, say so and name residual test/risk gaps.
-- For structural issues, propose the move: extract helper, remove branch, use existing policy, split module, make boundary explicit.
+For a consequential repo-local change, use one bounded `codex-doubt-review` cycle when independent review can test the unresolved assumption. Include relevant interface criteria in that same review. Main reconciles findings and owns the ANDON decision.
 
 ## Copyable Review Output
 
-Return one complete review body that the user can copy without reconstructing content from rendered Markdown, inline comments, or review cards.
+Return findings in severity order with priority, file/line reference, trigger and impact. Distinguish required fixes from optional suggestions. Include the overall assessment and residual verification gaps; say explicitly when there are no findings.
 
-- Put the complete review body inside an outer four-backtick `markdown` fence so headings, lists, links, and nested three-backtick fences remain literal and copyable.
-- Include every finding with its priority and file/line reference when available, followed by the brief assessment and residual test or risk gaps.
-- When there are no findings, include the no-findings result and any residual gaps inside the same copyable body.
-- Structured or inline code comments may supplement the review, but they never replace or shorten the copyable review body.
+Put the complete review body inside an outer four-backtick `markdown` fence. Inline comments and review cards may supplement it, but never replace or shorten the copyable review body.
 
-## Scope Guard
-
-- Do not ask for unrelated cleanup in a review.
-- Do not accept "we can fix later" when the current change introduces the issue.
-- Do not rubber-stamp AI-generated code because tests pass.
-- Do not include implementation journey or local setup noise in PR prose.
-
-## Test Scope Review
-
-When reviewing AI-generated tests, check whether each new test protects an accepted observable contract. Flag tests that mainly:
-
-- assert internal helper calls, mock choreography, private fields, or intermediate status names without proving user/API/worker behavior;
-- rely only on interactions between mocks, with no response, persisted state, rendered UI, queue message, output artifact, external boundary, billing event, or metrics event as the asserted contract;
-- lock in speculative defensive branches, unused fallback paths, sweepers, limiters, retry paths, or compatibility paths that the design did not accept;
-- keep removed behavior alive through negative assertions such as "does not call X", "does not create Y", or "does not use Z" when X/Y/Z is no longer part of the design;
-- duplicate coverage already provided by a higher-level behavior test;
-- preserve tests for concepts removed by the current design;
-- make future refactors harder while failing to catch a real regression.
-
-Prefer keeping tests that cover response contracts, persisted state transitions, idempotency, authorization, external message/artifact boundaries, UI states, and known failure modes. If a test is redundant, recommend removing or merging it rather than weakening production code to satisfy it.
-
-Negative assertions are useful only when the absence is itself the contract: no duplicate external call, no unauthorized write, no extra chargeable operation, no user-visible stale state, or no regression from a known incident. Otherwise, prefer a positive test for the remaining behavior.
-
-Mock-interaction tests are useful only when the interaction is the boundary contract: queue publish, external API call count for idempotency, forbidden write prevention, billing/metrics emission, or another observable side effect. Otherwise, prefer asserting the behavior after the interaction rather than the mock choreography itself.
-
-## OpenSpec Review
-
-When OpenSpec artifacts exist, compare implementation against design/spec:
-- implemented
-- missing
-- spec-outside behavior added
-- tests missing
-- unverified residual risk
-
-Use `claude-strategic-review` as a sidecar when AGENTS.md calls for post-implementation OpenSpec review.
+For OpenSpec-governed work, also identify missing, spec-external, insufficiently tested or unverified behavior against the accepted artifacts. Apply any repository-required sidecar review and reconcile its findings.

@@ -30,8 +30,7 @@ AI agent は、既存コード、会話履歴、指示文、利用可能な tool
 | Human | 文脈と判断の入力 | 目的、制約、事業文脈、仕様判断、停止判断、やらないことを決める |
 | Main agent | 実務担当の engineer | repo 読解、実装、差分確認、テスト確認、PR 説明作成、最終判断 |
 | Skills | 作業手順書 | context engineering、debug loop、review、writing、decision doc、CDK design review など |
-| Router | 薄い workflow 選択 | 実装、debug、review、writing、OpenSpec、advisor 相談の最小経路を選ぶ |
-| Subagents | bounded scout | 影響範囲調査、既存パターン調査、差分レビュー。最終判断や Git 操作はしない |
+| Subagents | 範囲を限定した調査・独立レビュー | 影響範囲調査、既存パターン調査、契約に照らした差分レビュー。最終判断や Git 操作はmain agentが持つ |
 | Strategic advisors | sidecar reviewer | 設計方針、長期保守性、代替案、大局的レビューを返す。採否は main agent が判断する |
 | External research scouts | bounded evidence discovery | X など特定情報源の最新情報とURLを集める。事実確認と採否は main agent が行う |
 | Execution harness | 実行境界 | Git、cloud、GitHub CLI、secret、production 操作を wrapper/rules/hooks で制御する |

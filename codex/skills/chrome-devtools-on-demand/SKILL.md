@@ -9,7 +9,7 @@ Use this skill when DevTools-level browser data is needed, especially Network, C
 
 ## Default Policy
 
-- Keep normal browsing on the in-app Browser plugin.
+- Browser/CUA use, including an isolated debug browser, requires the current-turn `browser-control: allow` under AGENTS.md. Use local files, approved readonly tools or dedicated connectors when they can answer the question.
 - Keep `chrome@openai-bundled` disabled unless the user explicitly asks to control their logged-in main Chrome.
 - Prefer `chrome-devtools-mcp` with `--isolated=true` so debugging uses a separate browser/profile.
 - Do not use `--autoConnect` for the user's main Chrome unless explicitly requested.
@@ -18,7 +18,7 @@ Use this skill when DevTools-level browser data is needed, especially Network, C
 ## Workflow
 
 1. Run `scripts/codex-devtools status` to inspect the current config state.
-2. If DevTools MCP is disabled and the current task truly needs it, run `scripts/codex-devtools on`.
+2. If the current task needs DevTools and its browser permission is present, run `scripts/codex-devtools on` when disabled.
 3. Tell the user that Codex may need a thread/app restart before the MCP tools are available in this session.
 4. Perform the DevTools investigation after the MCP tools are available.
 5. When done, run `scripts/codex-devtools off` unless the user explicitly asks to keep it enabled.
@@ -54,7 +54,7 @@ The script edits `~/.codex/config.toml` and creates a timestamped backup before 
 - `BROWSER_USE_AVAILABLE_BACKENDS`
 - `[plugins."chrome@openai-bundled"] enabled`
 
-Expected steady state after `off`:
+Expected steady state after `off` (configuration state, not permission to use a browser):
 
 - `chrome-devtools` MCP disabled
 - browser backends set to `iab`

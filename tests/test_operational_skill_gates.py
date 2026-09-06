@@ -22,7 +22,6 @@ class OperationalSkillGateTests(unittest.TestCase):
     def test_expensive_advisors_require_explicit_invocation(self):
         for skill_name in (
             "claude-fable-strategic-review",
-            "gpt-sol-strategic-review",
         ):
             metadata = (
                 ROOT / "codex" / "skills" / skill_name / "agents" / "openai.yaml"

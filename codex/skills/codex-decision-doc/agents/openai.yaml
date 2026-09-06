@@ -1,3 +1,4 @@
-display_name: Codex Decision Doc
-short_description: Draft Japanese decision-oriented design docs that preserve rationale, tradeoffs, compatibility, risks, and non-goals.
-default_prompt: Draft this design doc in Japanese, preserving any project-local format, and focus on decisions, rationale, alternatives, compatibility, and residual risks rather than implementation inventory.
+interface:
+  display_name: "Codex Decision Doc"
+  short_description: "Preserve decisions, rationale and compatibility"
+  default_prompt: "Use $codex-decision-doc to record this decision in the project format with its rationale, rejected alternatives and remaining risks."
