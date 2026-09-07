@@ -37,4 +37,6 @@ Distinguish pre-release checks from production outcomes. Resolve conflicting evi
 
 ## Bounded Scouts
 
-Use a read-only subagent when an independent scan would reduce main-context noise. Give it one question and a bounded source area. Request file/line evidence, strong and weak candidates, search limits, and the smallest useful follow-up reads. Main owns interpretation, design, I/F, compatibility, permissions and Git actions.
+Handle routine investigation in main. Use a read-only subagent when the user explicitly requests delegation or a substantial independent investigation offers enough time or quality benefit to justify the additional token use. Reducing main-context noise alone is not a trigger.
+
+Use `fork_turns: "none"` by default and provide one question, a bounded source area, and the necessary constraints and evidence already gathered. Inherit history only when the task requires it, using the smallest sufficient number of turns. Do not repeat the delegated scan in main or allow the scout to delegate further. Request file/line evidence, strong and weak candidates, search limits, and the smallest useful follow-up reads. Main owns interpretation, design, I/F, compatibility, permissions and Git actions.

@@ -9,7 +9,9 @@ Use independent review when an unresolved assumption could materially affect dat
 
 ## Review Packet
 
-Give the reviewer a concrete claim, the smallest relevant artifact and its governing contract. For boundary concerns, include producer representation, decision point, failure state and retrigger/recovery path. Include accepted constraints and relevant rejected alternatives, without the full session narrative.
+Use `fork_turns: "none"` by default. Give the reviewer a concrete claim, the smallest relevant artifact and its governing contract. For boundary concerns, include producer representation, decision point, failure state and retrigger/recovery path. Include accepted constraints and relevant rejected alternatives, without the full session narrative. Inherit history only when the review requires it, using the smallest sufficient number of turns.
+
+Use one reviewer for the relevant review dimensions and instruct it not to delegate further.
 
 Ask for at most three contract-breaking conditions, hidden assumptions or non-recovering failure paths, with evidence. Exclude stylistic naming and general refactoring; semantic ambiguity matters only when it can violate the contract.
 
