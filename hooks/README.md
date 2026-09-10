@@ -13,7 +13,7 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 - `.env` や credential file を直接表示する代表的なshell commandを止める
 - `rm -rf`、`git clean`、recursive chmod/chown などの破壊的操作を止める
 - shell interpreter、command substitution、process substitution、multiline shell、shell grouping、xargs、sudo を保守的に拒否する
-- Browser / CUA runtime は、現在のユーザーメッセージに一回限りの許可行 `browser-control: allow` がある場合だけ許可する
+- Browser / CUA runtime は `iab` を明示したin-app操作を許可し、ユーザーのブラウザや接続先が不明な操作を制限する
 
 `shell-policy.py` は、Git、AWS、GCP、GitHub CLI、local safety の各検査を1回のPreToolUse hookから呼び出します。個別policyは単体testと責務分離のため残しますが、同じshell呼び出しへ5本のhookを登録しません。
 
@@ -21,9 +21,11 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 
 ## Browser Permission Gate
 
-`browser-policy.py` は Browser plugin を常時有効にしたまま、Browser runtime を使う Node REPL と CUA REPL の呼び出しを実行前に検査します。現在のユーザーメッセージに独立した行として `browser-control: allow` がなければ拒否します。Browser pluginや既存タブへのmentionは参照指定として扱い、それだけでは操作を許可しません。自然文の語句や不満の表現から許可を推測せず、過去のターンの許可も持ち越しません。
+`browser-policy.py` は Browser runtime を使う Node REPL と CUA REPL の呼び出しを検査します。`cua.createBrowserTab("iab", ...)`、`cua.getTab(id, { browser: "iab" })`、`agent.browsers.get("iab")`、`cua.getBrowser({ id: "iab" })`、`cua.listTabs({ browser: "iab" })`と、そのREPLで取得したタブの操作には許可行を求めません。Browser SDKの初期化も許可します。REPLをresetした後は、再び`iab`を明示して選択します。
 
-このhookは CUA REPL toolを呼び出し内容にかかわらず対象にします。Node REPLでは、`browser-client.mjs`、`setupBrowserRuntime`、標準的な Browser bindingを対象にし、一度 Browser runtime を初期化したtaskでは、binding名を変えた迂回を防ぐため、以後の対象REPL呼び出しも同じ許可対象として扱います。Browserを使っていないtaskの通常の Node REPL 利用は対象外です。Browser plugin の手動有効化・無効化を運用手順にはしません。
+接続先の省略・動的指定、全ブラウザの一覧取得、既存ブラウザの選択は通常許可しません。外部ブラウザはAGENTS.mdに従ってユーザーが対象を明示的に依頼した場合だけ扱い、従来の現在turnの許可行も必要です。通常のin-app操作のためにこの許可行を求めません。
+
+hookは文書化されたAPIの選択先と同じREPLの履歴を確認する補助で、任意のJavaScriptの意味やタブ変数の由来を完全に検証するものではありません。ユーザーのブラウザを操作しない責務はAGENTS.mdにも残します。実行時には`browser-policy.py`と依存する`hook_utils.py`の両方を配置します。
 
 `local-safety-policy.py` は任意のPython、Node.js、Rubyなどのソースコードを解析するDLPではありません。開発用interpreterを一律に禁止すると通常のtest、生成、検証を妨げるため、既知のshell経由の誤表示だけを止めます。secretはCodexから読めるworkspaceへ置かず、sandbox、OSの権限、secret managerを実際の読み取り境界として使います。
 

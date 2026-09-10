@@ -9,7 +9,7 @@ Use this skill when DevTools-level browser data is needed, especially Network, C
 
 ## Default Policy
 
-- Browser/CUA use, including an isolated debug browser, requires the current-turn `browser-control: allow` under AGENTS.md. Use local files, approved readonly tools or dedicated connectors when they can answer the question.
+- In-app browser use with an explicit `iab` selector needs no additional approval. Use it for ordinary browser work. This skill starts an external Chrome instance, so use it only when the user explicitly requests that browser and supplies the current-turn `browser-control: allow` under AGENTS.md; do not make ordinary in-app work depend on that permission.
 - Keep `chrome@openai-bundled` disabled unless the user explicitly asks to control their logged-in main Chrome.
 - Prefer `chrome-devtools-mcp` with `--isolated=true` so debugging uses a separate browser/profile.
 - Do not use `--autoConnect` for the user's main Chrome unless explicitly requested.

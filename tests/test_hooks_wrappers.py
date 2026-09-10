@@ -48,6 +48,7 @@ def browser_hook(
     code: str,
     prior_browser_runtime: bool = False,
     tool_name: str = "mcp__node_repl__js",
+    prior_calls: list[tuple[str, str, str]] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', encoding='utf-8') as transcript:
         if prior_browser_runtime:
@@ -60,6 +61,17 @@ def browser_hook(
                         'server': 'node_repl',
                         'tool': 'js',
                         'arguments': {'code': 'const agent = await setupBrowserRuntime();'},
+                    },
+                },
+            }) + '\n')
+        for server, tool, prior_code in prior_calls or []:
+            transcript.write(json.dumps({
+                'type': 'event_msg',
+                'payload': {
+                    'type': 'item_completed',
+                    'item': {
+                        'type': 'McpToolCall', 'server': server, 'tool': tool,
+                        'arguments': {'code': prior_code},
                     },
                 },
             }) + '\n')
@@ -202,8 +214,8 @@ class HookPolicyTests(unittest.TestCase):
             with self.subTest(command=command):
                 self.assertBlocked(run_hook('shell-policy.py', command))
 
-    def test_browser_hook_requires_explicit_permission_in_latest_user_message(self):
-        setup = 'const { setupBrowserRuntime } = await import("/plugin/scripts/browser-client.mjs");'
+    def test_external_browser_hook_requires_explicit_permission_in_latest_user_message(self):
+        setup = 'const browser = await agent.browsers.get("chrome");'
         self.assertBlocked(browser_hook(['このURLの内容を調べて'], setup))
         self.assertBlocked(browser_hook(['Browserを使って確認して'], setup))
         self.assertBlocked(browser_hook(['Chromeで画面を開いて'], setup))
@@ -227,6 +239,77 @@ class HookPolicyTests(unittest.TestCase):
             'await cua["getState"]();',
             tool_name=cua_tool,
         ))
+
+    def test_iab_selection_and_sdk_setup_need_no_approval(self):
+        node_tool = 'mcp__node_repl__js'
+        cua_tool = 'mcp__cua_repl__js'
+        for tool, code in [
+            (node_tool, 'const { setupBrowserRuntime } = await import("/plugin/scripts/browser-client.mjs");'),
+            (node_tool, 'await setupBrowserRuntime({ globals: globalThis });'),
+            (node_tool, 'const browser = await agent.browsers.get("iab");'),
+            (cua_tool, 'let tab = await cua.createBrowserTab("iab", "about:blank", {visible:false});'),
+            (cua_tool, 'let tab = await cua.getTab(tabId, { browser: "iab" });'),
+            (cua_tool, 'let browser = await cua.getBrowser({ id: "iab" });'),
+            (cua_tool, 'await cua.listTabs({ browser: "iab" });'),
+            (cua_tool, 'await cua.listTabs({ browser: "iab", emit: false });'),
+        ]:
+            with self.subTest(tool=tool, code=code):
+                self.assertAllowed(browser_hook(['画面を検証して'], code, tool_name=tool))
+
+    def test_iab_followups_persist_across_user_turns_within_one_repl(self):
+        for server, tool, selection in [
+            ('node_repl', 'mcp__node_repl__js', 'const browser = await agent.browsers.get("iab");'),
+            ('cua_repl', 'mcp__cua_repl__js', 'let tab = await cua.createBrowserTab("iab", "about:blank");'),
+        ]:
+            with self.subTest(server=server):
+                self.assertAllowed(browser_hook(
+                    ['画面を確認して', '続けて'], 'await tab.playwright.domSnapshot();',
+                    tool_name=tool, prior_calls=[(server, 'js', selection)],
+                ))
+
+    def test_iab_state_does_not_authorize_other_repl_or_survive_reset(self):
+        selection = 'let tab = await cua.createBrowserTab("iab", "about:blank");'
+        cua_tool = 'mcp__cua_repl__js'
+        self.assertBlocked(browser_hook(
+            ['続けて'], 'await tab.playwright.domSnapshot();', tool_name=cua_tool,
+            prior_calls=[('node_repl', 'js', 'await agent.browsers.get("iab");')],
+        ))
+        self.assertAllowed(browser_hook(['続けて'], '', tool_name='mcp__cua_repl__js_reset'))
+        self.assertBlocked(browser_hook(
+            ['続けて'], 'await tab.playwright.domSnapshot();', tool_name=cua_tool,
+            prior_calls=[('cua_repl', 'js', selection), ('cua_repl', 'js_reset', '')],
+        ))
+        self.assertAllowed(browser_hook(
+            ['続けて'], selection, tool_name=cua_tool,
+            prior_calls=[('cua_repl', 'js', selection), ('cua_repl', 'js_reset', '')],
+        ))
+
+    def test_iab_does_not_allow_external_dynamic_or_inventory_access(self):
+        for code in [
+            'await cua.createBrowserTab("chrome", "about:blank");',
+            'await cua.createBrowserTab(target, "about:blank");',
+            'await cua.getTab(tabId);',
+            'await cua.getTab(tabId, {browser: "edge"});',
+            'await cua.getState();',
+            'await cua.listTabs();',
+            'await cua.listTabs({browser: "chrome"});',
+            'await cua.getBrowser({id: "chrome"});',
+            'await cua.getBrowser({url: "https://example.com"});',
+            'const ui = cua; await ui.getState();',
+            'await cua["getState"]();',
+            'await agent.browsers.list();',
+            'await agent.browsers.getDefault();',
+            'await agent.browsers.getForUrl("https://example.com");',
+            'await agent.browsers.get(target);',
+            'const browsers = agent.browsers; await browsers.get("chrome");',
+            'await agent.browsers.get("iab"); await agent.browsers.get("chrome");',
+            'await cua.createBrowserTab("iab", "about:blank"); await cua.getState();',
+        ]:
+            with self.subTest(code=code):
+                self.assertBlocked(browser_hook(
+                    ['画面を確認して'], code, tool_name='mcp__cua_repl__js',
+                    prior_calls=[('cua_repl', 'js', 'await cua.createBrowserTab("iab", "about:blank");')],
+                ))
 
     def test_browser_hook_registration_covers_node_and_cua_repl(self):
         config = (ROOT / 'codex' / 'config.example.toml').read_text(encoding='utf-8')

@@ -52,7 +52,7 @@
 - commit、push、PR branch更新、submodule syncは、最新のユーザー依頼に明示された場合だけ行う。rebaseは明示依頼時、または依頼済みpush/branch更新に必要な安全な統合時だけ行う。過去ターンの許可を持ち越さない。
 - Git mutationには`git-user-approved`、GitHub・AWS・GCPのreadにはreadonly wrapperを使う。raw CLIや別経路へ迂回しない。
 - readonly wrapperや明示されたCLI・APIが認証または権限エラーで失敗しても、browser、connector、別account、別credentialへ迂回しない。必要な認証手順またはblockerを返し、ユーザーの明示指示を待つ。
-- BrowserやCUAで既存ブラウザ、既存タブ、in-app browserを読み取り・操作するのは、最新のユーザーメッセージに独立した行として`browser-control: allow`がある場合だけにする。Browser pluginやタブのmention、URL、自然文での参照指定だけを許可として扱わない。ローカルファイル、read-only CLI、専用connectorで確認できる場合はそちらを使う。この許可は次のturnへ持ち越さない。
+- AI用のin-app browserは追加承認なしで使ってよく、`browser-control: allow`を求めない。Browser/CUAでは接続先を`iab`と明示する。ユーザーのChrome、Safari、Edgeなどのブラウザや既存タブは使わず、全ブラウザ・全タブの一覧も取得しない。外部ブラウザを使うのは、その対象をユーザーが明示的に依頼し、最新メッセージに独立した行として`browser-control: allow`がある場合だけとする。許可を得るためにin-appでできる作業を止めない。
 - cloud write、deploy、IAM変更、secret参照、リモートDBへの操作は実行しない。必要ならユーザーが実行できるコマンドを提示する。
 - ローカルDB（ローカルのcontainerを含む）のCLI操作、起動・停止、作成・初期化、migration、seed、DBを使うテストは追加承認なしで実行してよい。実際の接続先がローカルであることを確認する。ローカルport経由でも接続先がリモートDBなら、この許可の対象外とする。
 - package manager scriptは用途と接続先を確認する。DBを使う場合は、呼び出し先の内部処理とテストの準備・後片付けまで追い、設定や環境変数によって決まる実際のDB接続先がすべてローカルであると確認できた場合だけ実行する。script名や入口の接続設定だけでは判断せず、確認できない接続先があれば実行しない。検証系と確認済みのローカルDB用scriptは追加承認なしで実行してよい。deploy、release、publish、リモートDB、IaC、prod系は勝手に実行しない。

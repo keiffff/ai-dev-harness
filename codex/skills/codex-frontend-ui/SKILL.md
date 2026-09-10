@@ -19,6 +19,6 @@ For a visual representation of a plan/spec/schema, read [review visualization](r
 
 Start with isolated component, static artifact or screenshot checks when sufficient. Inspect overflow, long labels, mobile layout, keyboard focus, labels, contrast and relevant interaction states.
 
-Browser/CUA use requires the current-turn `browser-control: allow` under AGENTS.md, including isolated pages. Local rendering without Browser/CUA is a separate verification path. Heavy verification requiring a full app server, login, external services or deep navigation needs the user's authorization for that setup; use existing authorization without asking again. Report the specific blocked visual check when unavailable.
+Use the in-app browser with an explicit `iab` selector for Browser/CUA verification; no approval line is needed. Do not select the user's browser or enumerate their tabs. External browser exceptions follow AGENTS.md. Local rendering without Browser/CUA is a separate verification path. Heavy verification requiring a full app server, login, external services or deep navigation needs the user's authorization for that setup; use existing authorization without asking again. Report the specific blocked visual check when unavailable.
 
 Use `codex-code-review` for behavioral defects and `codex-interface-review` for changed public contracts as needed. Report the user-visible result, visual evidence and material gaps; no mandatory mode labels or file-by-file report.
