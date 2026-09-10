@@ -2,12 +2,13 @@
 import re
 import sys
 from typing import Optional
+from urllib.parse import urlsplit
 
 from hook_utils import extract_command, first_command_name, is_invalid_payload, load_payload, normalize_command_tokens, split_segments, unsafe_shell_reason
 
 DB_COMMANDS = {"p" + "sql", "my" + "sql", "mongo" + "sh", "mongo", "redis" + "-cli"}
 PACKAGE_MANAGERS = {"npm", "pnpm", "yarn", "bun"}
-RISKY_SCRIPT_RE = re.compile(r"(^|[:_-])(deploy|release|publish|migrate|migration|seed|db|database|prisma|drizzle|typeorm|knex|cdk|terraform|tf|sst|serverless|sam|pulumi|prod|production)($|[:_-])", re.IGNORECASE)
+RISKY_SCRIPT_RE = re.compile(r"(^|[:_-])(deploy|release|publish|cdk|terraform|tf|sst|serverless|sam|pulumi|prod|production)($|[:_-])", re.IGNORECASE)
 SENSITIVE_VAR_RE = re.compile(r"\$[{(]?(?:[A-Z0-9_]*(TOKEN|SECRET|PASSWORD|PASS|KEY|CREDENTIAL|AUTH)[A-Z0-9_]*)[})]?", re.IGNORECASE)
 SENSITIVE_PATH_RE = re.compile(r"(^|/)(\.env(\..*)?|\.npmrc|\.pypirc|\.netrc|credentials|config|auth\.json|id_rsa|id_ed25519|known_hosts|\.git-credentials)$")
 
@@ -75,13 +76,37 @@ def package_script_name(tokens: list[str]) -> Optional[str]:
     return None
 
 
+def database_target_is_local(tokens: list[str]) -> bool:
+    """Recognize explicit local endpoints; this does not inspect client config or SQL."""
+    hosts = []
+    args = iter(tokens[1:])
+    for arg in args:
+        if arg == "--host" or (arg == "-h" and tokens[0] not in {"mongo", "mongosh"}):
+            hosts.append(next(args, ""))
+        elif arg.startswith("--host="):
+            hosts.append(arg.split("=", 1)[1])
+        elif arg.startswith("-h") and len(arg) > 2 and tokens[0] not in {"mongo", "mongosh"}:
+            hosts.append(arg[2:])
+        elif "://" in arg:
+            try:
+                uri = urlsplit(arg)
+                if uri.scheme not in {"postgres", "postgresql", "mongodb", "redis", "rediss", "mysql"} or uri.query or uri.fragment:
+                    return False
+                hosts.append(uri.hostname or "")
+            except ValueError:
+                return False
+        elif re.search(r"(?:^|\s)(?:host|hostaddr|service)\s*=", arg) or arg.startswith(("--dns-srv-name", "--service")):
+            return False
+    return bool(hosts) and all(host.lower() in {"localhost", "127.0.0.1", "::1"} for host in hosts)
+
+
 def block_reason_for_tokens(tokens: list[str]) -> Optional[str]:
     tokens = normalize_command_tokens(tokens)
     if not tokens:
         return None
     cmd = first_command_name(tokens)
-    if cmd in DB_COMMANDS:
-        return "Blocked database CLI."
+    if cmd in DB_COMMANDS and not database_target_is_local(tokens):
+        return "Blocked database CLI without an explicit local endpoint. Confirm the actual target and specify a local host or URI."
     if cmd in {"env", "printenv"}:
         return "Blocked environment dump."
     if cmd == "security" and len(tokens) >= 2 and tokens[1] == "find-generic-password":

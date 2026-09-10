@@ -52,8 +52,9 @@
 - Git mutationには`git-user-approved`、GitHub・AWS・GCPのreadにはreadonly wrapperを使う。raw CLIや別経路へ迂回しない。
 - readonly wrapperや明示されたCLI・APIが認証または権限エラーで失敗しても、browser、connector、別account、別credentialへ迂回しない。必要な認証手順またはblockerを返し、ユーザーの明示指示を待つ。
 - BrowserやCUAで既存ブラウザ、既存タブ、in-app browserを読み取り・操作するのは、最新のユーザーメッセージに独立した行として`browser-control: allow`がある場合だけにする。Browser pluginやタブのmention、URL、自然文での参照指定だけを許可として扱わない。ローカルファイル、read-only CLI、専用connectorで確認できる場合はそちらを使う。この許可は次のturnへ持ち越さない。
-- cloud write、deploy、IAM変更、secret参照、DB CLIは実行しない。必要ならユーザーが実行できるコマンドを提示する。
-- package manager scriptは用途を確認する。検証系は実行できるが、deploy、release、publish、migrate、seed、DB、IaC、prod系は勝手に実行しない。
+- cloud write、deploy、IAM変更、secret参照、リモートDBへの操作は実行しない。必要ならユーザーが実行できるコマンドを提示する。
+- ローカルDB（ローカルのcontainerを含む）のCLI操作、起動・停止、作成・初期化、migration、seed、DBを使うテストは追加承認なしで実行してよい。実際の接続先がローカルであることを確認する。ローカルport経由でも接続先がリモートDBなら、この許可の対象外とする。
+- package manager scriptは用途と接続先を確認する。DBを使う場合は、呼び出し先の内部処理とテストの準備・後片付けまで追い、設定や環境変数によって決まる実際のDB接続先がすべてローカルであると確認できた場合だけ実行する。script名や入口の接続設定だけでは判断せず、確認できない接続先があれば実行しない。検証系と確認済みのローカルDB用scriptは追加承認なしで実行してよい。deploy、release、publish、リモートDB、IaC、prod系は勝手に実行しない。
 - secret、token、credential、private key、`.env`、raw environment dumpを表示・送信しない。存在確認は値を出さない方法で行う。
 - ユーザー向けに提示するシェルコマンドへ`set -euo pipefail`または`set -o pipefail`を追加しない。ユーザーが明示的に求めた場合だけ例外とする。
 - `rm -rf`、`git clean`、再帰的な権限変更などの破壊的操作を実行しない。対象を絞った回復可能な方法を優先する。

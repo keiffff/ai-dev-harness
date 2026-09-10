@@ -27,6 +27,12 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 
 `local-safety-policy.py` は任意のPython、Node.js、Rubyなどのソースコードを解析するDLPではありません。開発用interpreterを一律に禁止すると通常のtest、生成、検証を妨げるため、既知のshell経由の誤表示だけを止めます。secretはCodexから読めるworkspaceへ置かず、sandbox、OSの権限、secret managerを実際の読み取り境界として使います。
 
+## Local Database Work
+
+ローカルDBのCLI操作、migration、seed、DBを使うテストは追加承認なしで実行できます。DB CLIのhookは、明示された`localhost`、`127.0.0.1`、`::1`への接続を許可します。接続先の省略や未対応の接続形式は拒否するため、確認したローカル接続先をhost引数またはURIで明示します。
+
+client設定や環境変数による接続先、port forwardingの先はhookでは確定できないため、agentが実際の接続先を確認します。リモートDBの操作は引き続きAGENTS.mdで禁止します。DB、migration、seed、ORM名を含むことだけではpackage scriptを拒否しません。agentがscriptから呼び出される内部処理とテストの準備・後片付けまで追い、設定や環境変数によって決まる実際のDB接続先がすべてローカルであると確認できた場合だけ実行します。script名や入口の接続設定だけでは判断せず、接続先を確認できない処理があれば実行しません。deploy、release、publish、IaC、prod系のscript名に対するブロックは維持します。
+
 ## Japanese Output
 
 日本語の品質基準は、常時読む `AGENTS.md` と文章作成時の `codex-writing` が持ちます。Stop hook の continuation prompt は会話に feedback として表示され、回答を遮ったように見えるため、日本語の推敲には使用しません。

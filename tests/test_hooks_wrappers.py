@@ -157,6 +157,51 @@ class HookPolicyTests(unittest.TestCase):
         self.assertAllowed(run_hook('local-safety-policy.py', 'pnpm test'))
         self.assertAllowed(run_hook('local-safety-policy.py', 'python3 -c "print(1)"'))
 
+    def test_database_cli_allows_explicit_local_targets(self):
+        commands = [
+            "psql -h localhost -d testdb -c 'SELECT 1'",
+            "mysql --host=127.0.0.1 testdb",
+            "mongosh --host ::1 --eval 'db.runCommand({ping:1})'",
+            "redis-cli -h 127.0.0.1 PING",
+            "psql postgresql://localhost/testdb -c 'SELECT 1'",
+        ]
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertAllowed(run_hook('shell-policy.py', command))
+
+    def test_database_cli_rejects_remote_missing_and_overridden_targets(self):
+        commands = [
+            "psql -d testdb", "mysql --host remote.example testdb",
+            "mongosh mongodb://remote.example/testdb", "redis-cli -h remote.example PING",
+            "psql -h localhost postgresql://remote.example/testdb",
+            "psql postgresql://localhost/testdb?host=remote.example",
+            "psql -h localhost -d 'hostaddr=192.0.2.1 dbname=testdb'",
+            "psql -h localhost --host=remote.example",
+            "psql -h", "psql -h localhost.example",
+        ]
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertBlocked(run_hook('shell-policy.py', command))
+
+    def test_database_scripts_are_not_blocked_by_name_alone(self):
+        for command in [
+            'pnpm test:db', 'npm run db:migrate', 'yarn seed',
+            'bun run prisma:generate', 'npm run database:reset',
+            'pnpm run migration:run', 'yarn drizzle:push',
+            'npm run typeorm:migration', 'bun run knex:seed',
+        ]:
+            with self.subTest(command=command):
+                self.assertAllowed(run_hook('shell-policy.py', command))
+
+    def test_database_script_change_retains_deploy_and_production_blocks(self):
+        for command in [
+            'pnpm db:migrate:prod', 'npm run db:production',
+            'npm run deploy', 'yarn release', 'bun publish',
+            'pnpm run terraform:apply', 'npm run cdk:deploy',
+        ]:
+            with self.subTest(command=command):
+                self.assertBlocked(run_hook('shell-policy.py', command))
+
     def test_browser_hook_requires_explicit_permission_in_latest_user_message(self):
         setup = 'const { setupBrowserRuntime } = await import("/plugin/scripts/browser-client.mjs");'
         self.assertBlocked(browser_hook(['このURLの内容を調べて'], setup))
