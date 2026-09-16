@@ -1,0 +1,375 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+MODELS = {
+    "opus": "claude-opus-5",
+    "fable": "claude-fable-5-1",
+}
+DEFAULT_CLAUDE_CLI = "claude"
+DEFAULT_TIMEOUT_SECONDS = 600
+HEARTBEAT_SECONDS = 30
+DIAGNOSTIC_CHARS_PER_STREAM = 8000
+ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def stop(message: str, exit_code: int = 2) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(exit_code)
+
+
+def diagnostic_excerpt(output: str, token: str) -> str:
+    cleaned = ANSI_ESCAPE.sub("", output or "")
+    if token:
+        cleaned = cleaned.replace(token, "[REDACTED]")
+    cleaned = re.sub(
+        r"(?i)(authorization\s*[:=]\s*bearer\s+)\S+",
+        r"\1[REDACTED]",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?i)(CLAUDE_CODE_OAUTH_TOKEN\s*[:=]\s*)\S+",
+        r"\1[REDACTED]",
+        cleaned,
+    )
+    cleaned = "".join(
+        character
+        for character in cleaned
+        if character in "\n\r\t" or character.isprintable()
+    ).strip()
+    if len(cleaned) <= DIAGNOSTIC_CHARS_PER_STREAM:
+        return cleaned
+    return (
+        f"[truncated; showing final {DIAGNOSTIC_CHARS_PER_STREAM} characters]\n"
+        + cleaned[-DIAGNOSTIC_CHARS_PER_STREAM:]
+    )
+
+
+def emit_failure_diagnostics(stdout: str, stderr: str, token: str) -> None:
+    diagnostics = []
+    for label, output in (("stdout", stdout), ("stderr", stderr)):
+        excerpt = diagnostic_excerpt(output, token)
+        if excerpt:
+            diagnostics.append(f"Claude CLI {label}:\n{excerpt}")
+    if diagnostics:
+        print("\n".join(diagnostics), file=sys.stderr)
+    else:
+        print("Claude CLI produced no stdout or stderr diagnostics.", file=sys.stderr)
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Generate one bounded standalone HTML report through Claude."
+    )
+    parser.add_argument("--prompt-file", required=True)
+    parser.add_argument("--output-file", required=True)
+    parser.add_argument("--model", choices=tuple(MODELS), default="opus")
+    return parser.parse_args(argv)
+
+
+def resolve_prompt_file(raw: str) -> Path:
+    prompt_file = Path(raw).expanduser()
+    if not prompt_file.is_file():
+        stop("--prompt-file requires an existing regular file.")
+    return prompt_file.resolve()
+
+
+def resolve_output_file(raw: str) -> Path:
+    output_file = Path(raw).expanduser()
+    if output_file.suffix.lower() != ".html":
+        stop("--output-file must end in .html.")
+    if output_file.exists() or output_file.is_symlink():
+        stop("--output-file must not already exist.")
+    parent = output_file.parent.resolve()
+    if not parent.is_dir():
+        stop("--output-file parent directory must already exist.")
+    return parent / output_file.name
+
+
+def load_oauth_token() -> str:
+    account = os.environ.get("USER", "")
+    if not account:
+        stop("USER is required for macOS Keychain lookup.", 1)
+
+    result = subprocess.run(
+        [
+            "security",
+            "find-generic-password",
+            "-a",
+            account,
+            "-s",
+            "CLAUDE_CODE_OAUTH_TOKEN",
+            "-w",
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    token = result.stdout.strip()
+    if result.returncode != 0 or not token:
+        stop("CLAUDE_CODE_OAUTH_TOKEN was not found in macOS Keychain.", 1)
+    return token
+
+
+def timeout_seconds() -> int:
+    raw = os.environ.get(
+        "CLAUDE_HTML_REPORT_TIMEOUT_SECONDS",
+        str(DEFAULT_TIMEOUT_SECONDS),
+    )
+    try:
+        value = int(raw)
+    except ValueError:
+        stop("CLAUDE_HTML_REPORT_TIMEOUT_SECONDS must be an integer.")
+    if not 1 <= value <= 900:
+        stop("CLAUDE_HTML_REPORT_TIMEOUT_SECONDS must be between 1 and 900.")
+    return value
+
+
+def resolve_claude_cli() -> str:
+    configured = os.environ.get("CLAUDE_HTML_REPORT_CLI")
+    if configured:
+        candidate = Path(configured).expanduser()
+        if not candidate.is_absolute():
+            stop("CLAUDE_HTML_REPORT_CLI must be an absolute path.")
+        if not candidate.is_file() or not os.access(candidate, os.X_OK):
+            stop(f"CLAUDE_HTML_REPORT_CLI is not executable: {candidate}", 1)
+        return str(candidate)
+
+    resolved = shutil.which(DEFAULT_CLAUDE_CLI)
+    if not resolved:
+        stop("claude command was not found.", 1)
+    return resolved
+
+
+def require_safe_mode(claude_cli: str) -> None:
+    try:
+        help_result = subprocess.run(
+            [claude_cli, "--help"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        stop(f"Failed to inspect Claude CLI at {claude_cli}: {error}", 1)
+
+    help_text = f"{help_result.stdout}\n{help_result.stderr}"
+    if help_result.returncode == 0 and "--safe-mode" in help_text:
+        return
+
+    try:
+        version_result = subprocess.run(
+            [claude_cli, "--version"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+        version = (version_result.stdout or version_result.stderr).strip()
+    except (OSError, subprocess.TimeoutExpired):
+        version = "version unavailable"
+    stop(
+        f"Claude CLI at {claude_cli} does not support required --safe-mode "
+        f"({version or 'version unavailable'}). Set CLAUDE_HTML_REPORT_CLI to a "
+        "supported absolute path.",
+        1,
+    )
+
+
+def fixed_contract() -> str:
+    return """You are composing one evidence-backed standalone HTML report.
+Use only the facts, uncertainty, rejected claims, dependencies and asset descriptions in the packet below.
+Do not inspect files, use tools, infer unseen image content, or add causal explanations to complete the story.
+Return only one complete HTML document beginning with <!doctype html>. Do not use Markdown fences or surrounding commentary.
+Keep CSS and behavior self-contained. Do not fetch remote scripts, styles, fonts or images.
+Treat fact weight as a display contract, not a completeness score. Load-bearing facts form the visible main narrative. Show supporting facts only when they change the reader's understanding; otherwise compress or defer them. Keep context in progressive disclosure, a reference appendix or the canonical source unless it is a prerequisite. Do not make the reader reconstruct priority from exhaustive prose.
+The first viewport must communicate what matters, where things stand and what the reader must decide or do.
+Attach data-fact="F1 F4" and data-weight="load-bearing|supporting|context" to the nearest meaningful element carrying each visible claim. Split elements when combined facts have different weights. Every attached ID must exist in the packet.
+Attach data-uncertainty="U2" to the nearest meaningful element presenting each open question or assumption.
+Use exactly {{ASSET:A1}} as the source placeholder for each described asset. Do not invent asset IDs or unseen details.
+Preserve the distinction between general explanation and concrete examples. Do not assert or imply rejected claims.
+Immediately before </body>, include exactly one non-rendered HTML comment in this shape; never render REPORT-META as visible content:
+<!-- REPORT-META
+structure:
+- <why each major section follows the previous one>
+information_weighting:
+  main:
+  - F1: <why it is visible>
+  deferred:
+  - F4: <where it lives and why>
+  omitted:
+  - F8: <why the canonical source is sufficient>
+inferences:
+- id: I1
+  claim: <claim not directly reducible to packet facts>
+  based_on: <fact IDs>
+  confidence: <high|medium|low>
+-->
+An empty inference list is valid. An unlisted inference is not.
+
+--- PACKET ---
+"""
+
+
+def run_claude(
+    prompt: str,
+    token: str,
+    timeout: int,
+    claude_cli: str,
+    model: str,
+) -> str:
+    env = os.environ.copy()
+    env["CLAUDE_CODE_OAUTH_TOKEN"] = token
+    command = [
+        claude_cli,
+        "-p",
+        "--model",
+        MODELS[model],
+        "--output-format",
+        "text",
+        "--safe-mode",
+        "--tools",
+        "",
+        "--max-turns",
+        "1",
+        "--no-session-persistence",
+        "--disable-slash-commands",
+        "--no-chrome",
+    ]
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+            start_new_session=True,
+        )
+    except FileNotFoundError:
+        stop("claude command was not found.", 1)
+
+    started = time.monotonic()
+    first_wait = True
+    while True:
+        elapsed = time.monotonic() - started
+        remaining = timeout - elapsed
+        if remaining <= 0:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                stdout, stderr = process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                stdout, stderr = process.communicate()
+            emit_failure_diagnostics(stdout, stderr, token)
+            stop(
+                "Claude HTML report generation timed out after "
+                f"{timeout} seconds.",
+                124,
+            )
+
+        try:
+            stdout, stderr = process.communicate(
+                input=prompt if first_wait else None,
+                timeout=min(HEARTBEAT_SECONDS, remaining),
+            )
+            break
+        except subprocess.TimeoutExpired:
+            first_wait = False
+            elapsed_seconds = int(time.monotonic() - started)
+            print(
+                f"Claude HTML report generation is still running ({elapsed_seconds}s elapsed).",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    if process.returncode != 0:
+        emit_failure_diagnostics(stdout, stderr, token)
+        stop(f"Claude HTML report generation failed with exit code {process.returncode}.", 1)
+    return stdout.strip()
+
+
+def validate_html(output: str) -> None:
+    lowered = output.lower()
+    if not lowered.startswith("<!doctype html>"):
+        stop("Claude response did not begin with <!doctype html>.", 1)
+    if "```" in output:
+        stop("Claude response contained a Markdown fence.", 1)
+    if "<html" not in lowered or not lowered.endswith("</html>"):
+        stop("Claude response was not a complete HTML document.", 1)
+    if "data-fact=" not in lowered:
+        stop("Claude response did not attach any fact provenance.", 1)
+    if "data-weight=" not in lowered:
+        stop("Claude response did not attach any display weights.", 1)
+
+    meta_marker = "<!-- report-meta"
+    if lowered.count(meta_marker) != 1:
+        stop("Claude response did not contain exactly one REPORT-META comment.", 1)
+    meta_start = lowered.index(meta_marker)
+    meta_end = lowered.find("-->", meta_start)
+    body_end = lowered.rfind("</body>")
+    if meta_end < 0 or body_end < 0 or not meta_start < meta_end < body_end:
+        stop("Claude response did not place REPORT-META before </body>.", 1)
+    meta = lowered[meta_start:meta_end]
+    if (
+        "structure:" not in meta
+        or "information_weighting:" not in meta
+        or "inferences:" not in meta
+    ):
+        stop("Claude response contained an incomplete REPORT-META comment.", 1)
+    without_meta = lowered[:meta_start] + lowered[meta_end + 3 :]
+    if "report-meta" in without_meta:
+        stop("Claude response rendered REPORT-META outside its comment.", 1)
+
+
+def main() -> None:
+    args = parse_args(sys.argv[1:])
+    prompt_file = resolve_prompt_file(args.prompt_file)
+    output_file = resolve_output_file(args.output_file)
+
+    try:
+        packet = prompt_file.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        stop("--prompt-file must be UTF-8.")
+    if not packet.strip():
+        stop("--prompt-file must not be empty.")
+
+    claude_cli = resolve_claude_cli()
+    require_safe_mode(claude_cli)
+    output = run_claude(
+        fixed_contract() + packet,
+        load_oauth_token(),
+        timeout_seconds(),
+        claude_cli,
+        args.model,
+    )
+    validate_html(output)
+    try:
+        with output_file.open("x", encoding="utf-8") as output_stream:
+            output_stream.write(output + "\n")
+    except FileExistsError:
+        stop("--output-file must not already exist.")
+    print(output_file)
+
+
+if __name__ == "__main__":
+    main()

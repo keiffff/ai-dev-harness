@@ -45,6 +45,8 @@ Handoff authority permits a non-destructive local snapshot or exact transfer of 
 
 ## Build The Continuation Packet
 
+Start from the latest verified handoff packet or compaction summary and reconcile only the user messages and state changes after it. Inspect broader history only when that checkpoint is absent, incomplete, or contradicted. Do not reconstruct already-preserved decisions from scratch.
+
 Use this structure:
 
 ```markdown
@@ -94,6 +96,7 @@ Use this structure:
 ```
 
 Prefer references over copied diffs, logs, specs, or source code. Include failed approaches only when needed to prevent repetition. Redact secrets and irrelevant private data. Mark uncertain reconstruction as uncertain.
+Keep the packet concise. Merge adjacent sections when that removes duplication, omit empty optional detail, and do not repeat the same constraint under current state, decisions, and open work. Preserve the objective, complete unresolved-work inventory, workspace checkpoint, load-bearing decisions, and resume point.
 
 Do not collapse the `Open work` inventory into the proposed resume point. For an explicit split, record work retained elsewhere under `Explicit exclusions`.
 

@@ -21,6 +21,7 @@ wrapper は、AI agent に期待する実行境界を command level で表現し
 - `bin/gcloud-readonly.example`: explicit read-only Google Cloud CLI allowlist with secret/token access blocked
 - `bin/grok-x-research.example`: one bounded xAI X Search request with date limits, no Web Search, normalized citation annotations, and explicit cost reporting
 - `bin/claude-strategic-review.example`: one bounded Claude Opus review with a 600-second default timeout, heartbeat diagnostics, and tools, project customizations, session persistence, and extra agent turns disabled
+- `bin/claude-html-report.example`: one bounded Claude Opus or explicitly requested Fable whole-HTML composition with a 600-second default timeout, safe mode, no tools, no session persistence, complete-document validation, bounded redacted failure diagnostics, and a new-file-only output boundary
 
 ## Local Adaptation
 

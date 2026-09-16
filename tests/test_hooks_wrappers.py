@@ -517,6 +517,258 @@ class WrapperTests(unittest.TestCase):
         self.assertIn('timed out after 1 seconds', result.stderr)
         self.assertIn('process remained active but final stdout was not received', result.stderr)
 
+    def run_claude_html_wrapper(
+        self,
+        claude_script: str,
+        args: list[str] | None = None,
+        supports_safe_mode: bool = True,
+        timeout: str = '5',
+    ) -> tuple[subprocess.CompletedProcess[str], Path, tempfile.TemporaryDirectory[str]]:
+        tmp_context = tempfile.TemporaryDirectory()
+        tmp = Path(tmp_context.name)
+        fake_security = tmp / 'security'
+        fake_security.write_text('#!/bin/sh\nprintf "test-token\\n"\n')
+        fake_security.chmod(0o755)
+
+        fake_claude = tmp / 'claude'
+        safe_mode_help = '--safe-mode' if supports_safe_mode else '--permission-mode'
+        fake_claude.write_text(
+            '#!/bin/sh\n'
+            'if [ "$1" = "--help" ]; then\n'
+            f'  printf "%s\\n" "{safe_mode_help}"\n'
+            '  exit 0\n'
+            'fi\n'
+            'if [ "$1" = "--version" ]; then\n'
+            '  printf "test-claude 1.0\\n"\n'
+            '  exit 0\n'
+            'fi\n'
+            + claude_script.removeprefix('#!/bin/sh\n')
+        )
+        fake_claude.chmod(0o755)
+
+        prompt = tmp / 'packet.md'
+        prompt.write_text('Reader: product owner.\\nFact F1: verified result.')
+        output = tmp / 'candidate.html'
+        args_file = tmp / 'claude-args.txt'
+        env = os.environ.copy()
+        env.update({
+            'PATH': str(tmp) + os.pathsep + env.get('PATH', ''),
+            'CLAUDE_HTML_REPORT_CLI': str(fake_claude),
+            'CLAUDE_HTML_REPORT_TIMEOUT_SECONDS': timeout,
+            'CLAUDE_HTML_ARGS_FILE': str(args_file),
+        })
+        command = [
+            str(ROOT / 'wrappers' / 'bin' / 'claude-html-report.example'),
+            '--prompt-file',
+            str(prompt),
+            '--output-file',
+            str(output),
+        ]
+        if args:
+            command.extend(args)
+        result = subprocess.run(
+            command,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            check=False,
+        )
+        return result, output, tmp_context
+
+    def test_claude_html_report_disables_agentic_execution_and_writes_new_html(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\n'
+            'printf "%s\\n" "$@" > "$CLAUDE_HTML_ARGS_FILE"\n'
+            'printf "<!doctype html><html><body data-fact=\\"F1\\" data-weight=\\"load-bearing\\">ok<!-- REPORT-META structure: - one information_weighting: main: - F1 deferred: [] omitted: [] inferences: [] --></body></html>\\n"\n'
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            args = (Path(tmp_context.name) / 'claude-args.txt').read_text().splitlines()
+            self.assertIn('--safe-mode', args)
+            self.assertIn('--no-session-persistence', args)
+            self.assertIn('--disable-slash-commands', args)
+            self.assertIn('--no-chrome', args)
+            self.assertEqual(args[args.index('--tools') + 1], '')
+            self.assertEqual(args[args.index('--max-turns') + 1], '1')
+            self.assertEqual(args[args.index('--model') + 1], 'claude-opus-5')
+            self.assertTrue(output.is_file())
+            self.assertIn('data-fact="F1"', output.read_text())
+            self.assertIn('data-weight="load-bearing"', output.read_text())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_prompt_contains_the_enforced_output_contract(self):
+        wrapper = ROOT / 'wrappers' / 'bin' / 'claude-html-report.example'
+        contract = runpy.run_path(str(wrapper))['fixed_contract']()
+
+        self.assertIn('data-fact="F1 F4"', contract)
+        self.assertIn('data-weight="load-bearing|supporting|context"', contract)
+        self.assertIn('data-uncertainty="U2"', contract)
+        self.assertIn('{{ASSET:A1}}', contract)
+        self.assertIn('<!-- REPORT-META', contract)
+        self.assertIn('information_weighting:', contract)
+        self.assertIn('Do not make the reader reconstruct priority', contract)
+        self.assertIn('never render REPORT-META as visible content', contract)
+
+    def test_claude_html_report_uses_fable_only_when_selected(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\n'
+            'printf "%s\\n" "$@" > "$CLAUDE_HTML_ARGS_FILE"\n'
+            'printf "<!doctype html><html><body data-fact=\\"F1\\" data-weight=\\"load-bearing\\">ok<!-- REPORT-META structure: - one information_weighting: main: - F1 deferred: [] omitted: [] inferences: [] --></body></html>\\n"\n',
+            args=['--model', 'fable'],
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            args = (Path(tmp_context.name) / 'claude-args.txt').read_text().splitlines()
+            self.assertEqual(args[args.index('--model') + 1], 'claude-fable-5-1')
+            self.assertTrue(output.is_file())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_rejects_existing_output(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\nprintf "<!doctype html><html><body data-fact=\\"F1\\" data-weight=\\"load-bearing\\"><!-- REPORT-META structure: - one information_weighting: main: - F1 deferred: [] omitted: [] inferences: [] --></body></html>\\n"\n'
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            second = subprocess.run(
+                [
+                    str(ROOT / 'wrappers' / 'bin' / 'claude-html-report.example'),
+                    '--prompt-file',
+                    str(Path(tmp_context.name) / 'packet.md'),
+                    '--output-file',
+                    str(output),
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env={
+                    **os.environ,
+                    'PATH': tmp_context.name + os.pathsep + os.environ.get('PATH', ''),
+                    'CLAUDE_HTML_REPORT_CLI': str(Path(tmp_context.name) / 'claude'),
+                },
+                check=False,
+            )
+            self.assertNotEqual(second.returncode, 0)
+            self.assertIn('must not already exist', second.stderr)
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_rejects_invalid_html(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\nprintf "not html\\n"\n'
+        )
+        try:
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('did not begin with <!doctype html>', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_surfaces_redacted_stdout_and_stderr_on_cli_failure(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\n'
+            'printf "Fable request failed for token %s\\n" "$CLAUDE_CODE_OAUTH_TOKEN"\n'
+            'printf "provider detail: overloaded\\n" >&2\n'
+            'exit 7\n'
+        )
+        try:
+            self.assertEqual(result.returncode, 1)
+            self.assertIn('Claude CLI stdout:', result.stderr)
+            self.assertIn('Fable request failed for token [REDACTED]', result.stderr)
+            self.assertIn('Claude CLI stderr:', result.stderr)
+            self.assertIn('provider detail: overloaded', result.stderr)
+            self.assertIn('failed with exit code 7', result.stderr)
+            self.assertNotIn('test-token', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_reports_empty_cli_failure_diagnostics(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\nexit 9\n'
+        )
+        try:
+            self.assertEqual(result.returncode, 1)
+            self.assertIn('produced no stdout or stderr diagnostics', result.stderr)
+            self.assertIn('failed with exit code 9', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_surfaces_diagnostics_on_timeout(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\n'
+            'printf "provider request started\\n"\n'
+            'sleep 2\n',
+            timeout='1',
+        )
+        try:
+            self.assertEqual(result.returncode, 124)
+            self.assertIn('Claude CLI stdout:', result.stderr)
+            self.assertIn('provider request started', result.stderr)
+            self.assertIn('timed out after 1 seconds', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_rejects_commentary_after_html(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\nprintf "<!doctype html><html><body data-fact=\\"F1\\" data-weight=\\"load-bearing\\"><!-- REPORT-META structure: - one information_weighting: main: - F1 deferred: [] omitted: [] inferences: [] --></body></html>\\nDone.\\n"\n'
+        )
+        try:
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('was not a complete HTML document', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_rejects_missing_report_metadata(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\nprintf "<!doctype html><html><body data-fact=\\"F1\\" data-weight=\\"load-bearing\\">ok</body></html>\\n"\n'
+        )
+        try:
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('exactly one REPORT-META comment', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_rejects_missing_display_weights(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\nprintf "<!doctype html><html><body data-fact=\\"F1\\">ok<!-- REPORT-META structure: - one information_weighting: main: - F1 deferred: [] omitted: [] inferences: [] --></body></html>\\n"\n'
+        )
+        try:
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('did not attach any display weights', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_rejects_missing_weighting_metadata(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\nprintf "<!doctype html><html><body data-fact=\\"F1\\" data-weight=\\"load-bearing\\">ok<!-- REPORT-META structure: - one inferences: [] --></body></html>\\n"\n'
+        )
+        try:
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('incomplete REPORT-META comment', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_claude_html_report_rejects_cli_without_safe_mode(self):
+        result, output, tmp_context = self.run_claude_html_wrapper(
+            '#!/bin/sh\nexit 0\n',
+            supports_safe_mode=False,
+        )
+        try:
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('does not support required --safe-mode', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
     def run_grok_wrapper(
         self,
         response_payload: dict,

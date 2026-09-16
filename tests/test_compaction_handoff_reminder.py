@@ -39,45 +39,45 @@ def run_hook(state_dir: str, session_id: str = "session-1", source: str = "compa
 
 
 class CompactionHandoffReminderTests(unittest.TestCase):
-    def test_reminds_on_second_and_later_compactions(self):
+    def test_reminds_once_on_third_compaction(self):
         with tempfile.TemporaryDirectory() as state_dir:
             first = run_hook(state_dir)
             second = run_hook(state_dir)
             third = run_hook(state_dir)
+            fourth = run_hook(state_dir)
 
         self.assertEqual(first.returncode, 0, first.stderr)
         self.assertEqual(first.stdout, "")
-        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual(second.stdout, "")
         self.assertEqual(third.returncode, 0, third.stderr)
-        for result in (second, third):
-            output = json.loads(result.stdout)
-            hook_output = output["hookSpecificOutput"]
-            self.assertEqual(hook_output["hookEventName"], "SessionStart")
-            self.assertIn("codex-thread-handoff", hook_output["additionalContext"])
-            self.assertIn("explicit user approval", hook_output["additionalContext"])
-            self.assertIn("cover the whole root task", hook_output["additionalContext"])
-            self.assertIn(
-                "unless the user explicitly asks to split",
-                hook_output["additionalContext"],
-            )
-            self.assertIn("at most once for each observed compaction", hook_output["additionalContext"])
-            self.assertIn("Do not interrupt", hook_output["additionalContext"])
+        self.assertEqual(fourth.stdout, "")
+        output = json.loads(third.stdout)
+        hook_output = output["hookSpecificOutput"]
+        self.assertEqual(hook_output["hookEventName"], "SessionStart")
+        self.assertIn("codex-thread-handoff", hook_output["additionalContext"])
+        self.assertIn("explicit user approval", hook_output["additionalContext"])
+        self.assertIn("cover the whole root task", hook_output["additionalContext"])
+        self.assertIn("unless the user explicitly asks to split", hook_output["additionalContext"])
+        self.assertIn("Compaction alone is not enough", hook_output["additionalContext"])
+        self.assertIn("at most one proactive", hook_output["additionalContext"])
+        self.assertIn("Do not interrupt", hook_output["additionalContext"])
 
-    def test_reads_existing_state_with_legacy_reminder_field(self):
+    def test_migrates_legacy_state_as_already_reminded(self):
         with tempfile.TemporaryDirectory() as state_dir:
             session_key = hashlib.sha256(b"session-1").hexdigest()
             path = Path(state_dir) / f"{session_key}.json"
             path.write_text(json.dumps({
                 "compaction_count": 2,
-                "reminder_emitted": True,
             }))
             result = run_hook(state_dir)
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertNotEqual(result.stdout, "")
+        self.assertEqual(result.stdout, "")
 
     def test_tracks_sessions_independently(self):
         with tempfile.TemporaryDirectory() as state_dir:
+            self.assertEqual(run_hook(state_dir, session_id="session-a").stdout, "")
+            self.assertEqual(run_hook(state_dir, session_id="session-b").stdout, "")
             self.assertEqual(run_hook(state_dir, session_id="session-a").stdout, "")
             self.assertEqual(run_hook(state_dir, session_id="session-b").stdout, "")
             self.assertNotEqual(run_hook(state_dir, session_id="session-a").stdout, "")

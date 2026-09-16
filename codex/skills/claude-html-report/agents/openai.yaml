@@ -1,0 +1,7 @@
+interface:
+  display_name: "Claude HTML Report"
+  short_description: "Claudeで情報設計されたHTML資料を生成しCodexで検証"
+  default_prompt: "Use $claude-html-report to compose this evidence-backed standalone HTML report and verify the complete artifact."
+
+policy:
+  allow_implicit_invocation: true

@@ -5,7 +5,7 @@ description: Draft or revise prose with the requested facts, Japanese style and 
 
 # Codex Writing
 
-Codex writes prose deliverables directly. Ordinary Q&A needs no writing workflow; decision records use `codex-decision-doc`.
+Codex writes prose deliverables directly. Ordinary Q&A needs no writing workflow; decision records use `codex-decision-doc`. A standalone HTML report routed through `claude-html-report` is the bounded exception: Claude composes the whole artifact from Codex's verified fact packet, while Codex retains factual and final-output verification. Do not extend that exception to PR, README, Slack, release-note or UI-copy drafting.
 
 ## Editing Contract
 

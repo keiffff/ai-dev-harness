@@ -5,7 +5,7 @@ description: Build or review UI using existing design constraints, concrete visu
 
 # Codex Frontend UI
 
-For an existing product, follow its components, tokens, density, icons and interaction patterns. For a standalone artifact, choose a visual direction suited to the primary user task. A strategy-only request returns a proposal; an implementation request authorizes routine UI choices within its scope.
+For an existing product, follow its components, tokens, density, icons and interaction patterns. For a standalone artifact, choose a visual direction suited to the primary user task. When a standalone HTML report depends on cross-section narrative, coordinated comparisons, annotated assets or dense information architecture, use `claude-html-report` for whole-artifact composition and keep factual verification here. A strategy-only request returns a proposal; an implementation request authorizes routine UI choices within its scope.
 
 ## Design And Review Criteria
 

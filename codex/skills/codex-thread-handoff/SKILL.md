@@ -1,6 +1,6 @@
 ---
 name: codex-thread-handoff
-description: Move the whole owned task to a fresh task when the user asks or context degrades. Requires explicit acceptance, preserves scope and workspace state, and stops after verification.
+description: Move the whole owned task to a fresh task when the user asks or multiple context-degradation signals justify it. Requires explicit acceptance and preserves scope and workspace state.
 ---
 
 # Codex Thread Handoff
@@ -9,23 +9,21 @@ Separate read-only advice from task creation. A migration suggestion does not au
 
 ## Assess The Timing
 
-Suggest a handoff only at a safe checkpoint and when at least one meaningful signal is present:
+A user-requested handoff may proceed at a safe checkpoint. Proactively suggest one only when at least two independent degradation signals are present:
 
-- two or more compactions are observable;
+- three or more compactions are observable, as one weak signal only;
 - the runtime exposes sustained context pressure;
-- the task crosses a major phase boundary;
-- the goal has materially changed;
 - the user has corrected the same misunderstanding more than once;
 - prior decisions or constraints are being rediscovered or contradicted;
 - accumulated dead ends are making the conversation less reliable.
 
-Do not invent token or compaction counts. Do not suggest a handoff during an active command, edit, test, approval, or unresolved failure; for a short answer; while one coherent phase remains reliable; or more than once in the same phase without new degradation evidence.
+A phase boundary or changed goal is a convenient checkpoint, not evidence of degradation by itself. Compaction alone is also insufficient. Do not invent token or compaction counts. Do not suggest a handoff during an active command, edit, test, approval, or unresolved failure; for a short answer; or while the current task state remains reliable.
 
 Keep the suggestion to one sentence and match the conversation language:
 
 > This task has reached a safe boundary and shows context degradation. Move this whole task to a fresh task with a compact handoff?
 
-If the user declines or ignores it, continue without repeating it for the same observed compaction. Each later compaction is new degradation evidence and may justify one new suggestion at the next safe checkpoint.
+Proactively suggest a handoff at most once per task. If the user declines or ignores it, continue without repeating the suggestion. A later user request can still authorize a handoff.
 
 ## Require Explicit Authority
 
@@ -55,7 +53,7 @@ Before transfer, inventory:
 - decisions and rejected alternatives that constrain retained work;
 - work explicitly excluded by the user.
 
-Do not derive this inventory only from the latest turn or a compaction summary. Reconcile the latest accepted objective, any earlier handoff packet, unresolved work mentioned earlier, and explicit cancellations. If the complete scope cannot be established, stop before destination creation and ask the user instead of choosing a narrower subset.
+Use the latest verified handoff packet or compaction summary as the baseline when available, then reconcile user messages since that checkpoint, unresolved work, and explicit cancellations. Read older history only when the baseline is missing, incomplete, or conflicts with later evidence. If the complete scope cannot be established, stop before destination creation and ask the user instead of choosing a narrower subset.
 
 Use the source task identity and root outcome for the destination title and objective. Every unresolved item in the source inventory must appear in the packet or be an explicit user-approved exclusion. The resume point does not replace the task objective.
 
@@ -63,7 +61,7 @@ Use the source task identity and root outcome for the destination title and obje
 
 A handoff authorizes only destination-task creation, context transfer, required-artifact transfer, and read-only destination verification. Selecting or correcting the destination checkout to the exact recovery commit is part of context transfer. It does not authorize substantive work in the destination, browser, credentials, external services, cloud use, implementation, commit, branch creation, rebase, push, or other unrelated Git mutation. Source-task permissions do not transfer. Source archival requires the separate authority described above.
 
-After destination verification, restate the transferred state and proposed resume point, then stop and wait for a new user message. Treat all such packet content as context only.
+The destination must verify transferred state before substantive work. On a same-host destination that shares the exact checkout and needs no post-creation artifact transfer, use the fast verification path: create the destination, take at most one immediate status snapshot, report the created task without waiting for its verification turn, and stop. The destination verifies before responding to new work. Use synchronous source-side verification only when checkout setup, host transfer, or post-creation artifact delivery makes it necessary.
 
 ## Load Execution Detail Progressively
 

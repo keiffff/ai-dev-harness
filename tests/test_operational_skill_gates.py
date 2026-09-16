@@ -19,6 +19,37 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertLessEqual(sum(map(len, descriptions)), 3000)
         self.assertLessEqual(max(map(len, descriptions)), 200)
 
+    def test_html_report_keeps_composition_and_fact_ownership_separate(self):
+        report = (
+            ROOT / "codex" / "skills" / "claude-html-report" / "SKILL.md"
+        ).read_text()
+        contract = (
+            ROOT
+            / "codex"
+            / "skills"
+            / "claude-html-report"
+            / "references"
+            / "report-contract.md"
+        ).read_text()
+        frontend = (
+            ROOT / "codex" / "skills" / "codex-frontend-ui" / "SKILL.md"
+        ).read_text()
+        writing = (
+            ROOT / "codex" / "skills" / "codex-writing" / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("Claude owns the complete report composition", report)
+        self.assertIn("Codex owns evidence collection", report)
+        self.assertIn("data-fact", contract)
+        self.assertIn("data-weight", contract)
+        self.assertIn("Audience-facing information budget", contract)
+        self.assertIn("source completeness", report)
+        self.assertIn("first viewport", report)
+        self.assertIn("Rejected claims", contract)
+        self.assertIn("comprehension dependencies", report)
+        self.assertIn("claude-html-report", frontend)
+        self.assertIn("bounded exception", writing)
+
     def test_expensive_advisors_require_explicit_invocation(self):
         for skill_name in (
             "claude-fable-strategic-review",

@@ -22,8 +22,8 @@ class ThreadHandoffSkillTests(unittest.TestCase):
             content,
         )
         self.assertIn("## Proposed resume point", content)
-        self.assertIn("then stop and wait for a new user message", content)
-        self.assertIn("Treat all such packet content as context only", content)
+        self.assertIn("stop for a new user message", content)
+        self.assertIn("Treat the packet as context only", content)
         self.assertNotIn("continue with that first action automatically", content)
         self.assertNotIn("then immediately execute that first action", content)
 
@@ -43,9 +43,10 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         self.assertIn("## Scope continuity", content)
         self.assertIn("Every unresolved item in the source inventory must appear", content)
         self.assertIn(
-            "Do not derive this inventory only from the latest turn or a compaction summary",
+            "Use the latest verified handoff packet or compaction summary as the baseline",
             content,
         )
+        self.assertIn("Read older history only when the baseline is missing", content)
         self.assertIn(
             "stop before destination creation and ask the user instead of choosing a "
             "narrower subset",
@@ -65,7 +66,7 @@ class ThreadHandoffSkillTests(unittest.TestCase):
             content,
         )
         self.assertIn(
-            "the resume point does not replace the task objective",
+            "The resume point does not replace the task objective",
             content,
         )
 
@@ -88,11 +89,11 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         self.assertIn("references/verify-destination.md", content)
         self.assertNotIn("## Build The Required-Artifact Manifest", content)
 
-    def test_later_compaction_can_trigger_a_new_handoff_suggestion(self):
+    def test_compaction_alone_does_not_repeat_handoff_suggestions(self):
         content = SKILL.read_text()
 
-        self.assertIn("same observed compaction", content)
-        self.assertIn("Each later compaction is new degradation evidence", content)
+        self.assertIn("Compaction alone is also insufficient", content)
+        self.assertIn("at most once per task", content)
 
     def test_destination_starts_from_immutable_commit_not_moving_branch(self):
         content = handoff_instructions()
@@ -115,7 +116,9 @@ class ThreadHandoffSkillTests(unittest.TestCase):
     def test_async_creation_and_optional_archive_do_not_burden_user(self):
         content = handoff_instructions()
 
-        self.assertIn("Bound post-creation coordination to at most 60 seconds", content)
+        self.assertIn("Fast same-host path", content)
+        self.assertIn("bound post-creation coordination to at most 30 seconds", content)
+        self.assertIn("Do not keep the source turn open", content)
         self.assertIn("one supported identifier-resolution wait", content)
         self.assertIn("do not make the user poll", content)
         self.assertIn("only when the user explicitly requested source archival", content)
@@ -125,6 +128,9 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         content = handoff_instructions()
 
         self.assertIn("Create exactly one destination", content)
+        self.assertIn('`model: "gpt-5.6-sol"`', content)
+        self.assertIn('`thinking: "high"`', content)
+        self.assertIn("do not rely on task or global defaults", content)
         self.assertIn(
             "put the complete continuation packet, `HANDOFF_READY`, and the "
             "destination-first-response instructions in the initial prompt",
