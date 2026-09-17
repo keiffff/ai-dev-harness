@@ -20,6 +20,7 @@ skillには、証拠の探し先、レビュー基準、成果物の形式、外
 | `codex-frontend-ui` | UI 方針、HTML/mock/report、review visualization、既存デザインシステム準拠、visual QA | 既存デザインへの準拠、見た目、元資料との整合、視覚検証を確認する | canonical source を生成 HTML へ置き換えたり、full app browser 検証を勝手に始めたりしない |
 | `claude-html-report` | 複数章、比較図、画像、密な情報設計が必要な standalone HTML 資料 | Codexが証拠契約を作り、Claudeが資料全体を構成し、Codexが事実と表示を検証する | Claudeへrepo調査、事実判断、直接のファイル編集を任せない |
 | `codex-writing` | PR説明、README、チーム共有、release note、返信案などの文章成果物 | 読者、目的、事実、書かないことを整理して本文を書く | `claude-html-report`のstandalone HTMLを除き、Claudeに文章草稿を外注しない |
+| `gemini-japanese-polish` | 完成済みの日本語草稿をGeminiで明示的に推敲したいとき | `codex-writing`の草稿へGemini 3.8 Flashを1回だけ通し、Codexが事実と最終文面を検証する | 初稿、事実調査、構成変更、暗黙実行、自動再試行を任せない |
 | `codex-decision-doc` | design doc、ADR/RFC、移行方針、判断の記録 | 判断、理由、代替案、互換性、残リスクを残す | 実装ファイル一覧や作業ログを書かない |
 | `codex-cdk-design-review` | CDK、CloudFormation、stack、shared environment、cross-stack reference を触るとき | resource ownership、依存方向、物理名、quota、region を事前に見る | isolated 環境で通るだけの設計を安全扱いしない |
 | `claude-strategic-review` | 方針、設計、移行、長期保守性を広く見たいとき | Claude Opus に sidecar review を依頼する | 最終判断や repo 編集を Claude に渡さない |

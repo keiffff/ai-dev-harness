@@ -13,19 +13,27 @@ def handoff_instructions() -> str:
 
 
 class ThreadHandoffSkillTests(unittest.TestCase):
-    def test_handoff_stops_after_transfer_and_read_only_verification(self):
+    def test_handoff_resumes_only_when_latest_request_explicitly_asks(self):
         content = handoff_instructions()
 
         self.assertIn(
-            "A handoff authorizes only destination-task creation, context transfer, "
+            "A plain handoff authorizes only destination-task creation, context transfer, "
             "required-artifact transfer, and read-only destination verification.",
             content,
         )
         self.assertIn("## Proposed resume point", content)
-        self.assertIn("stop for a new user message", content)
-        self.assertIn("Treat the packet as context only", content)
-        self.assertNotIn("continue with that first action automatically", content)
-        self.assertNotIn("then immediately execute that first action", content)
+        self.assertIn("Post-verification mode", content)
+        self.assertIn("A plain handoff stops after verification", content)
+        self.assertIn(
+            "An explicit handoff-and-resume request authorizes the destination to continue",
+            content,
+        )
+        self.assertIn(
+            "For `RESUME`, continue the proposed resume point in the same turn",
+            content,
+        )
+        self.assertIn("For `STOP`", content)
+        self.assertIn("does not authorize browser use, credentials, external services", content)
 
     def test_handoff_preserves_whole_task_scope_unless_user_explicitly_splits_it(self):
         content = handoff_instructions()
@@ -70,16 +78,41 @@ class ThreadHandoffSkillTests(unittest.TestCase):
             content,
         )
 
-    def test_destination_generated_environment_files_are_classified_before_blocking(self):
+    def test_checkout_local_environment_files_do_not_block_or_create_noise(self):
         content = handoff_instructions()
 
         self.assertIn("known environment-generated files", content)
         self.assertIn("Block on missing task artifacts", content)
         self.assertIn(
-            "A destination-only environment-generated file does not block the handoff",
+            "A source-only or destination-only environment-generated file does not block the handoff",
             content,
         )
-        self.assertIn("do not transfer, edit, or delete it", content)
+        self.assertIn("do not put it in expected task changes", content)
+        self.assertIn("Excluded environment state may differ by checkout", content)
+        self.assertIn(
+            "Do not mention a present, absent, or changed excluded environment file",
+            content,
+        )
+        self.assertIn(
+            "Do not enumerate passing checks such as `HEAD`, remote branch equality, "
+            "default branch, absent OpenSpec changes",
+            content,
+        )
+        self.assertIn(
+            "does not become a blocker merely because it is present in only one checkout",
+            content,
+        )
+
+    def test_destination_blocks_only_on_task_bearing_state(self):
+        content = handoff_instructions()
+
+        self.assertIn("Verification gates only task-bearing state", content)
+        self.assertIn("task-required dirty state", content)
+        self.assertIn(
+            "If a task-required artifact or semantic workstream is missing",
+            content,
+        )
+        self.assertNotIn("If anything is missing, reclassified, or conflicting", content)
 
     def test_execution_detail_is_loaded_only_after_acceptance(self):
         content = SKILL.read_text()
@@ -132,7 +165,8 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         self.assertIn('`thinking: "high"`', content)
         self.assertIn("do not rely on task or global defaults", content)
         self.assertIn(
-            "put the complete continuation packet, `HANDOFF_READY`, and the "
+            "put the complete continuation packet, its `Post-verification mode`, "
+            "`HANDOFF_READY`, and the "
             "destination-first-response instructions in the initial prompt",
             content,
         )

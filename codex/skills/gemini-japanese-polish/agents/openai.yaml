@@ -1,0 +1,6 @@
+interface:
+  display_name: "Gemini Japanese Polish"
+  short_description: "Polish a completed Japanese draft with Gemini 3.8 Flash"
+  default_prompt: "Use $gemini-japanese-polish to polish this completed Japanese draft without changing its facts or structure."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,305 @@
+#!/usr/bin/env python3
+
+import argparse
+from collections import Counter
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+from urllib import error, request
+from urllib.parse import urlparse
+
+
+MODEL = "gemini-3.8-flash"
+DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
+DEFAULT_TIMEOUT_SECONDS = 120
+MAX_INPUT_CHARS = 100_000
+MAX_DIAGNOSTIC_CHARS = 8_000
+
+
+def stop(message: str, exit_code: int = 2) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(exit_code)
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Polish one Japanese draft with Gemini 3.8 Flash."
+    )
+    parser.add_argument("--input-file", required=True)
+    parser.add_argument("--output-file", required=True)
+    parser.add_argument(
+        "--medium",
+        choices=("general", "github", "slack", "ui-copy", "release-note"),
+        default="general",
+    )
+    return parser.parse_args(argv)
+
+
+def resolve_input_file(raw: str) -> Path:
+    input_file = Path(raw).expanduser()
+    if not input_file.is_file():
+        stop("--input-file requires an existing regular file.")
+    return input_file.resolve()
+
+
+def resolve_output_file(raw: str) -> Path:
+    output_file = Path(raw).expanduser()
+    if output_file.exists() or output_file.is_symlink():
+        stop("--output-file must not already exist.")
+    parent = output_file.parent.resolve()
+    if not parent.is_dir():
+        stop("--output-file parent directory must already exist.")
+    return parent / output_file.name
+
+
+def load_api_key() -> str:
+    configured = os.environ.get("GEMINI_API_KEY", "").strip()
+    if configured:
+        return configured
+
+    account = os.environ.get("USER", "")
+    if not account:
+        stop("USER is required for macOS Keychain lookup.", 1)
+    result = subprocess.run(
+        [
+            "/usr/bin/security",
+            "find-generic-password",
+            "-a",
+            account,
+            "-s",
+            "GEMINI_JAPANESE_POLISH_API_KEY",
+            "-w",
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    api_key = result.stdout.strip()
+    if result.returncode != 0 or not api_key:
+        stop("GEMINI_JAPANESE_POLISH_API_KEY was not found in macOS Keychain.", 1)
+    return api_key
+
+
+def timeout_seconds() -> int:
+    raw = os.environ.get(
+        "GEMINI_JAPANESE_POLISH_TIMEOUT_SECONDS",
+        str(DEFAULT_TIMEOUT_SECONDS),
+    )
+    try:
+        value = int(raw)
+    except ValueError:
+        stop("GEMINI_JAPANESE_POLISH_TIMEOUT_SECONDS must be an integer.")
+    if not 1 <= value <= 300:
+        stop("GEMINI_JAPANESE_POLISH_TIMEOUT_SECONDS must be between 1 and 300.")
+    return value
+
+
+def api_url() -> str:
+    value = os.environ.get("GEMINI_JAPANESE_POLISH_API_URL", DEFAULT_API_URL)
+    parsed = urlparse(value)
+    production = value == DEFAULT_API_URL
+    local_test = parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost"}
+    if not production and not local_test:
+        stop("GEMINI_JAPANESE_POLISH_API_URL must be the Gemini endpoint or localhost.")
+    return value
+
+
+def fixed_contract(medium: str) -> str:
+    return f"""You are a Japanese copy editor performing one bounded polishing pass.
+Improve only clarity, naturalness, grammar, rhythm, and wording for the requested medium: {medium}.
+Preserve the author's meaning, factual claims, scope, structure, tone, and level of certainty.
+Do not add causes, evaluations, owners, dates, promises, procedures, or verification claims.
+Do not change proper nouns, product names, numbers, dates, URLs, citations, Markdown syntax, code, commands, or file paths.
+Do not summarize, expand, translate, or reorganize the draft unless a local wording defect requires it.
+Return the complete polished draft. Record concise change notes and any ambiguity that prevents a safe edit in the structured fields.
+"""
+
+
+def response_schema() -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "revised_text": {
+                "type": "string",
+                "description": "The complete polished draft.",
+            },
+            "changes": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Concise descriptions of material wording changes.",
+            },
+            "warnings": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Ambiguities or edits deliberately not made.",
+            },
+        },
+        "required": ["revised_text", "changes", "warnings"],
+    }
+
+
+def request_payload(source: str, medium: str) -> dict:
+    return {
+        "model": MODEL,
+        "store": False,
+        "system_instruction": fixed_contract(medium),
+        "input": source,
+        "generation_config": {
+            "thinking_level": "low",
+            "max_output_tokens": 16_384,
+        },
+        "response_format": {
+            "type": "text",
+            "mime_type": "application/json",
+            "schema": response_schema(),
+        },
+    }
+
+
+def diagnostic_excerpt(value: str, api_key: str) -> str:
+    cleaned = (value or "").replace(api_key, "[REDACTED]")
+    cleaned = re.sub(r"(?i)(x-goog-api-key\s*[:=]\s*)\S+", r"\1[REDACTED]", cleaned)
+    cleaned = "".join(
+        character for character in cleaned
+        if character in "\n\r\t" or character.isprintable()
+    ).strip()
+    if len(cleaned) <= MAX_DIAGNOSTIC_CHARS:
+        return cleaned
+    return "[truncated]\n" + cleaned[-MAX_DIAGNOSTIC_CHARS:]
+
+
+def call_gemini(payload: dict, api_key: str, timeout: int) -> dict:
+    encoded = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    api_request = request.Request(
+        api_url(),
+        data=encoded,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key,
+        },
+    )
+    try:
+        with request.urlopen(api_request, timeout=timeout) as response:
+            body = response.read().decode("utf-8")
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        excerpt = diagnostic_excerpt(detail, api_key)
+        if excerpt:
+            print(f"Gemini API response:\n{excerpt}", file=sys.stderr)
+        stop(f"Gemini API request failed with HTTP {exc.code}.", 1)
+    except error.URLError as exc:
+        stop(f"Gemini API request failed: {diagnostic_excerpt(str(exc.reason), api_key)}", 1)
+    except TimeoutError:
+        stop(f"Gemini API request timed out after {timeout} seconds.", 124)
+
+    try:
+        value = json.loads(body)
+    except json.JSONDecodeError:
+        stop("Gemini API returned invalid JSON.", 1)
+    if not isinstance(value, dict):
+        stop("Gemini API returned an invalid response object.", 1)
+    return value
+
+
+def extract_structured_output(response: dict) -> dict:
+    if response.get("status") != "completed":
+        stop(f"Gemini interaction did not complete (status={response.get('status', 'missing')}).", 1)
+    if response.get("model") not in {None, MODEL}:
+        stop("Gemini interaction returned an unexpected model.", 1)
+
+    blocks = []
+    for step in response.get("steps", []):
+        if isinstance(step, dict) and step.get("type") == "model_output":
+            for content in step.get("content", []):
+                if isinstance(content, dict) and content.get("type") == "text":
+                    blocks.append(content.get("text", ""))
+    if len(blocks) != 1 or not isinstance(blocks[0], str):
+        stop("Gemini interaction did not return exactly one text output.", 1)
+    try:
+        output = json.loads(blocks[0])
+    except json.JSONDecodeError:
+        stop("Gemini structured output was not valid JSON.", 1)
+    if not isinstance(output, dict) or set(output) != {"revised_text", "changes", "warnings"}:
+        stop("Gemini structured output had an unexpected shape.", 1)
+    if not isinstance(output["revised_text"], str) or not output["revised_text"].strip():
+        stop("Gemini structured output did not contain revised text.", 1)
+    if not all(isinstance(output[name], list) and all(isinstance(item, str) for item in output[name]) for name in ("changes", "warnings")):
+        stop("Gemini structured output contained invalid notes.", 1)
+    return output
+
+
+PROTECTED_PATTERNS = {
+    "fenced code": re.compile(r"```[\s\S]*?```"),
+    "inline code": re.compile(r"(?<!`)`[^`\n]+`(?!`)"),
+    "URL": re.compile(r"https?://[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+"),
+    "number": re.compile(r"(?<![\w])\d[\d,./:%+-]*(?![\w])"),
+    "citation": re.compile(r"\[\^?[^\]\n]+\]"),
+    "absolute path": re.compile(
+        r"(?<![:/\w])/(?!/)[A-Za-z0-9._~+@%=-]+(?:/[A-Za-z0-9._~+@%=-]+)*"
+    ),
+}
+
+
+def validate_preserved_spans(source: str, revised: str) -> None:
+    for label, pattern in PROTECTED_PATTERNS.items():
+        before = Counter(pattern.findall(source))
+        after = Counter(pattern.findall(revised))
+        if before != after:
+            stop(f"Gemini changed a protected {label}; no output was written.", 1)
+
+
+def emit_usage(response: dict) -> None:
+    usage = response.get("usage")
+    if not isinstance(usage, dict):
+        return
+    safe_usage = {
+        key: usage[key]
+        for key in ("total_input_tokens", "total_output_tokens", "total_tokens")
+        if isinstance(usage.get(key), int)
+    }
+    if safe_usage:
+        print(json.dumps({"model": MODEL, "usage": safe_usage}, ensure_ascii=False), file=sys.stderr)
+
+
+def main() -> None:
+    args = parse_args(sys.argv[1:])
+    input_file = resolve_input_file(args.input_file)
+    output_file = resolve_output_file(args.output_file)
+    try:
+        source = input_file.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        stop("--input-file must be UTF-8.")
+    if not source.strip():
+        stop("--input-file must not be empty.")
+    if len(source) > MAX_INPUT_CHARS:
+        stop(f"--input-file must not exceed {MAX_INPUT_CHARS} characters.")
+
+    api_key = load_api_key()
+    response = call_gemini(
+        request_payload(source, args.medium),
+        api_key,
+        timeout_seconds(),
+    )
+    output = extract_structured_output(response)
+    validate_preserved_spans(source, output["revised_text"])
+    try:
+        with output_file.open("x", encoding="utf-8") as stream:
+            stream.write(output["revised_text"].rstrip() + "\n")
+    except FileExistsError:
+        stop("--output-file must not already exist.")
+    emit_usage(response)
+    if output["changes"] or output["warnings"]:
+        print(json.dumps({
+            "changes": output["changes"],
+            "warnings": output["warnings"],
+        }, ensure_ascii=False), file=sys.stderr)
+    print(output_file)
+
+
+if __name__ == "__main__":
+    main()

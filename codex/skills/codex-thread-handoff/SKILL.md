@@ -29,6 +29,8 @@ Proactively suggest a handoff at most once per task. If the user declines or ign
 
 Create a destination only when the latest user message explicitly asks to move, transfer, hand off, or continue in a fresh task, or accepts the suggestion. Remarks such as "this is getting long" are not authority. Never use a transcript-preserving fork for context relief, and do not delete, compact, rename, or otherwise mutate the source task.
 
+Record whether the latest request is a plain handoff or explicitly asks the destination to continue, resume, or finish the owned task. A plain handoff stops after verification. An explicit handoff-and-resume request authorizes the destination to continue the already-owned local task after successful verification, without another confirmation message. Do not infer resume authority from the existence of a proposed resume point.
+
 Archive the source only after destination verification and only when the user explicitly requested source archival for this handoff or has a verified standing preference to archive successfully handed-off tasks. Otherwise leave it unchanged. Archival is cleanup after success, never a substitute for verification.
 
 ## Preflight Task Coordination
@@ -59,9 +61,11 @@ Use the source task identity and root outcome for the destination title and obje
 
 ## Bound Handoff Authority
 
-A handoff authorizes only destination-task creation, context transfer, required-artifact transfer, and read-only destination verification. Selecting or correcting the destination checkout to the exact recovery commit is part of context transfer. It does not authorize substantive work in the destination, browser, credentials, external services, cloud use, implementation, commit, branch creation, rebase, push, or other unrelated Git mutation. Source-task permissions do not transfer. Source archival requires the separate authority described above.
+A plain handoff authorizes only destination-task creation, context transfer, required-artifact transfer, and read-only destination verification. Selecting or correcting the destination checkout to the exact recovery commit is part of context transfer. When the latest request explicitly asks to hand off and continue, resume, or finish, the destination may continue already-authorized local investigation or implementation within the retained task scope after verification. Neither form transfers authority for browser use, credentials, external services, cloud operations, commit, branch creation, rebase, push, deployment, or other separately gated mutation. Source archival requires the separate authority described above.
 
-The destination must verify transferred state before substantive work. On a same-host destination that shares the exact checkout and needs no post-creation artifact transfer, use the fast verification path: create the destination, take at most one immediate status snapshot, report the created task without waiting for its verification turn, and stop. The destination verifies before responding to new work. Use synchronous source-side verification only when checkout setup, host transfer, or post-creation artifact delivery makes it necessary.
+The destination must verify transferred state before substantive work. On a same-host destination that shares the exact checkout and needs no post-creation artifact transfer, use the fast verification path: create the destination, take at most one immediate status snapshot, report the created task without waiting for its verification turn, and stop. The destination verifies before either resuming authorized work or responding. Use synchronous source-side verification only when checkout setup, host transfer, or post-creation artifact delivery makes it necessary.
+
+Verification gates only task-bearing state: semantic scope, the exact recovery commit, task-required state outside that commit, and active contract artifacts such as OpenSpec. A known environment-generated file that is unrelated to the task and intentionally excluded from the required-artifact manifest does not become a blocker merely because it is present in only one checkout. Do not surface such excluded state in the user-facing verification result unless it affects the proposed resume point.
 
 ## Load Execution Detail Progressively
 

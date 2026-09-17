@@ -13,7 +13,7 @@ Inspect the source checkout read-only and record:
 - required ignored artifacts, including repository-local specifications;
 - whether each required artifact is available from a durable commit or another verified checkpoint.
 
-Classify differences as task-required artifacts, user-owned or unknown changes, or known environment-generated files. Block on missing task artifacts and user-owned or unknown differences. A destination-only environment-generated file does not block the handoff when its owner and trigger are known, it is unrelated to the task, and the base commit plus manifest still match. Record it as excluded environment state; do not transfer, edit, or delete it.
+Classify differences as task-required artifacts, user-owned or unknown changes, or known environment-generated files. Block on missing task artifacts and user-owned or unknown differences. A source-only or destination-only environment-generated file does not block the handoff when its owner and trigger are known, it is unrelated to the task, and the base commit plus required-artifact manifest still match. Record it separately as excluded environment state; do not put it in expected task changes or the required-artifact manifest, and do not transfer, edit, delete, or require it at the destination.
 
 Do not rely on ordinary `git status` for ignored artifacts. Search the active contract, conversation references, and repository instructions for artifact roots. For OpenSpec, enumerate candidates directly under `openspec/changes/`, establish the active change from source evidence, and inspect the complete selected tree. If multiple candidates remain, stop before destination creation instead of choosing one. Do not sweep unrelated ignored areas such as dependency caches or secrets.
 
@@ -21,7 +21,7 @@ Do not rely on ordinary `git status` for ignored artifacts. Search the active co
 
 An exact commit identifies the complete committed tree. Do not enumerate or hand-copy hashes for files already contained in the verified recovery commit. Verify those files through the exact commit and destination `HEAD`; add a committed file to the manifest only when there is a specific reason to verify it independently.
 
-Build the manifest only for task-required state outside that commit, such as staged, tracked-dirty, untracked, ignored, external, or snapshot-backed artifacts. For every manifest entry:
+Build the manifest only for task-required state outside that commit, such as staged, tracked-dirty, untracked, ignored, external, or snapshot-backed artifacts. The complete dirty-state inventory is diagnostic input, not automatically a transfer contract. For every manifest entry:
 
 - classify it as staged, tracked-dirty, untracked, ignored, external, snapshot-backed, or exceptionally committed;
 - record its recovery source and hash;
@@ -57,6 +57,7 @@ Use this structure:
 
 ## Scope continuity
 - Handoff scope: <whole source task, or explicitly requested subset>
+- Post-verification mode: <STOP for a plain handoff; RESUME only when the latest request explicitly asks to continue, resume, or finish>
 - Active resume point: <where work should resume>
 - Retained deferred, blocked, or waiting work: <complete inventory>
 - Explicit exclusions: <only user-approved exclusions or named split work>
@@ -67,7 +68,8 @@ Use this structure:
 ## Workspace checkpoint
 - Source checkout: `<path>`
 - Source HEAD: `<commit>`
-- Expected changes: <tracked, staged, untracked, required ignored inventory>
+- Task-required changes: <tracked, staged, untracked, and required ignored state that must match or transfer>
+- Excluded environment state: <known generated files that may legitimately differ by checkout; omit when empty>
 - Recovery source: <commit, approved snapshot, or verified transfer>
 - Required-artifact manifest: <only state outside the exact recovery commit, plus any exceptional committed checks; path, classification, recovery source and mechanically derived hash, destination hash, transfer method>
 

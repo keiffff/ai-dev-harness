@@ -344,6 +344,53 @@ class WrapperTests(unittest.TestCase):
         self.assertNotEqual(run(['dynamodb', 'scan', '--table-name', 'x']).returncode, 0)
         self.assertNotEqual(run(['lambda', 'get-function', '--function-name', 'fn']).returncode, 0)
 
+    def test_github_readonly_allows_rest_reads_and_blocks_api_mutations(self):
+        script = ROOT / 'wrappers' / 'bin' / 'gh-readonly.example'
+        run = lambda args: self.run_with_fake_bin(script, GH, args)
+
+        comments = run(['api', 'repos/acme/example/pulls/12/comments', '--paginate'])
+        self.assertEqual(comments.returncode, 0, comments.stderr)
+        self.assertEqual(
+            comments.stdout.splitlines(),
+            ['api', 'repos/acme/example/pulls/12/comments', '--paginate', '--method', 'GET'],
+        )
+        self.assertEqual(run(['api', 'repos/acme/example', '--method', 'GET']).returncode, 0)
+        self.assertEqual(run(['api', 'repos/acme/example', '-XHEAD']).returncode, 0)
+
+        for args in (
+            ['api', 'repos/acme/example/issues', '--method', 'POST'],
+            ['api', 'repos/acme/example', '-XPATCH'],
+            ['api', 'repos/acme/example', '-X', 'DELETE'],
+            ['api', 'repos/acme/example/issues', '--field', 'title=test', '--'],
+            ['api', 'repos/acme/example', '--header', 'X-HTTP-Method-Override: POST'],
+            ['api', 'repos/acme/example', '--header=X-Method-Override: DELETE'],
+        ):
+            with self.subTest(args=args):
+                self.assertNotEqual(run(args).returncode, 0)
+
+        self.assertNotEqual(run(['pr', 'merge', '12']).returncode, 0)
+
+    def test_github_readonly_keeps_global_options_before_rest_reads(self):
+        script = ROOT / 'wrappers' / 'bin' / 'gh-readonly.example'
+        result = self.run_with_fake_bin(
+            script,
+            GH,
+            ['--repo', 'acme/example', 'api', 'repos/acme/example/pulls/12/reviews'],
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.splitlines(),
+            [
+                '--repo',
+                'acme/example',
+                'api',
+                'repos/acme/example/pulls/12/reviews',
+                '--method',
+                'GET',
+            ],
+        )
+
     def test_gcloud_readonly_uses_explicit_allowlist_and_blocks_write_like_forms(self):
         script = ROOT / 'wrappers' / 'bin' / 'gcloud-readonly.example'
         run = lambda args: self.run_with_fake_bin(script, GCLOUD, args)
@@ -765,6 +812,172 @@ class WrapperTests(unittest.TestCase):
         try:
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('does not support required --safe-mode', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def run_gemini_polish_wrapper(
+        self,
+        response_payload: dict,
+        source: str = 'API v2は`/api/v2/items`で使えます。詳細はhttps://example.com/docsを見てください。',
+        http_status: int = 200,
+        precreate_output: bool = False,
+    ) -> tuple[subprocess.CompletedProcess[str], Path, dict, tempfile.TemporaryDirectory[str]]:
+        captured: dict = {'calls': 0}
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                captured['calls'] += 1
+                length = int(self.headers['Content-Length'])
+                captured['api_key'] = self.headers.get('x-goog-api-key')
+                captured['payload'] = json.loads(self.rfile.read(length))
+                body = json.dumps(response_payload, ensure_ascii=False).encode()
+                self.send_response(http_status)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, format, *args):
+                pass
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        tmp_context = tempfile.TemporaryDirectory()
+        tmp = Path(tmp_context.name)
+        input_file = tmp / 'draft.md'
+        input_file.write_text(source, encoding='utf-8')
+        output_file = tmp / 'polished.md'
+        if precreate_output:
+            output_file.write_text('existing', encoding='utf-8')
+        env = os.environ.copy()
+        env.update({
+            'GEMINI_API_KEY': 'test-gemini-key',
+            'GEMINI_JAPANESE_POLISH_API_URL': f'http://127.0.0.1:{server.server_port}/interactions',
+            'GEMINI_JAPANESE_POLISH_TIMEOUT_SECONDS': '5',
+        })
+        try:
+            result = subprocess.run(
+                [
+                    str(ROOT / 'wrappers' / 'bin' / 'gemini-japanese-polish.example'),
+                    '--input-file',
+                    str(input_file),
+                    '--output-file',
+                    str(output_file),
+                    '--medium',
+                    'github',
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+        return result, output_file, captured, tmp_context
+
+    @staticmethod
+    def gemini_response(revised_text: str) -> dict:
+        return {
+            'id': 'int_test',
+            'status': 'completed',
+            'model': 'gemini-3.8-flash',
+            'usage': {
+                'total_input_tokens': 120,
+                'total_output_tokens': 40,
+                'total_tokens': 160,
+            },
+            'steps': [{
+                'type': 'model_output',
+                'content': [{
+                    'type': 'text',
+                    'text': json.dumps({
+                        'revised_text': revised_text,
+                        'changes': ['語順を調整'],
+                        'warnings': [],
+                    }, ensure_ascii=False),
+                }],
+            }],
+        }
+
+    def test_gemini_polish_is_stateless_bounded_and_writes_verified_output(self):
+        revised = 'API v2は`/api/v2/items`で利用できます。詳細はhttps://example.com/docsをご覧ください。'
+        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
+            self.gemini_response(revised)
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_text(encoding='utf-8'), revised + '\n')
+            self.assertEqual(captured['calls'], 1)
+            self.assertEqual(captured['api_key'], 'test-gemini-key')
+            payload = captured['payload']
+            self.assertEqual(payload['model'], 'gemini-3.8-flash')
+            self.assertIs(payload['store'], False)
+            self.assertEqual(payload['generation_config']['thinking_level'], 'low')
+            self.assertNotIn('tools', payload)
+            self.assertEqual(payload['response_format']['mime_type'], 'application/json')
+            self.assertEqual(
+                set(payload['response_format']['schema']['required']),
+                {'revised_text', 'changes', 'warnings'},
+            )
+            self.assertIn('120', result.stderr)
+            self.assertNotIn('test-gemini-key', result.stderr + result.stdout)
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_rejects_changed_protected_spans(self):
+        revised = 'API v3は`/api/v3/items`で利用できます。詳細はhttps://example.com/newをご覧ください。'
+        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
+            self.gemini_response(revised)
+        )
+        try:
+            self.assertEqual(result.returncode, 1)
+            self.assertIn('changed a protected', result.stderr)
+            self.assertEqual(captured['calls'], 1)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_rejects_invalid_structured_output(self):
+        response = self.gemini_response('推敲済み')
+        response['steps'][0]['content'][0]['text'] = '{not json'
+        result, output, _, tmp_context = self.run_gemini_polish_wrapper(response)
+        try:
+            self.assertEqual(result.returncode, 1)
+            self.assertIn('structured output was not valid JSON', result.stderr)
+            self.assertFalse(output.exists())
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_rejects_existing_output_before_api_call(self):
+        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
+            self.gemini_response('unused'),
+            precreate_output=True,
+        )
+        try:
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('must not already exist', result.stderr)
+            self.assertEqual(captured['calls'], 0)
+            self.assertEqual(output.read_text(encoding='utf-8'), 'existing')
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_does_not_retry_and_redacts_http_failure(self):
+        response = {'error': {'message': 'key test-gemini-key is rejected'}}
+        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
+            response,
+            http_status=429,
+        )
+        try:
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(captured['calls'], 1)
+            self.assertIn('HTTP 429', result.stderr)
+            self.assertIn('[REDACTED]', result.stderr)
+            self.assertNotIn('test-gemini-key', result.stderr)
             self.assertFalse(output.exists())
         finally:
             tmp_context.cleanup()

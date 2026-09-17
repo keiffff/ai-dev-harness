@@ -8,8 +8,96 @@ if [[ $# -lt 1 ]]; then
   exit 2
 fi
 
-cmd="$1"
-sub="${2:-}"
+args=("$@")
+i=1
+while [[ $i -le ${#args[@]} ]]; do
+  token_arg="${args[$i]}"
+  case "$token_arg" in
+    -R|--repo|--hostname)
+      i=$((i + 2))
+      ;;
+    --repo=*|--hostname=*)
+      i=$((i + 1))
+      ;;
+    -*)
+      i=$((i + 1))
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [[ $i -gt ${#args[@]} ]]; then
+  print -u2 "Missing gh command."
+  exit 2
+fi
+
+cmd="${args[$i]}"
+sub=""
+if [[ $((i + 1)) -le ${#args[@]} ]]; then
+  sub="${args[$((i + 1))]}"
+fi
+
+if [[ "$cmd" == "api" ]]; then
+  method=""
+  j=$((i + 1))
+  while [[ $j -le ${#args[@]} ]]; do
+    api_arg="${args[$j]}"
+    case "$api_arg" in
+      --)
+        print -u2 "Blocked option separator in read-only GitHub API request."
+        exit 2
+        ;;
+      -X|--method)
+        if [[ $((j + 1)) -gt ${#args[@]} ]]; then
+          print -u2 "Missing value for gh api $api_arg."
+          exit 2
+        fi
+        method="${(U)args[$((j + 1))]}"
+        j=$((j + 2))
+        continue
+        ;;
+      -X?*)
+        method="${(U)api_arg#-X}"
+        ;;
+      --method=*)
+        method="${(U)api_arg#--method=}"
+        ;;
+      -H|--header)
+        if [[ $((j + 1)) -gt ${#args[@]} ]]; then
+          print -u2 "Missing value for gh api $api_arg."
+          exit 2
+        fi
+        header_value="${(L)args[$((j + 1))]}"
+        if [[ "$header_value" == x-http-method-override:* || "$header_value" == x-method-override:* ]]; then
+          print -u2 "Blocked HTTP method override header in read-only GitHub API request."
+          exit 2
+        fi
+        j=$((j + 2))
+        continue
+        ;;
+      --header=*)
+        header_value="${(L)api_arg#--header=}"
+        if [[ "$header_value" == x-http-method-override:* || "$header_value" == x-method-override:* ]]; then
+          print -u2 "Blocked HTTP method override header in read-only GitHub API request."
+          exit 2
+        fi
+        ;;
+    esac
+    j=$((j + 1))
+  done
+
+  if [[ -n "$method" && "$method" != "GET" && "$method" != "HEAD" ]]; then
+    print -u2 "Blocked non-read GitHub API method: $method"
+    exit 2
+  fi
+  if [[ -z "$method" ]]; then
+    exec gh "$@" --method GET
+  fi
+  exec gh "$@"
+fi
+
 case "$cmd:$sub" in
   auth:status|pr:view|pr:list|pr:checks|pr:diff|pr:status|issue:view|issue:list|issue:status|run:view|run:list|repo:view|repo:list|release:view|release:list|workflow:view|workflow:list)
     exec gh "$@"
