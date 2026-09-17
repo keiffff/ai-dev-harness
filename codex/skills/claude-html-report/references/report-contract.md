@@ -16,7 +16,7 @@ Use stable IDs so coverage and provenance can be checked without relying on a vi
 10. **Out of scope and noise** — facts that are true but would distract from the reader's task.
 11. **Canonical sources and format justification** — name the source of truth and why coordinated HTML views materially improve this report.
 
-Do not include credentials, tokens, private keys, raw environment dumps, `.env`, auth configuration or other secret-bearing content. Ordinary verified project facts may be sent through the user-managed Claude CLI under the standing authorization; honor any narrower user instruction.
+Do not include credentials, tokens, private keys, raw environment dumps, `.env`, auth configuration or other secret-bearing content. The standing authorization covers every task-required non-secret fact sent through the user-managed Claude CLI, including company-internal, confidential-design and personal information. Do not ask for additional approval or withhold a fact solely because of one of those classifications. Keep the packet relevant to the requested report and honor any narrower user instruction in the current request.
 
 ## Required Claude Output
 
@@ -59,6 +59,12 @@ An empty inference list is valid. An unlisted inference is not. Empty `deferred`
 
 ## Revision Contract
 
+### Local Codex revision
+
+Codex edits the accepted HTML directly when the requested change is bounded and does not change the report's narrative architecture, fact weighting or cross-section relationships. Examples include localized wording, labels, color themes, CSS tokens, spacing, typography, responsive overflow, deterministic asset or syntax repairs, and isolated factual-literal or metadata corrections. Keep `data-fact`, `data-weight`, `data-uncertainty` and `REPORT-META` consistent with the edited content, then rerun the relevant full-document and visual checks. Do not invoke Claude merely because it generated the original file.
+
+### Structural Claude revision
+
 The revision input contains the original packet plus:
 
 - factual corrections and adjudicated inference decisions;
@@ -66,4 +72,4 @@ The revision input contains the original packet plus:
 - reader-level symptoms, such as `the proposal appears before the current mechanism is understandable`;
 - asset failures, such as `the screenshots are present but do not reveal the cross-screen inconsistency`.
 
-Do not prescribe isolated element moves unless the user explicitly chose them. Claude returns the complete document again and rechecks all fact, uncertainty and asset IDs.
+Use this path only when the change affects the ranked takeaway, reader decision, fact weighting across sections, prerequisite order, comparison structure, primary visual model or another whole-report relationship. Do not prescribe isolated element moves unless the user explicitly chose them. Claude returns the complete document again and rechecks all fact, uncertainty and asset IDs.

@@ -38,7 +38,7 @@ class OperationalSkillGateTests(unittest.TestCase):
             ROOT / "codex" / "skills" / "codex-writing" / "SKILL.md"
         ).read_text()
 
-        self.assertIn("Claude owns the complete report composition", report)
+        self.assertIn("Claude owns the initial complete report composition", report)
         self.assertIn("Codex owns evidence collection", report)
         self.assertIn("data-fact", contract)
         self.assertIn("data-weight", contract)
@@ -49,6 +49,34 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("comprehension dependencies", report)
         self.assertIn("claude-html-report", frontend)
         self.assertIn("bounded exception", writing)
+        self.assertIn("Do not request separate approval", report)
+        self.assertIn("company-internal, confidential-design or personal information", report)
+        self.assertIn("every task-required non-secret fact", contract)
+
+    def test_html_report_keeps_bounded_revisions_in_codex(self):
+        report = (
+            ROOT / "codex" / "skills" / "claude-html-report" / "SKILL.md"
+        ).read_text()
+        contract = (
+            ROOT
+            / "codex"
+            / "skills"
+            / "claude-html-report"
+            / "references"
+            / "report-contract.md"
+        ).read_text()
+
+        self.assertIn("Bounded Codex edit", report)
+        self.assertIn("color themes, CSS tokens", report)
+        self.assertIn("isolated factual-literal or metadata corrections", report)
+        self.assertIn("Structural Claude recomposition", report)
+        self.assertIn("alters the ranked takeaway or reader decision", report)
+        self.assertIn(
+            "Do not send a revision to Claude solely because Claude produced the original HTML",
+            report,
+        )
+        self.assertIn("Local Codex revision", contract)
+        self.assertIn("Structural Claude revision", contract)
 
     def test_expensive_advisors_require_explicit_invocation(self):
         for skill_name in (

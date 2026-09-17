@@ -7,7 +7,7 @@ description: Create a coherent standalone HTML report through bounded Claude com
 
 Use for a standalone HTML report whose quality depends on cross-section narrative, coordinated comparisons, annotated assets or dense information architecture. Keep ordinary product UI in `codex-frontend-ui`, and use Markdown, a table or one diagram when it expresses the review task clearly.
 
-Claude owns the complete report composition. Codex owns evidence collection, the factual packet, acceptance checks, deterministic asset embedding and the final file. Do not use the strategic-review skills as an artifact authoring substitute.
+Claude owns the initial complete report composition and any structural recomposition. Codex owns evidence collection, the factual packet, acceptance checks, bounded post-generation edits, deterministic asset embedding and the final file. Do not use the strategic-review skills as an artifact authoring substitute.
 
 ## Prepare The Contract
 
@@ -16,6 +16,8 @@ Read [report contract](references/report-contract.md). Build its packet from ver
 Use Opus by default. Pass `--model fable` only when the user's current request explicitly asks for Fable. Model choice does not change the evidence or verification contract.
 
 ## Generate One Whole Artifact
+
+Invoking this skill includes standing authorization to send the task-required, non-secret packet to the user-managed Claude CLI. Do not request separate approval or stop merely because the packet contains company-internal, confidential-design or personal information. Keep the packet relevant to the requested report, honor any narrower instruction in the current request, and retain the secret exclusions in the report contract.
 
 Write the packet to a UTF-8 file under `/private/tmp`. Select a new candidate path that does not already exist, then run:
 
@@ -29,7 +31,7 @@ Use escalated sandbox permissions because the wrapper reads its own Keychain cre
 
 For images, charts or screenshots, include dimensions, a faithful description and what each asset must demonstrate in the packet. Require `{{ASSET:A1}}` placeholders in Claude's HTML, then have Codex replace them mechanically with local or embedded sources after validating every placeholder. Do not ask Claude to infer unseen image content.
 
-## Accept Or Restart
+## Accept And Revise
 
 Validate the entire candidate against the packet before visual polish:
 
@@ -46,6 +48,11 @@ Validate the entire candidate against the packet before visual polish:
 
 Run desktop and mobile visual QA under `codex-frontend-ui`. Inspect hierarchy, density, wrapping, overflow, contrast, whether the reader can distinguish the decision from reference material, and whether diagrams or comparisons explain the consequence rather than merely label components. A factually complete page that requires the reader to extract the hierarchy from long prose is not accepted.
 
-Send one bounded revision packet containing reader-level symptoms, factual corrections and visual evidence. Claude must return the whole HTML again, not a section or diff. If a third composition pass would be needed, fix the source packet and restart instead of accumulating local patches. Codex may make deterministic embedding or syntax repairs, but not redesign the report piecemeal.
+Classify a requested revision by its effect on the report, not by who generated the file:
+
+- **Bounded Codex edit:** edit the accepted HTML directly when the target is specific and the report's narrative architecture, fact weighting and cross-section relationships remain intact. This includes wording, labels and typo fixes; color themes, CSS tokens, spacing, typography and responsive overflow; deterministic asset or syntax repairs; and isolated factual-literal or metadata corrections. Preserve or consistently update fact, weight, uncertainty and `REPORT-META` markers, then repeat the relevant factual and visual checks.
+- **Structural Claude recomposition:** return to Claude only when the change alters the ranked takeaway or reader decision, materially reweights facts across sections, changes prerequisite order or comparison structure, replaces the primary visual model, or otherwise requires coordinated redesign of the whole report. Send a refreshed packet with the new evidence, accepted decisions and observed reader-level symptoms; Claude returns one complete replacement document.
+
+Do not send a revision to Claude solely because Claude produced the original HTML. Do not use whole-document regeneration for a color theme, localized wording, a few stale literals, metadata cleanup or a bounded responsive fix. If repeated local edits begin to change the information hierarchy or make sections inconsistent, stop patching and use structural recomposition from a corrected source packet.
 
 On wrapper timeout, invalid HTML or non-zero exit, report the route as unavailable together with the wrapper's bounded, redacted diagnostics. Do not retry automatically, switch models or fabricate Claude output.
