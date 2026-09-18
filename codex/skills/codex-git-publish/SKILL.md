@@ -25,10 +25,10 @@ If the wrapper is blocked by the sandbox, rerun the same wrapper command through
 
 1. Confirm the latest user message explicitly names or authorizes the target branch.
 2. Inspect the current branch, HEAD, and worktree state.
-3. Create a branch from the current HEAD with `git-user-approved switch --confirm-user-requested --create <branch>`.
+3. Create a branch from the current HEAD with `git-user-approved switch --confirm-user-requested --create <branch>`. When the user names a fetched base ref or commit as the starting point, use `git-user-approved switch --confirm-user-requested --create <branch> <start-point>`.
 4. Switch to an existing branch with `git-user-approved switch --confirm-user-requested <branch>`.
 
-The wrapper does not support `checkout`, forced recreation, detaching HEAD, discarding changes, or an implicit start point. Do not fall back to raw `git switch`, `git checkout`, or `git branch`.
+The wrapper does not support `checkout`, forced recreation, detaching HEAD, or discarding changes. Do not fall back to raw `git switch`, `git checkout`, or `git branch`.
 
 ## Commit
 

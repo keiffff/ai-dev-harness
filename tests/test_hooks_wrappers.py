@@ -475,12 +475,24 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(existing.stdout.splitlines(), ['switch', 'main'])
         self.assertNotEqual(run(['switch', '--confirm-user-requested', '--detach', 'main']).returncode, 0)
         self.assertNotEqual(run(['switch', '--confirm-user-requested', '--create', '-invalid']).returncode, 0)
-        self.assertNotEqual(run([
+        based = run([
             'switch',
             '--confirm-user-requested',
             '--create',
             'new-branch',
             'origin/main',
+        ])
+        self.assertEqual(based.returncode, 0, based.stderr)
+        self.assertEqual(
+            based.stdout.splitlines(),
+            ['switch', '--create', 'new-branch', 'origin/main'],
+        )
+        self.assertNotEqual(run([
+            'switch',
+            '--confirm-user-requested',
+            '--create',
+            'new-branch',
+            '--detach',
         ]).returncode, 0)
 
     def run_claude_wrapper(
@@ -818,12 +830,14 @@ class WrapperTests(unittest.TestCase):
 
     def run_gemini_polish_wrapper(
         self,
-        response_payload: dict,
+        response_payload: dict | list[dict],
         source: str = 'API v2は`/api/v2/items`で使えます。詳細はhttps://example.com/docsを見てください。',
         http_status: int = 200,
         precreate_output: bool = False,
+        medium: str = 'github',
     ) -> tuple[subprocess.CompletedProcess[str], Path, dict, tempfile.TemporaryDirectory[str]]:
-        captured: dict = {'calls': 0}
+        captured: dict = {'calls': 0, 'payloads': []}
+        responses = response_payload if isinstance(response_payload, list) else [response_payload]
 
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self):
@@ -831,7 +845,9 @@ class WrapperTests(unittest.TestCase):
                 length = int(self.headers['Content-Length'])
                 captured['api_key'] = self.headers.get('x-goog-api-key')
                 captured['payload'] = json.loads(self.rfile.read(length))
-                body = json.dumps(response_payload, ensure_ascii=False).encode()
+                captured['payloads'].append(captured['payload'])
+                response_index = min(captured['calls'] - 1, len(responses) - 1)
+                body = json.dumps(responses[response_index], ensure_ascii=False).encode()
                 self.send_response(http_status)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(body)))
@@ -866,7 +882,7 @@ class WrapperTests(unittest.TestCase):
                     '--output-file',
                     str(output_file),
                     '--medium',
-                    'github',
+                    medium,
                 ],
                 text=True,
                 stdout=subprocess.PIPE,
@@ -916,8 +932,11 @@ class WrapperTests(unittest.TestCase):
             self.assertEqual(captured['api_key'], 'test-gemini-key')
             payload = captured['payload']
             self.assertEqual(payload['model'], 'gemini-3.8-flash')
+            self.assertNotIn('service_tier', payload)
             self.assertIs(payload['store'], False)
             self.assertEqual(payload['generation_config']['thinking_level'], 'low')
+            self.assertIn('Take ownership of the overall structure', payload['system_instruction'])
+            self.assertIn('comprehensively rewrite the source', payload['system_instruction'])
             self.assertNotIn('tools', payload)
             self.assertEqual(payload['response_format']['mime_type'], 'application/json')
             self.assertEqual(
@@ -929,15 +948,105 @@ class WrapperTests(unittest.TestCase):
         finally:
             tmp_context.cleanup()
 
-    def test_gemini_polish_rejects_changed_protected_spans(self):
+    def test_gemini_polish_accepts_whole_document_recomposition(self):
+        source = 'API v2は2026年9月に提供します。\n\n詳細は`/api/v2/items`を参照してください。'
+        revised = '# API v2の提供\n\n2026年9月にAPI v2を提供します。詳細は`/api/v2/items`を参照してください。'
+        result, output, _, tmp_context = self.run_gemini_polish_wrapper(
+            self.gemini_response(revised),
+            source=source,
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_text(encoding='utf-8'), revised + '\n')
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_distinguishes_brief_metadata_from_required_content(self):
+        source = '''<writing-brief>
+目安は500字。読み手は開発者。
+</writing-brief>
+<required-content>
+API v2は2026年9月に提供する。
+</required-content>
+<verbatim>`/api/v2/items`</verbatim>'''
+        revised = 'API v2は2026年9月に提供します。詳細は`/api/v2/items`を参照してください。'
+        result, output, _, tmp_context = self.run_gemini_polish_wrapper(
+            self.gemini_response(revised),
+            source=source,
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_text(encoding='utf-8'), revised + '\n')
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_reports_changed_protected_spans_without_discarding_output(self):
         revised = 'API v3は`/api/v3/items`で利用できます。詳細はhttps://example.com/newをご覧ください。'
         result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
             self.gemini_response(revised)
         )
         try:
-            self.assertEqual(result.returncode, 1)
-            self.assertIn('changed a protected', result.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('changed protected', result.stderr)
             self.assertEqual(captured['calls'], 1)
+            self.assertEqual(output.read_text(encoding='utf-8'), revised + '\n')
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_accepts_complete_html_and_removes_completion_marker(self):
+        html = '<!doctype html><html><body><h1>資料</h1></body></html>'
+        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
+            self.gemini_response(html + '<!-- GEMINI_COMPLETE_HTML -->'),
+            source='<required-content>資料</required-content>',
+            medium='html',
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(captured['calls'], 1)
+            self.assertEqual(output.read_text(encoding='utf-8'), html + '\n')
+            payload = captured['payload']
+            self.assertEqual(payload['generation_config']['max_output_tokens'], 65_536)
+            self.assertIn('GEMINI_COMPLETE_HTML', payload['system_instruction'])
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_regenerates_incomplete_html_once(self):
+        complete = '<!doctype html><html><body><h1>完全版</h1></body></html>'
+        responses = [
+            self.gemini_response('<!doctype html><html><body><h1>途中'),
+            self.gemini_response(complete + '<!-- GEMINI_COMPLETE_HTML -->'),
+        ]
+        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
+            responses,
+            source='<required-content>完全版</required-content>',
+            medium='html',
+        )
+        try:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(captured['calls'], 2)
+            self.assertIn('regenerating the complete document once', result.stderr)
+            self.assertIn(
+                'Regenerate the entire document from the beginning',
+                captured['payloads'][1]['system_instruction'],
+            )
+            self.assertEqual(output.read_text(encoding='utf-8'), complete + '\n')
+        finally:
+            tmp_context.cleanup()
+
+    def test_gemini_polish_rejects_html_after_one_incomplete_regeneration(self):
+        responses = [
+            self.gemini_response('<!doctype html><html><body>途中'),
+            self.gemini_response('<!doctype html><html><body>まだ途中'),
+        ]
+        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
+            responses,
+            source='<required-content>完全版</required-content>',
+            medium='html',
+        )
+        try:
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(captured['calls'], 2)
+            self.assertIn('incomplete HTML twice', result.stderr)
             self.assertFalse(output.exists())
         finally:
             tmp_context.cleanup()

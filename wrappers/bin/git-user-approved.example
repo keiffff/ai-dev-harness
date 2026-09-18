@@ -100,7 +100,10 @@ case "$1" in
     if [[ $# -eq 2 && ("$1" == "-c" || "$1" == "--create") && "$2" != -* ]]; then
       exec git switch "$@"
     fi
-    print -u2 "Usage: git-user-approved switch --confirm-user-requested [-c|--create] <branch>"
+    if [[ $# -eq 3 && ("$1" == "-c" || "$1" == "--create") && "$2" != -* && "$3" != -* ]]; then
+      exec git switch "$@"
+    fi
+    print -u2 "Usage: git-user-approved switch --confirm-user-requested [-c|--create] <branch> [<start-point>]"
     exit 2
     ;;
   submodule)

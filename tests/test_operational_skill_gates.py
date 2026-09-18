@@ -53,6 +53,21 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("company-internal, confidential-design or personal information", report)
         self.assertIn("every task-required non-secret fact", contract)
 
+    def test_gemini_skill_has_standing_non_secret_authorization(self):
+        skill = (
+            ROOT
+            / "codex"
+            / "skills"
+            / "gemini-japanese-polish"
+            / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("standing authorization", skill)
+        self.assertIn("Do not request separate approval", skill)
+        self.assertIn("company-internal repository names", skill)
+        self.assertIn("PR or issue identifiers", skill)
+        self.assertIn("other secret-bearing content", skill)
+
     def test_html_report_keeps_bounded_revisions_in_codex(self):
         report = (
             ROOT / "codex" / "skills" / "claude-html-report" / "SKILL.md"

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-from collections import Counter
 import json
 import os
 import re
@@ -17,6 +16,7 @@ DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/interactions
 DEFAULT_TIMEOUT_SECONDS = 120
 MAX_INPUT_CHARS = 100_000
 MAX_DIAGNOSTIC_CHARS = 8_000
+HTML_COMPLETION_MARKER = "<!-- GEMINI_COMPLETE_HTML -->"
 
 
 def stop(message: str, exit_code: int = 2) -> None:
@@ -32,7 +32,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--output-file", required=True)
     parser.add_argument(
         "--medium",
-        choices=("general", "github", "slack", "ui-copy", "release-note"),
+        choices=("general", "github", "slack", "ui-copy", "release-note", "html"),
         default="general",
     )
     return parser.parse_args(argv)
@@ -108,15 +108,26 @@ def api_url() -> str:
     return value
 
 
-def fixed_contract(medium: str) -> str:
-    return f"""You are a Japanese copy editor performing one bounded polishing pass.
-Improve only clarity, naturalness, grammar, rhythm, and wording for the requested medium: {medium}.
-Preserve the author's meaning, factual claims, scope, structure, tone, and level of certainty.
-Do not add causes, evaluations, owners, dates, promises, procedures, or verification claims.
-Do not change proper nouns, product names, numbers, dates, URLs, citations, Markdown syntax, code, commands, or file paths.
-Do not summarize, expand, translate, or reorganize the draft unless a local wording defect requires it.
-Return the complete polished draft. Record concise change notes and any ambiguity that prevents a safe edit in the structured fields.
+def fixed_contract(medium: str, html_recovery: bool = False) -> str:
+    contract = f"""You are the principal Japanese writer for one bounded composition pass.
+The input may be a writing brief, verified fact list, source material, a rough draft, or a combination of them.
+When the input uses writing-packet tags, treat `<writing-brief>` as instructions, `<required-content>` as facts that must be represented, `<reference-draft>` as optional source prose, and each `<verbatim>` block as text that must remain exact. Do not reproduce the tags.
+Produce the complete final Japanese deliverable for the requested medium: {medium}.
+Take ownership of the overall structure, headings, paragraph order, transitions, tone, concision, and wording. You may reorganize, merge, split, or comprehensively rewrite the source when that improves the deliverable.
+Preserve every required fact, scope boundary, uncertainty, and level of certainty. Do not invent causes, evaluations, owners, dates, promises, procedures, or verification claims.
+Keep proper nouns, product names, numbers, dates, URLs, citations, code, commands, and file paths factually exact. Preserve any span explicitly marked as verbatim.
+Do not describe the writing brief or your process. Return only the complete deliverable as revised_text. Record concise notes about material compositional choices and any unresolved ambiguity in the structured fields.
 """
+    if medium == "html":
+        contract += f"""
+The revised_text must be one complete standalone HTML document, beginning with <!doctype html> and ending with </html> followed by {HTML_COMPLETION_MARKER}.
+Never return an excerpt, outline, partial document, or explanation. Include every closing tag and the completion marker even when the source is long.
+"""
+    if html_recovery:
+        contract += """
+The previous generation ended before the required completion marker. Regenerate the entire document from the beginning; do not continue the previous fragment.
+"""
+    return contract
 
 
 def response_schema() -> dict:
@@ -142,15 +153,15 @@ def response_schema() -> dict:
     }
 
 
-def request_payload(source: str, medium: str) -> dict:
+def request_payload(source: str, medium: str, html_recovery: bool = False) -> dict:
     return {
         "model": MODEL,
         "store": False,
-        "system_instruction": fixed_contract(medium),
+        "system_instruction": fixed_contract(medium, html_recovery),
         "input": source,
         "generation_config": {
             "thinking_level": "low",
-            "max_output_tokens": 16_384,
+            "max_output_tokens": 65_536 if medium == "html" else 16_384,
         },
         "response_format": {
             "type": "text",
@@ -245,12 +256,61 @@ PROTECTED_PATTERNS = {
 }
 
 
-def validate_preserved_spans(source: str, revised: str) -> None:
+def protected_content(source: str) -> tuple[str, list[str]]:
+    required_blocks = re.findall(
+        r"<required-content>([\s\S]*?)</required-content>",
+        source,
+        flags=re.IGNORECASE,
+    )
+    verbatim_blocks = [
+        value.strip()
+        for value in re.findall(
+            r"<verbatim>([\s\S]*?)</verbatim>",
+            source,
+            flags=re.IGNORECASE,
+        )
+        if value.strip()
+    ]
+    if required_blocks or verbatim_blocks:
+        return "\n".join(required_blocks + verbatim_blocks), verbatim_blocks
+    return source, []
+
+
+def protected_matches(label: str, pattern: re.Pattern[str], value: str) -> set[str]:
+    if label == "number":
+        value = re.sub(r"(?m)^\s*\d+[.)]\s+", "", value)
+    return set(pattern.findall(value))
+
+
+def preserved_span_warnings(source: str, revised: str) -> list[str]:
+    warnings = []
+    protected, verbatim_blocks = protected_content(source)
     for label, pattern in PROTECTED_PATTERNS.items():
-        before = Counter(pattern.findall(source))
-        after = Counter(pattern.findall(revised))
+        before = protected_matches(label, pattern, protected)
+        after = protected_matches(label, pattern, revised)
         if before != after:
-            stop(f"Gemini changed a protected {label}; no output was written.", 1)
+            warnings.append(
+                f"Gemini output changed protected {label}; Codex must verify or restore it."
+            )
+    for block in verbatim_blocks:
+        if block not in revised:
+            warnings.append(
+                "Gemini output changed an explicitly verbatim span; Codex must restore it."
+            )
+    return warnings
+
+
+def complete_html(value: str) -> str | None:
+    candidate = value.rstrip()
+    if not candidate.endswith(HTML_COMPLETION_MARKER):
+        return None
+    candidate = candidate[: -len(HTML_COMPLETION_MARKER)].rstrip()
+    if not re.fullmatch(
+        r"(?is)\s*<!doctype\s+html[^>]*>.*</html>\s*",
+        candidate,
+    ):
+        return None
+    return candidate
 
 
 def emit_usage(response: dict) -> None:
@@ -280,23 +340,39 @@ def main() -> None:
         stop(f"--input-file must not exceed {MAX_INPUT_CHARS} characters.")
 
     api_key = load_api_key()
-    response = call_gemini(
-        request_payload(source, args.medium),
-        api_key,
-        timeout_seconds(),
-    )
+    timeout = timeout_seconds()
+    response = call_gemini(request_payload(source, args.medium), api_key, timeout)
     output = extract_structured_output(response)
-    validate_preserved_spans(source, output["revised_text"])
+    revised_text = output["revised_text"]
+    if args.medium == "html":
+        verified_html = complete_html(revised_text)
+        if verified_html is None:
+            print(
+                "Gemini returned incomplete HTML; regenerating the complete document once.",
+                file=sys.stderr,
+            )
+            response = call_gemini(
+                request_payload(source, args.medium, html_recovery=True),
+                api_key,
+                timeout,
+            )
+            output = extract_structured_output(response)
+            verified_html = complete_html(output["revised_text"])
+            if verified_html is None:
+                stop("Gemini returned incomplete HTML twice; no output was written.", 1)
+        revised_text = verified_html
+    local_warnings = preserved_span_warnings(source, revised_text)
     try:
         with output_file.open("x", encoding="utf-8") as stream:
-            stream.write(output["revised_text"].rstrip() + "\n")
+            stream.write(revised_text.rstrip() + "\n")
     except FileExistsError:
         stop("--output-file must not already exist.")
     emit_usage(response)
-    if output["changes"] or output["warnings"]:
+    combined_warnings = output["warnings"] + local_warnings
+    if output["changes"] or combined_warnings:
         print(json.dumps({
             "changes": output["changes"],
-            "warnings": output["warnings"],
+            "warnings": combined_warnings,
         }, ensure_ascii=False), file=sys.stderr)
     print(output_file)
 
