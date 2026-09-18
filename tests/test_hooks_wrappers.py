@@ -832,36 +832,46 @@ class WrapperTests(unittest.TestCase):
         self,
         response_payload: dict | list[dict],
         source: str = 'API v2は`/api/v2/items`で使えます。詳細はhttps://example.com/docsを見てください。',
-        http_status: int = 200,
         precreate_output: bool = False,
         medium: str = 'github',
     ) -> tuple[subprocess.CompletedProcess[str], Path, dict, tempfile.TemporaryDirectory[str]]:
-        captured: dict = {'calls': 0, 'payloads': []}
         responses = response_payload if isinstance(response_payload, list) else [response_payload]
-
-        class Handler(BaseHTTPRequestHandler):
-            def do_POST(self):
-                captured['calls'] += 1
-                length = int(self.headers['Content-Length'])
-                captured['api_key'] = self.headers.get('x-goog-api-key')
-                captured['payload'] = json.loads(self.rfile.read(length))
-                captured['payloads'].append(captured['payload'])
-                response_index = min(captured['calls'] - 1, len(responses) - 1)
-                body = json.dumps(responses[response_index], ensure_ascii=False).encode()
-                self.send_response(http_status)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Content-Length', str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
-
-            def log_message(self, format, *args):
-                pass
-
-        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
         tmp_context = tempfile.TemporaryDirectory()
         tmp = Path(tmp_context.name)
+        capture_file = tmp / 'capture.json'
+        responses_file = tmp / 'responses.json'
+        responses_file.write_text(json.dumps(responses, ensure_ascii=False), encoding='utf-8')
+        fake_cli = tmp / 'agy'
+        fake_cli.write_text(
+            '''#!/usr/bin/env python3
+import json
+import os
+import sys
+from pathlib import Path
+
+capture_file = Path(os.environ["FAKE_AGY_CAPTURE"])
+responses = json.loads(Path(os.environ["FAKE_AGY_RESPONSES"]).read_text(encoding="utf-8"))
+calls = json.loads(capture_file.read_text(encoding="utf-8")) if capture_file.exists() else []
+stream_input = sys.stdin.read()
+settings_file = Path(os.environ["HOME"]) / ".gemini" / "antigravity-cli" / "settings.json"
+calls.append({
+    "args": sys.argv[1:],
+    "input": json.loads(stream_input),
+    "api_key": os.environ.get("GEMINI_API_KEY"),
+    "home": os.environ["HOME"],
+    "cwd": os.getcwd(),
+    "settings": json.loads(settings_file.read_text(encoding="utf-8")),
+})
+capture_file.write_text(json.dumps(calls, ensure_ascii=False), encoding="utf-8")
+response = responses[min(len(calls) - 1, len(responses) - 1)]
+exit_code = response.pop("_exit_code", 0)
+print(json.dumps({"event": "init", "init": {"model": "gemini-3.8-flash-medium"}}))
+print(json.dumps({"event": "result", "result": response}, ensure_ascii=False))
+raise SystemExit(exit_code)
+''',
+            encoding='utf-8',
+        )
+        fake_cli.chmod(0o755)
         input_file = tmp / 'draft.md'
         input_file.write_text(source, encoding='utf-8')
         output_file = tmp / 'polished.md'
@@ -870,54 +880,52 @@ class WrapperTests(unittest.TestCase):
         env = os.environ.copy()
         env.update({
             'GEMINI_API_KEY': 'test-gemini-key',
-            'GEMINI_JAPANESE_POLISH_API_URL': f'http://127.0.0.1:{server.server_port}/interactions',
+            'GEMINI_JAPANESE_POLISH_ANTIGRAVITY_CLI': str(fake_cli),
             'GEMINI_JAPANESE_POLISH_TIMEOUT_SECONDS': '5',
+            'FAKE_AGY_CAPTURE': str(capture_file),
+            'FAKE_AGY_RESPONSES': str(responses_file),
         })
-        try:
-            result = subprocess.run(
-                [
-                    str(ROOT / 'wrappers' / 'bin' / 'gemini-japanese-polish.example'),
-                    '--input-file',
-                    str(input_file),
-                    '--output-file',
-                    str(output_file),
-                    '--medium',
-                    medium,
-                ],
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                check=False,
-            )
-        finally:
-            server.shutdown()
-            server.server_close()
-            thread.join()
+        result = subprocess.run(
+            [
+                str(ROOT / 'wrappers' / 'bin' / 'gemini-japanese-polish.example'),
+                '--input-file', str(input_file),
+                '--output-file', str(output_file),
+                '--medium', medium,
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            check=False,
+        )
+        calls = json.loads(capture_file.read_text(encoding='utf-8')) if capture_file.exists() else []
+        captured = {'calls': len(calls), 'payloads': calls}
+        if calls:
+            captured['payload'] = calls[-1]
+            captured['api_key'] = calls[-1]['api_key']
         return result, output_file, captured, tmp_context
 
     @staticmethod
     def gemini_response(revised_text: str) -> dict:
         return {
-            'id': 'int_test',
-            'status': 'completed',
-            'model': 'gemini-3.8-flash',
+            'status': 'SUCCESS',
+            'response': json.dumps({
+                'revised_text': revised_text,
+                'changes': ['語順を調整'],
+                'warnings': [],
+            }, ensure_ascii=False),
+            'structured_output': {
+                'revised_text': revised_text,
+                'changes': ['語順を調整'],
+                'warnings': [],
+            },
             'usage': {
-                'total_input_tokens': 120,
-                'total_output_tokens': 40,
+                'input_tokens': 120,
+                'output_tokens': 40,
+                'thinking_tokens': 10,
+                'cache_read_tokens': 0,
                 'total_tokens': 160,
             },
-            'steps': [{
-                'type': 'model_output',
-                'content': [{
-                    'type': 'text',
-                    'text': json.dumps({
-                        'revised_text': revised_text,
-                        'changes': ['語順を調整'],
-                        'warnings': [],
-                    }, ensure_ascii=False),
-                }],
-            }],
         }
 
     def test_gemini_polish_is_stateless_bounded_and_writes_verified_output(self):
@@ -931,18 +939,23 @@ class WrapperTests(unittest.TestCase):
             self.assertEqual(captured['calls'], 1)
             self.assertEqual(captured['api_key'], 'test-gemini-key')
             payload = captured['payload']
-            self.assertEqual(payload['model'], 'gemini-3.8-flash')
-            self.assertNotIn('service_tier', payload)
-            self.assertIs(payload['store'], False)
-            self.assertEqual(payload['generation_config']['thinking_level'], 'low')
-            self.assertIn('Take ownership of the overall structure', payload['system_instruction'])
-            self.assertIn('comprehensively rewrite the source', payload['system_instruction'])
-            self.assertNotIn('tools', payload)
-            self.assertEqual(payload['response_format']['mime_type'], 'application/json')
-            self.assertEqual(
-                set(payload['response_format']['schema']['required']),
-                {'revised_text', 'changes', 'warnings'},
-            )
+            args = payload['args']
+            self.assertEqual(args[args.index('--model') + 1], 'gemini-3.8-flash-medium')
+            self.assertIn('--sandbox', args)
+            self.assertIn('--disable-slash-commands', args)
+            self.assertEqual(args[args.index('--input-format') + 1], 'stream-json')
+            self.assertEqual(args[args.index('--output-format') + 1], 'stream-json')
+            self.assertNotIn('--continue', args)
+            prompt = payload['input']['message']['content']
+            self.assertIn('Take ownership of the overall structure', prompt)
+            self.assertIn('comprehensively rewrite the source', prompt)
+            self.assertIn('Do not use tools', prompt)
+            self.assertIn('API v2は`/api/v2/items`で使えます。', prompt)
+            self.assertNotIn('test-gemini-key', prompt)
+            self.assertEqual(payload['settings']['modelProvider'], 'gemini')
+            self.assertEqual(payload['settings']['toolPermission'], 'strict')
+            self.assertIs(payload['settings']['enableTelemetry'], False)
+            self.assertEqual(os.path.realpath(payload['home']), os.path.realpath(payload['cwd']))
             self.assertIn('120', result.stderr)
             self.assertNotIn('test-gemini-key', result.stderr + result.stdout)
         finally:
@@ -1004,9 +1017,7 @@ API v2は2026年9月に提供する。
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(captured['calls'], 1)
             self.assertEqual(output.read_text(encoding='utf-8'), html + '\n')
-            payload = captured['payload']
-            self.assertEqual(payload['generation_config']['max_output_tokens'], 65_536)
-            self.assertIn('GEMINI_COMPLETE_HTML', payload['system_instruction'])
+            self.assertIn('GEMINI_COMPLETE_HTML', captured['payload']['input']['message']['content'])
         finally:
             tmp_context.cleanup()
 
@@ -1027,7 +1038,7 @@ API v2は2026年9月に提供する。
             self.assertIn('regenerating the complete document once', result.stderr)
             self.assertIn(
                 'Regenerate the entire document from the beginning',
-                captured['payloads'][1]['system_instruction'],
+                captured['payloads'][1]['input']['message']['content'],
             )
             self.assertEqual(output.read_text(encoding='utf-8'), complete + '\n')
         finally:
@@ -1053,11 +1064,12 @@ API v2は2026年9月に提供する。
 
     def test_gemini_polish_rejects_invalid_structured_output(self):
         response = self.gemini_response('推敲済み')
-        response['steps'][0]['content'][0]['text'] = '{not json'
+        response['structured_output'] = {'revised_text': '推敲済み'}
+        response['response'] = '{not json'
         result, output, _, tmp_context = self.run_gemini_polish_wrapper(response)
         try:
             self.assertEqual(result.returncode, 1)
-            self.assertIn('structured output was not valid JSON', result.stderr)
+            self.assertIn('structured output had an unexpected shape', result.stderr)
             self.assertFalse(output.exists())
         finally:
             tmp_context.cleanup()
@@ -1075,16 +1087,18 @@ API v2は2026年9月に提供する。
         finally:
             tmp_context.cleanup()
 
-    def test_gemini_polish_does_not_retry_and_redacts_http_failure(self):
-        response = {'error': {'message': 'key test-gemini-key is rejected'}}
-        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(
-            response,
-            http_status=429,
-        )
+    def test_gemini_polish_does_not_retry_and_redacts_cli_failure(self):
+        response = {
+            'status': 'ERROR',
+            'response': '',
+            'error': 'key test-gemini-key is rejected',
+            '_exit_code': 1,
+        }
+        result, output, captured, tmp_context = self.run_gemini_polish_wrapper(response)
         try:
             self.assertEqual(result.returncode, 1)
             self.assertEqual(captured['calls'], 1)
-            self.assertIn('HTTP 429', result.stderr)
+            self.assertIn('status=ERROR', result.stderr)
             self.assertIn('[REDACTED]', result.stderr)
             self.assertNotIn('test-gemini-key', result.stderr)
             self.assertFalse(output.exists())

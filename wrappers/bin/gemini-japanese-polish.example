@@ -6,14 +6,13 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
-from urllib import error, request
-from urllib.parse import urlparse
 
 
-MODEL = "gemini-3.8-flash"
-DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
-DEFAULT_TIMEOUT_SECONDS = 120
+MODEL = "gemini-3.8-flash-medium"
+DEFAULT_ANTIGRAVITY_CLI = "/Users/kei/.local/bin/agy"
+DEFAULT_TIMEOUT_SECONDS = 600
 MAX_INPUT_CHARS = 100_000
 MAX_DIAGNOSTIC_CHARS = 8_000
 HTML_COMPLETION_MARKER = "<!-- GEMINI_COMPLETE_HTML -->"
@@ -93,19 +92,20 @@ def timeout_seconds() -> int:
         value = int(raw)
     except ValueError:
         stop("GEMINI_JAPANESE_POLISH_TIMEOUT_SECONDS must be an integer.")
-    if not 1 <= value <= 300:
-        stop("GEMINI_JAPANESE_POLISH_TIMEOUT_SECONDS must be between 1 and 300.")
+    if not 1 <= value <= 900:
+        stop("GEMINI_JAPANESE_POLISH_TIMEOUT_SECONDS must be between 1 and 900.")
     return value
 
 
-def api_url() -> str:
-    value = os.environ.get("GEMINI_JAPANESE_POLISH_API_URL", DEFAULT_API_URL)
-    parsed = urlparse(value)
-    production = value == DEFAULT_API_URL
-    local_test = parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost"}
-    if not production and not local_test:
-        stop("GEMINI_JAPANESE_POLISH_API_URL must be the Gemini endpoint or localhost.")
-    return value
+def antigravity_cli() -> Path:
+    value = os.environ.get(
+        "GEMINI_JAPANESE_POLISH_ANTIGRAVITY_CLI",
+        DEFAULT_ANTIGRAVITY_CLI,
+    )
+    candidate = Path(value).expanduser()
+    if not candidate.is_absolute() or not candidate.is_file() or not os.access(candidate, os.X_OK):
+        stop("Antigravity CLI must be an existing absolute executable path.", 1)
+    return candidate.resolve()
 
 
 def fixed_contract(medium: str, html_recovery: bool = False) -> str:
@@ -116,7 +116,8 @@ Produce the complete final Japanese deliverable for the requested medium: {mediu
 Take ownership of the overall structure, headings, paragraph order, transitions, tone, concision, and wording. You may reorganize, merge, split, or comprehensively rewrite the source when that improves the deliverable.
 Preserve every required fact, scope boundary, uncertainty, and level of certainty. Do not invent causes, evaluations, owners, dates, promises, procedures, or verification claims.
 Keep proper nouns, product names, numbers, dates, URLs, citations, code, commands, and file paths factually exact. Preserve any span explicitly marked as verbatim.
-Do not describe the writing brief or your process. Return only the complete deliverable as revised_text. Record concise notes about material compositional choices and any unresolved ambiguity in the structured fields.
+Do not use tools, inspect files, browse, run commands, or delegate work. Work only from the text in this prompt.
+Do not describe the writing brief or your process. Return the complete deliverable as revised_text. Record concise notes about material compositional choices and any unresolved ambiguity in the structured fields.
 """
     if medium == "html":
         contract += f"""
@@ -153,22 +154,8 @@ def response_schema() -> dict:
     }
 
 
-def request_payload(source: str, medium: str, html_recovery: bool = False) -> dict:
-    return {
-        "model": MODEL,
-        "store": False,
-        "system_instruction": fixed_contract(medium, html_recovery),
-        "input": source,
-        "generation_config": {
-            "thinking_level": "low",
-            "max_output_tokens": 65_536 if medium == "html" else 16_384,
-        },
-        "response_format": {
-            "type": "text",
-            "mime_type": "application/json",
-            "schema": response_schema(),
-        },
-    }
+def composition_prompt(source: str, medium: str, html_recovery: bool = False) -> str:
+    return f"{fixed_contract(medium, html_recovery)}\n<source>\n{source}\n</source>"
 
 
 def diagnostic_excerpt(value: str, api_key: str) -> str:
@@ -183,64 +170,96 @@ def diagnostic_excerpt(value: str, api_key: str) -> str:
     return "[truncated]\n" + cleaned[-MAX_DIAGNOSTIC_CHARS:]
 
 
-def call_gemini(payload: dict, api_key: str, timeout: int) -> dict:
-    encoded = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    api_request = request.Request(
-        api_url(),
-        data=encoded,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "x-goog-api-key": api_key,
-        },
-    )
-    try:
-        with request.urlopen(api_request, timeout=timeout) as response:
-            body = response.read().decode("utf-8")
-    except error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
+def call_gemini(prompt: str, api_key: str, timeout: int) -> dict:
+    stream_input = json.dumps(
+        {"event": "user", "message": {"content": prompt}},
+        ensure_ascii=False,
+    ) + "\n"
+    settings = {
+        "modelProvider": "gemini",
+        "toolPermission": "strict",
+        "artifactReviewPolicy": "always-proceed",
+        "enableTerminalSandbox": True,
+        "verbosity": "low",
+        "showTips": False,
+        "enableTelemetry": False,
+    }
+    command = [
+        str(antigravity_cli()),
+        "--model", MODEL,
+        "--output-format", "stream-json",
+        "--input-format", "stream-json",
+        "--json-schema", json.dumps(response_schema(), ensure_ascii=False, separators=(",", ":")),
+        "--print-timeout", f"{timeout}s",
+        "--sandbox",
+        "--disable-slash-commands",
+    ]
+
+    with tempfile.TemporaryDirectory(prefix="gemini-japanese-polish-") as temporary_home:
+        settings_dir = Path(temporary_home) / ".gemini" / "antigravity-cli"
+        settings_dir.mkdir(parents=True)
+        (settings_dir / "settings.json").write_text(
+            json.dumps(settings, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        child_env = os.environ.copy()
+        child_env["HOME"] = temporary_home
+        child_env["GEMINI_API_KEY"] = api_key
+        try:
+            completed = subprocess.run(
+                command,
+                input=stream_input,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=temporary_home,
+                env=child_env,
+                timeout=timeout + 15,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            stop(f"Antigravity CLI timed out after {timeout} seconds.", 124)
+
+    result = None
+    for line in completed.stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict) and event.get("event") == "result":
+            result = event.get("result")
+    if not isinstance(result, dict):
+        excerpt = diagnostic_excerpt(completed.stderr, api_key)
+        if excerpt:
+            print(f"Antigravity CLI response:\n{excerpt}", file=sys.stderr)
+        stop("Antigravity CLI did not return a result event.", 1)
+    if completed.returncode != 0 or result.get("status") != "SUCCESS":
+        detail = "\n".join(
+            value for value in (str(result.get("error", "")), completed.stderr) if value
+        )
         excerpt = diagnostic_excerpt(detail, api_key)
         if excerpt:
-            print(f"Gemini API response:\n{excerpt}", file=sys.stderr)
-        stop(f"Gemini API request failed with HTTP {exc.code}.", 1)
-    except error.URLError as exc:
-        stop(f"Gemini API request failed: {diagnostic_excerpt(str(exc.reason), api_key)}", 1)
-    except TimeoutError:
-        stop(f"Gemini API request timed out after {timeout} seconds.", 124)
-
-    try:
-        value = json.loads(body)
-    except json.JSONDecodeError:
-        stop("Gemini API returned invalid JSON.", 1)
-    if not isinstance(value, dict):
-        stop("Gemini API returned an invalid response object.", 1)
-    return value
+            print(f"Antigravity CLI response:\n{excerpt}", file=sys.stderr)
+        stop(
+            f"Antigravity CLI composition failed (status={result.get('status', 'missing')}).",
+            1,
+        )
+    return result
 
 
 def extract_structured_output(response: dict) -> dict:
-    if response.get("status") != "completed":
-        stop(f"Gemini interaction did not complete (status={response.get('status', 'missing')}).", 1)
-    if response.get("model") not in {None, MODEL}:
-        stop("Gemini interaction returned an unexpected model.", 1)
-
-    blocks = []
-    for step in response.get("steps", []):
-        if isinstance(step, dict) and step.get("type") == "model_output":
-            for content in step.get("content", []):
-                if isinstance(content, dict) and content.get("type") == "text":
-                    blocks.append(content.get("text", ""))
-    if len(blocks) != 1 or not isinstance(blocks[0], str):
-        stop("Gemini interaction did not return exactly one text output.", 1)
-    try:
-        output = json.loads(blocks[0])
-    except json.JSONDecodeError:
-        stop("Gemini structured output was not valid JSON.", 1)
+    output = response.get("structured_output")
+    if output is None and isinstance(response.get("response"), str):
+        try:
+            output = json.loads(response["response"])
+        except json.JSONDecodeError:
+            pass
     if not isinstance(output, dict) or set(output) != {"revised_text", "changes", "warnings"}:
-        stop("Gemini structured output had an unexpected shape.", 1)
+        stop("Antigravity CLI structured output had an unexpected shape.", 1)
     if not isinstance(output["revised_text"], str) or not output["revised_text"].strip():
-        stop("Gemini structured output did not contain revised text.", 1)
+        stop("Antigravity CLI structured output did not contain revised text.", 1)
     if not all(isinstance(output[name], list) and all(isinstance(item, str) for item in output[name]) for name in ("changes", "warnings")):
-        stop("Gemini structured output contained invalid notes.", 1)
+        stop("Antigravity CLI structured output contained invalid notes.", 1)
     return output
 
 
@@ -319,7 +338,13 @@ def emit_usage(response: dict) -> None:
         return
     safe_usage = {
         key: usage[key]
-        for key in ("total_input_tokens", "total_output_tokens", "total_tokens")
+        for key in (
+            "input_tokens",
+            "output_tokens",
+            "thinking_tokens",
+            "cache_read_tokens",
+            "total_tokens",
+        )
         if isinstance(usage.get(key), int)
     }
     if safe_usage:
@@ -341,7 +366,7 @@ def main() -> None:
 
     api_key = load_api_key()
     timeout = timeout_seconds()
-    response = call_gemini(request_payload(source, args.medium), api_key, timeout)
+    response = call_gemini(composition_prompt(source, args.medium), api_key, timeout)
     output = extract_structured_output(response)
     revised_text = output["revised_text"]
     if args.medium == "html":
@@ -352,7 +377,7 @@ def main() -> None:
                 file=sys.stderr,
             )
             response = call_gemini(
-                request_payload(source, args.medium, html_recovery=True),
+                composition_prompt(source, args.medium, html_recovery=True),
                 api_key,
                 timeout,
             )

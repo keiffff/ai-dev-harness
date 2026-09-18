@@ -1,6 +1,6 @@
 interface:
   display_name: "Gemini Japanese Composition"
   short_description: "Compose complete Japanese prose with Gemini 3.8 Flash"
-  default_prompt: "Use $gemini-japanese-polish to turn these verified facts and constraints into a complete Japanese deliverable."
+  default_prompt: "Use $gemini-japanese-polish through Antigravity CLI to turn these verified facts and constraints into a complete Japanese deliverable."
 policy:
   allow_implicit_invocation: false
