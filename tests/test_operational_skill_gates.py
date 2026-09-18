@@ -52,6 +52,8 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("Do not request separate approval", report)
         self.assertIn("company-internal, confidential-design or personal information", report)
         self.assertIn("every task-required non-secret fact", contract)
+        self.assertIn("Run the wrapper with normal sandbox permissions", report)
+        self.assertIn("Do not request escalated permissions solely for Keychain access", report)
 
     def test_gemini_skill_has_standing_non_secret_authorization(self):
         skill = (
