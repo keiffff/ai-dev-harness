@@ -21,6 +21,8 @@ Use `/Users/kei/.local/bin/git-user-approved` for `add`, `commit`, `merge`, `reb
 
 If the wrapper is blocked by the sandbox, rerun the same wrapper command through the approval flow. Do not switch to another Git path.
 
+When the Git directory is already known to sit outside the writable sandbox, use the required approval flow on the first wrapper call. Do not run an identical sandboxed attempt merely to reproduce the known permission failure.
+
 ## Branch Creation And Switching
 
 1. Confirm the latest user message explicitly names or authorizes the target branch.

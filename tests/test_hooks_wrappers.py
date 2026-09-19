@@ -527,6 +527,7 @@ class WrapperTests(unittest.TestCase):
             env = os.environ.copy()
             env.update({
                 'PATH': tmp + os.pathsep + env.get('PATH', ''),
+                'CLAUDE_CODE_OAUTH_TOKEN': 'test-token',
                 'CLAUDE_STRATEGIC_CLI': str(fake_claude),
                 'CLAUDE_STRATEGIC_TIMEOUT_SECONDS': timeout,
             })
@@ -612,6 +613,7 @@ class WrapperTests(unittest.TestCase):
         env = os.environ.copy()
         env.update({
             'PATH': str(tmp) + os.pathsep + env.get('PATH', ''),
+            'CLAUDE_CODE_OAUTH_TOKEN': 'test-token',
             'CLAUDE_HTML_REPORT_CLI': str(fake_claude),
             'CLAUDE_HTML_REPORT_TIMEOUT_SECONDS': timeout,
             'CLAUDE_HTML_ARGS_FILE': str(args_file),
@@ -708,6 +710,7 @@ class WrapperTests(unittest.TestCase):
                 stderr=subprocess.PIPE,
                 env={
                     **os.environ,
+                    'CLAUDE_CODE_OAUTH_TOKEN': 'test-token',
                     'PATH': tmp_context.name + os.pathsep + os.environ.get('PATH', ''),
                     'CLAUDE_HTML_REPORT_CLI': str(Path(tmp_context.name) / 'claude'),
                 },

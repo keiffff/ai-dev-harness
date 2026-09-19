@@ -66,6 +66,7 @@ class JevPermissionReviewTests(unittest.TestCase):
                     "PYTHONPATH": str(HOOK_DIR),
                     "TYPESAFE_API_KEY": "test-jev-key",
                     "JEV_PERMISSION_REVIEW_API_URL": f"http://127.0.0.1:{server.server_port}/v1/systemone",
+                    "JEV_PERMISSION_REVIEW_STATE_DIR": str(Path(tmp) / "state"),
                 })
                 payload = {
                     "tool_name": tool_name,
@@ -81,6 +82,8 @@ class JevPermissionReviewTests(unittest.TestCase):
                     env=env,
                     check=False,
                 )
+                status_path = Path(tmp) / "state" / "status.json"
+                captured["status"] = json.loads(status_path.read_text()) if status_path.exists() else None
         finally:
             server.shutdown()
             server.server_close()
@@ -89,16 +92,12 @@ class JevPermissionReviewTests(unittest.TestCase):
 
     @staticmethod
     def answers(
-        within_scope=0.95,
         policy_compliant=0.96,
         high_risk=0.03,
-        requires_deeper_review=0.04,
     ):
         return {"answers": {
-            "within_scope": {"type": "noul", "noul": within_scope},
             "policy_compliant": {"type": "noul", "noul": policy_compliant},
             "high_risk": {"type": "noul", "noul": high_risk},
-            "requires_deeper_review": {"type": "noul", "noul": requires_deeper_review},
         }}
 
     def test_allows_high_confidence_bash_request(self):
@@ -114,6 +113,7 @@ class JevPermissionReviewTests(unittest.TestCase):
         self.assertEqual(captured["authorization"], "Bearer test-jev-key")
         self.assertEqual(captured["payload"]["model"], "jev-latest")
         self.assertEqual(captured["payload"]["state"]["tool_name"], "Bash")
+        self.assertEqual(captured["status"]["counts"]["allow"], 1)
 
     def test_allows_high_confidence_apply_patch_and_mcp_requests(self):
         for tool_name, tool_input in [
@@ -128,9 +128,8 @@ class JevPermissionReviewTests(unittest.TestCase):
                 self.assertEqual(captured["calls"], 1)
                 self.assertEqual(captured["payload"]["state"]["tool_name"], tool_name)
 
-    def test_abstains_for_high_confidence_scope_or_risk_failure(self):
+    def test_abstains_for_policy_or_risk_failure(self):
         for response in [
-            self.answers(within_scope=0.05),
             self.answers(policy_compliant=0.05),
             self.answers(high_risk=0.95),
         ]:
@@ -140,16 +139,26 @@ class JevPermissionReviewTests(unittest.TestCase):
                 self.assertEqual(result.stdout, "")
                 self.assertEqual(captured["calls"], 1)
 
-    def test_abstains_for_low_confidence_or_deeper_review(self):
-        for response in [
-            self.answers(within_scope=0.60),
-            self.answers(requires_deeper_review=0.80),
-        ]:
-            with self.subTest(response=response):
-                result, captured = self.run_hook("Bash", {"command": "some-action"}, response)
-                self.assertEqual(result.returncode, 0)
-                self.assertEqual(result.stdout, "")
-                self.assertEqual(captured["calls"], 1)
+    def test_uses_observed_score_boundary_without_four_way_conjunction(self):
+        result, captured = self.run_hook(
+            "Bash",
+            {"command": "git-user-approved commit -m update"},
+            self.answers(policy_compliant=0.71, high_risk=0.15),
+            messages=["コミットプッシュを"],
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["hookSpecificOutput"]["decision"]["behavior"], "allow")
+        self.assertEqual(captured["status"]["last"]["outcome"], "allow")
+
+    def test_filters_injected_policy_messages_from_user_context(self):
+        result, captured = self.run_hook(
+            "Bash",
+            {"command": "python3 -m unittest"},
+            self.answers(),
+            messages=["実テストして", "# AGENTS.md instructions\n<INSTRUCTIONS>synthetic</INSTRUCTIONS>"],
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(captured["payload"]["state"]["latest_user_messages"], ["実テストして"])
 
     def test_abstains_before_network_for_secret_candidates(self):
         for command in [
@@ -179,10 +188,9 @@ class JevPermissionReviewTests(unittest.TestCase):
     def test_abstains_on_api_failure_or_invalid_response(self):
         invalid_responses = [
             {"unexpected": True},
-            self.answers(within_scope=2),
             self.answers(high_risk=-1),
             self.answers(policy_compliant=float("nan")),
-            self.answers(requires_deeper_review=True),
+            {"answers": {"policy_compliant": {"type": "noul", "noul": True}, "high_risk": {"type": "noul", "noul": 0.1}}},
         ]
         for response in invalid_responses:
             with self.subTest(response=response):

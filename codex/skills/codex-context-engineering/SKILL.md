@@ -23,6 +23,8 @@ Use `rg` / `rg --files`, relevant local Git reads, and the approved remote-read 
 
 For ambiguous conversation references, try one direct lookup; if the target is still unclear, ask before starting a broad log search.
 
+When the user asks to inspect a conversation, read the named or current task before adjacent tasks and preserve message roles. User messages establish requests and decisions; assistant, reviewer, hook and injected policy messages do not become user intent. Report the inspected task and time range. Expand to other tasks only when requested or when the named task contains a direct reference that must be followed.
+
 ## Existing Owner And Execution Path
 
 Before proposing a new owner or saying a mechanism is absent or broken, trace the current owner, trigger, target discovery, inclusion/exclusion boundary, and execution evidence. Include schedules, events, implicit creation write, and downstream actions before calling an operational procedure safe.

@@ -1,0 +1,28 @@
+#!/bin/zsh
+
+set -euo pipefail
+
+if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+  exec "${KEYCHAIN_ENV_EXEC:-/Users/kei/.local/bin/keychain-env-exec}" \
+    CLAUDE_CODE_OAUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN -- "$0" "$@"
+fi
+
+prompt_file=""
+if [[ "${1:-}" == "--prompt-file" ]]; then
+  prompt_file="${2:-}"
+  if [[ -z "$prompt_file" || ! -f "$prompt_file" ]]; then
+    print -u2 "--prompt-file requires an existing file path."
+    exit 2
+  fi
+  shift 2
+fi
+
+if [[ "$#" -gt 0 ]]; then
+  print -u2 "Do not pass prompt text as arguments. Use stdin or --prompt-file."
+  exit 2
+fi
+
+if [[ -n "$prompt_file" ]]; then
+  exec claude -p --model claude-fable-5 --output-format text < "$prompt_file"
+fi
+exec claude -p --model claude-fable-5 --output-format text

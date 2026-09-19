@@ -31,29 +31,17 @@ def parse_prompt_file(argv: list[str]) -> Path:
 
 
 def load_oauth_token() -> str:
-    account = os.environ.get("USER", "")
-    if not account:
-        stop("USER is required for macOS Keychain lookup.", 1)
-
-    result = subprocess.run(
-        [
-            "security",
-            "find-generic-password",
-            "-a",
-            account,
-            "-s",
-            "CLAUDE_CODE_OAUTH_TOKEN",
-            "-w",
-        ],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    token = result.stdout.strip()
-    if result.returncode != 0 or not token:
-        stop("CLAUDE_CODE_OAUTH_TOKEN was not found in macOS Keychain.", 1)
-    return token
+    token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+    if token:
+        return token
+    launcher = os.environ.get("KEYCHAIN_ENV_EXEC", "/Users/kei/.local/bin/keychain-env-exec")
+    try:
+        os.execv(
+            launcher,
+            [launcher, "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "--", sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
+        )
+    except OSError as error:
+        stop(f"Failed to execute Keychain credential launcher: {error}", 1)
 
 
 def timeout_seconds() -> int:

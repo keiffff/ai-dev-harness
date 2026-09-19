@@ -17,15 +17,15 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 
 `shell-policy.py` は、Git、AWS、GCP、GitHub CLI、local safety の各検査を1回のPreToolUse hookから呼び出します。個別policyは単体testと責務分離のため残しますが、同じshell呼び出しへ5本のhookを登録しません。
 
-`decision-integrity-policy.py` は、書き込みを伴うshellまたは`apply_patch`の前に、現在のユーザーturnで`decision-checkpoint.py`が有効な判断状態を記録したか検査します。成功したcheckpoint commandの実行結果だけを受け付け、文書や一般tool出力に同じ文字列が含まれていてもcheckpointとは扱いません。`NEW`、`HOLD`、`REVISE`、`SUSPEND`の遷移と許可された根拠種別を機械的に確認し、checkpointなしの変更を拒否します。自然言語の意味や判断の正しさをhookだけで推測するものではありません。
-
 ## Jev Permission Review
 
-`jev-permission-review.py` は、承認要求が発生したBash、`apply_patch`、MCPなどのtool呼び出しをJevへ渡します。直近のユーザー依頼、承認理由、tool名と入力を1回のAPI呼び出しで評価し、依頼範囲、既存policyとの整合、リスク、追加reviewの必要性を判定します。すべての許可条件を高信頼で満たす場合だけ`allow`を返します。Jev自身は`deny`を返しません。
+`jev-permission-review.py` は、承認要求が発生したBash、`apply_patch`、MCPなどのtool呼び出しをJevへ渡します。注入されたpolicy messageを除いた直近のユーザー依頼、承認理由、tool名と入力を1回のAPI呼び出しで評価し、policy整合度が0.70以上かつ高リスク度が0.15以下の場合だけ`allow`を返します。この境界は、通常のread・edit・test・明示されたcommit/push・外部model資料生成と、secret読取・cloud変更・無関係な外部操作を分けた実測ケースに基づきます。Jev自身は`deny`を返しません。
 
-secret候補はJevへ送信しません。API key未設定、通信失敗、2秒のtimeout、不正応答、閾値未達、範囲外、高リスク、追加reviewが必要な場合は何も返しません。その場合は既存のOpenAI auto-reviewまたはユーザー承認がそのまま続きます。tool入力へ独自の長さ上限や切り詰めは加えません。PreToolUseの各policyとsandboxも引き続き適用され、Jevの判断がそれらを迂回することはありません。
+secret候補はJevへ送信しません。API key未設定、通信失敗、2秒のtimeout、不正応答、またはscore不足の場合は何も返さず、既存のOpenAI auto-reviewまたはユーザー承認へ戻します。tool入力へ独自の長さ上限や切り詰めは加えません。PreToolUseの各policyとsandboxも引き続き適用され、Jevの判断がそれらを迂回することはありません。
 
-API keyは環境変数`TYPESAFE_API_KEY`、またはmacOS Keychainのservice `JEV_PERMISSION_REVIEW_API_KEY`から取得します。keyの値はstate、stdout、stderrへ出しません。実行時には`jev-permission-review.py`と依存する`hook_utils.py`の両方を配置します。
+Jevが実際に許可しているか確認できるよう、raw入力を残さず、結果別件数と直近のtool名・scoreだけを`~/.codex/hook-state/jev-permission-review/status.json`へ記録します。
+
+Jev hook自身は`TYPESAFE_API_KEY`だけを読み、Keychainへアクセスしません。PermissionRequestのcommandは汎用`keychain-env-exec`を経由し、macOS Keychainのservice `JEV_PERMISSION_REVIEW_API_KEY`を子processの`TYPESAFE_API_KEY`へ注入します。keyの値は引数、stdout、stderr、Jev stateへ出しません。実行時には`keychain-env-exec`、`jev-permission-review.py`、依存する`hook_utils.py`を配置します。
 
 `jev-keychain-store.example`を`jev-keychain-store`として配置すると、コマンド名を入力してからAPI keyを非表示で貼り付けられます。クリップボードにあるkeyと保存用commandを持ち替える必要はありません。
 
@@ -48,26 +48,6 @@ client設定や環境変数による接続先、port forwardingの先はhookで�
 ## Japanese Output
 
 日本語の品質基準は、常時読む `AGENTS.md` と文章作成時の `codex-writing` が持ちます。Stop hook の continuation prompt は会話に feedback として表示され、回答を遮ったように見えるため、日本語の推敲には使用しません。
-
-## Context Handoff Reminder
-
-`compaction-handoff-reminder.py` は、同じ task で2回目以降の compaction が起きるたびに、次の安全な区切りで `codex-thread-handoff` を使って移行要否を確認するよう Codex へ context を渡します。通知後も task を続けるか、fresh task へ移すかは、その時点のユーザーと Codex が判断します。
-
-hook 自体は task の作成、fork、archive を行いません。実行中の command、編集、test、approval、未解決の失敗も中断させません。提案と task 操作は、引き続き `codex-thread-handoff` の制約とユーザーの明示承認に従います。
-
-compaction 回数は session ごとに `~/.codex/hook-state/compaction-handoff/` へ保存します。test などで保存先を分離する場合は `CODEX_HANDOFF_STATE_DIR` を指定できます。入力を解釈できない場合は、作業を妨げないよう何も通知せず終了します。
-
-### Activation Check
-
-command hook は、設定へ追加しただけでは実行されません。追加または command 変更後は Codex を再起動し、CLI の `/hooks` で `SessionStart` の compact hookを確認して trust します。
-
-導入完了は次の両方で確認します。
-
-- `/hooks` で対象hookが `Active` になり、`Review` が0である
-- 実際の1回目のcompaction後に `~/.codex/hook-state/compaction-handoff/` へstateファイルが作られる
-- decision integrityでは、read-only commandがcheckpointなしで通り、write-bearing commandが拒否され、有効なcheckpoint後に同じturnの書き込みが通る
-
-スクリプトへの模擬入力やunit testだけでは、Codex lifecycleへの接続、trust、実行を確認したことにはなりません。
 
 ## Parse Failure Policy
 

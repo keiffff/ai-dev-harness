@@ -21,8 +21,10 @@ wrapper は、AI agent に期待する実行境界を command level で表現し
 - `bin/gcloud-readonly.example`: explicit read-only Google Cloud CLI allowlist with secret/token access blocked
 - `bin/grok-x-research.example`: one bounded xAI X Search request with date limits, no Web Search, normalized citation annotations, and explicit cost reporting
 - `bin/claude-strategic-review.example`: one bounded Claude Opus review with a 600-second default timeout, heartbeat diagnostics, and tools, project customizations, session persistence, and extra agent turns disabled
+- `bin/claude-fable-strategic-review.example`: Fable review entrypoint using the shared Keychain credential launcher
 - `bin/claude-html-report.example`: one bounded Claude Opus or explicitly requested Fable whole-HTML composition with a 600-second default timeout, safe mode, no tools, no session persistence, complete-document validation, bounded redacted failure diagnostics, and a new-file-only output boundary
 - `bin/gemini-japanese-polish.example`: one stateless Gemini 3.8 Flash Medium whole-document Japanese composition run through an isolated Antigravity CLI workspace with structured output, strict tool permissions, sandboxing, protected fact-span difference reporting, complete-HTML validation with one bounded regeneration, token usage reporting, Keychain lookup, and a new-file-only output boundary
+- `bin/keychain-env-exec.example`: generic macOS Keychain credential injection that places one secret in a child process environment without exposing it through command arguments or output
 
 ## Local Adaptation
 
@@ -33,8 +35,8 @@ Copy examples to a local bin directory and adapt:
 - cloud profiles and accounts
 - repository-specific history protection
 - organization-specific approval requirements
-- xAI API key lookup from the local environment or macOS Keychain
-- Gemini API key lookup from the `GEMINI_JAPANESE_POLISH_API_KEY` macOS Keychain item and child-process-only injection into Antigravity CLI
+- xAI API key service/account selection before shared Keychain launcher injection
+- Gemini API key injection from the `GEMINI_JAPANESE_POLISH_API_KEY` Keychain item through the shared launcher
 - an absolute `CLAUDE_STRATEGIC_CLI` path so escalated execution cannot select a different Claude CLI from `PATH`
 
 Keep project-specific rules out of this repository unless they are rewritten as reusable patterns.

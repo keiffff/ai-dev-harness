@@ -117,16 +117,17 @@ class ThreadHandoffSkillTests(unittest.TestCase):
     def test_execution_detail_is_loaded_only_after_acceptance(self):
         content = SKILL.read_text()
 
-        self.assertIn("For timing advice or a suggestion, use only this file.", content)
+        self.assertIn("For explaining handoff behavior, use only this file.", content)
         self.assertIn("references/prepare-transfer.md", content)
         self.assertIn("references/verify-destination.md", content)
         self.assertNotIn("## Build The Required-Artifact Manifest", content)
 
-    def test_compaction_alone_does_not_repeat_handoff_suggestions(self):
+    def test_handoff_is_user_initiated(self):
         content = SKILL.read_text()
 
-        self.assertIn("Compaction alone is also insufficient", content)
-        self.assertIn("at most once per task", content)
+        self.assertIn("Do not proactively suggest a handoff", content)
+        self.assertIn("latest user message explicitly asks", content)
+        self.assertNotIn("Compaction alone is also insufficient", content)
 
     def test_destination_starts_from_immutable_commit_not_moving_branch(self):
         content = handoff_instructions()

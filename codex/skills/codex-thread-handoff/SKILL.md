@@ -1,33 +1,15 @@
 ---
 name: codex-thread-handoff
-description: Move the whole owned task to a fresh task when the user asks or multiple context-degradation signals justify it. Requires explicit acceptance and preserves scope and workspace state.
+description: Move the whole owned task to a fresh task when the user explicitly asks. Preserves scope and workspace state.
 ---
 
 # Codex Thread Handoff
 
 Separate read-only advice from task creation. A migration suggestion does not authorize a migration.
 
-## Assess The Timing
-
-A user-requested handoff may proceed at a safe checkpoint. Proactively suggest one only when at least two independent degradation signals are present:
-
-- three or more compactions are observable, as one weak signal only;
-- the runtime exposes sustained context pressure;
-- the user has corrected the same misunderstanding more than once;
-- prior decisions or constraints are being rediscovered or contradicted;
-- accumulated dead ends are making the conversation less reliable.
-
-A phase boundary or changed goal is a convenient checkpoint, not evidence of degradation by itself. Compaction alone is also insufficient. Do not invent token or compaction counts. Do not suggest a handoff during an active command, edit, test, approval, or unresolved failure; for a short answer; or while the current task state remains reliable.
-
-Keep the suggestion to one sentence and match the conversation language:
-
-> This task has reached a safe boundary and shows context degradation. Move this whole task to a fresh task with a compact handoff?
-
-Proactively suggest a handoff at most once per task. If the user declines or ignores it, continue without repeating the suggestion. A later user request can still authorize a handoff.
-
 ## Require Explicit Authority
 
-Create a destination only when the latest user message explicitly asks to move, transfer, hand off, or continue in a fresh task, or accepts the suggestion. Remarks such as "this is getting long" are not authority. Never use a transcript-preserving fork for context relief, and do not delete, compact, rename, or otherwise mutate the source task.
+Do not proactively suggest a handoff. Create a destination only when the latest user message explicitly asks to move, transfer, hand off, or continue in a fresh task. Remarks such as "this is getting long" are not authority. Never use a transcript-preserving fork for context relief, and do not delete, compact, rename, or otherwise mutate the source task.
 
 Record whether the latest request is a plain handoff or explicitly asks the destination to continue, resume, or finish the owned task. A plain handoff stops after verification. An explicit handoff-and-resume request authorizes the destination to continue the already-owned local task after successful verification, without another confirmation message. Do not infer resume authority from the existence of a proposed resume point.
 
@@ -69,7 +51,7 @@ Verification gates only task-bearing state: semantic scope, the exact recovery c
 
 ## Load Execution Detail Progressively
 
-- For timing advice or a suggestion, use only this file.
+- For explaining handoff behavior, use only this file.
 - After explicit acceptance and a successful task-coordination preflight, read [references/prepare-transfer.md](references/prepare-transfer.md) to inspect workspace state and build the continuation packet.
 - Before creating or verifying the destination, also read [references/verify-destination.md](references/verify-destination.md).
 

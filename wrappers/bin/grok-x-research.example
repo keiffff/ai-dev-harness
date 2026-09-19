@@ -84,31 +84,17 @@ def load_api_key() -> str:
     api_key = os.environ.get("XAI_API_KEY", "").strip()
     if api_key:
         return api_key
-
-    if sys.platform == "darwin":
-        account = os.environ.get("XAI_KEYCHAIN_ACCOUNT") or os.environ.get("USER", "")
-        service = os.environ.get("XAI_KEYCHAIN_SERVICE", "XAI_API_KEY")
-        if account:
-            result = subprocess.run(
-                [
-                    "security",
-                    "find-generic-password",
-                    "-a",
-                    account,
-                    "-s",
-                    service,
-                    "-w",
-                ],
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-            api_key = result.stdout.strip()
-            if result.returncode == 0 and api_key:
-                return api_key
-
-    stop("XAI_API_KEY was not found in the environment or macOS Keychain.", 1)
+    launcher = os.environ.get("KEYCHAIN_ENV_EXEC", "/Users/kei/.local/bin/keychain-env-exec")
+    service = os.environ.get("XAI_KEYCHAIN_SERVICE", "XAI_API_KEY")
+    account = os.environ.get("XAI_KEYCHAIN_ACCOUNT", "")
+    launcher_args = [launcher]
+    if account:
+        launcher_args.extend(["--account", account])
+    launcher_args.extend(["XAI_API_KEY", service, "--", sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
+    try:
+        os.execv(launcher, launcher_args)
+    except OSError as error:
+        stop(f"Failed to execute Keychain credential launcher: {error}", 1)
 
 
 def build_request(args: argparse.Namespace, prompt: str) -> tuple[dict[str, Any], dict[str, Any]]:

@@ -32,20 +32,6 @@ default_subagent_reasoning_effort = "medium"
 # AWS_READONLY_WRAPPER=$HOME/.local/bin/aws-readonly
 # GCLOUD_READONLY_WRAPPER=$HOME/.local/bin/gcloud-readonly
 
-# After the third compaction in one task, ask Codex once to reassess context
-# health. Compaction alone does not justify a handoff suggestion. The hook only injects
-# context; it never creates or mutates a task. After adding or changing this
-# command, restart Codex and trust the exact hook definition through `/hooks`
-# before relying on it.
-[[hooks.SessionStart]]
-matcher = "^compact$"
-
-[[hooks.SessionStart.hooks]]
-type = "command"
-command = "/usr/bin/python3 /absolute/path/to/hooks/codex/compaction-handoff-reminder.py"
-timeout = 10
-statusMessage = "Checking task context health"
-
 # Run Git, cloud CLI, and local shell safety checks through one hook process.
 [[hooks.PreToolUse]]
 matcher = "^Bash$"
@@ -64,21 +50,9 @@ matcher = ".*"
 
 [[hooks.PermissionRequest.hooks]]
 type = "command"
-command = "/usr/bin/python3 /absolute/path/to/hooks/codex/jev-permission-review.py"
+command = "/absolute/path/to/keychain-env-exec TYPESAFE_API_KEY JEV_PERMISSION_REVIEW_API_KEY -- /usr/bin/python3 /absolute/path/to/hooks/codex/jev-permission-review.py"
 timeout = 4
 statusMessage = "Checking approval with Jev"
-
-# Require a current-turn decision checkpoint before write-bearing shell or
-# apply_patch operations. This checks the transition contract, not whether the
-# model's semantic judgment is correct.
-[[hooks.PreToolUse]]
-matcher = "(?i)^(Bash|apply[_-]?patch)$"
-
-[[hooks.PreToolUse.hooks]]
-type = "command"
-command = "/usr/bin/python3 /absolute/path/to/hooks/codex/decision-integrity-policy.py"
-timeout = 10
-statusMessage = "Checking decision integrity"
 
 # Allow explicitly selected in-app browser sessions without an approval line.
 # Keep external or unverified Browser/CUA access behind the AGENTS.md gate.

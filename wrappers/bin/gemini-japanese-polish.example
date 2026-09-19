@@ -55,32 +55,17 @@ def resolve_output_file(raw: str) -> Path:
 
 
 def load_api_key() -> str:
-    configured = os.environ.get("GEMINI_API_KEY", "").strip()
-    if configured:
-        return configured
-
-    account = os.environ.get("USER", "")
-    if not account:
-        stop("USER is required for macOS Keychain lookup.", 1)
-    result = subprocess.run(
-        [
-            "/usr/bin/security",
-            "find-generic-password",
-            "-a",
-            account,
-            "-s",
-            "GEMINI_JAPANESE_POLISH_API_KEY",
-            "-w",
-        ],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    api_key = result.stdout.strip()
-    if result.returncode != 0 or not api_key:
-        stop("GEMINI_JAPANESE_POLISH_API_KEY was not found in macOS Keychain.", 1)
-    return api_key
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if api_key:
+        return api_key
+    launcher = os.environ.get("KEYCHAIN_ENV_EXEC", "/Users/kei/.local/bin/keychain-env-exec")
+    try:
+        os.execv(
+            launcher,
+            [launcher, "GEMINI_API_KEY", "GEMINI_JAPANESE_POLISH_API_KEY", "--", sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
+        )
+    except OSError as error:
+        stop(f"Failed to execute Keychain credential launcher: {error}", 1)
 
 
 def timeout_seconds() -> int:

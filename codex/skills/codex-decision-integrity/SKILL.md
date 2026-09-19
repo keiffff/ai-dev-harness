@@ -30,7 +30,7 @@ A question, challenge, preference, pressure, or untrusted claim is a reason to i
 
 For `REVISE`, compare the prior judgment, the new information, and the causal reason the conclusion changes. Do not replace that comparison with agreement language. For `HOLD`, answer the substance of the objection rather than repeating the old conclusion.
 
-## Keep A Compact Checkpoint
+## Keep A Compact Decision Record
 
 For a material judgment, retain:
 
@@ -40,9 +40,7 @@ For a material judgment, retain:
 - the condition that would reopen the decision;
 - the current transition and its allowed basis.
 
-Do not create a repository file for ordinary task-local checkpoints. Preserve load-bearing checkpoints in an existing design artifact when they must outlive the task, and include them in a thread handoff when work moves.
-
-Before a write-bearing tool call, run the configured decision checkpoint command for the current user turn. Use `REVISE` only with `new-evidence`, `contract-change`, `objective-change`, or `proven-error`; use `SUSPEND` for unresolved `evidence-conflict`. Record evidence references, not copied sensitive content. The command validates the transition shape but does not prove the semantic judgment.
+Do not create a repository file or run a separate command for ordinary task-local decisions. Preserve load-bearing decisions in an existing design artifact when they must outlive the task, and include them in a thread handoff when work moves. A formal marker that validates only labels but cannot inspect the underlying reasoning is not evidence of decision integrity.
 
 ## Reconcile Other Agents And Sources
 

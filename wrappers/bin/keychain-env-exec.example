@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import subprocess
+import sys
+
+
+ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def stop(message: str, exit_code: int = 2) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(exit_code)
+
+
+def parse_args(argv: list[str]) -> tuple[str, str, str | None, list[str]]:
+    account = None
+    if len(argv) >= 2 and argv[0] == "--account":
+        account = argv[1]
+        argv = argv[2:]
+    if len(argv) < 4 or argv[2] != "--":
+        stop("Usage: keychain-env-exec [--account <account>] <env-name> <keychain-service> -- <command> [args...]")
+    env_name, service = argv[:2]
+    if not ENV_NAME_RE.fullmatch(env_name):
+        stop("<env-name> must be a valid environment variable name.")
+    if not service:
+        stop("<keychain-service> must not be empty.")
+    return env_name, service, account, argv[3:]
+
+
+def load_secret(env_name: str, service: str, account: str | None = None) -> str:
+    configured = os.environ.get(env_name, "").strip()
+    if configured:
+        return configured
+
+    account = account or os.environ.get("USER", "")
+    if not account:
+        stop("USER is required for macOS Keychain lookup.", 1)
+    result = subprocess.run(
+        [
+            "/usr/bin/security",
+            "find-generic-password",
+            "-a",
+            account,
+            "-s",
+            service,
+            "-w",
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    secret = result.stdout.strip()
+    if result.returncode != 0 or not secret:
+        stop(f"{service} was not found in macOS Keychain.", 1)
+    return secret
+
+
+def main() -> None:
+    env_name, service, account, command = parse_args(sys.argv[1:])
+    child_env = os.environ.copy()
+    child_env[env_name] = load_secret(env_name, service, account)
+    try:
+        os.execvpe(command[0], command, child_env)
+    except OSError as error:
+        stop(f"Failed to execute child command: {error}", 1)
+
+
+if __name__ == "__main__":
+    main()
