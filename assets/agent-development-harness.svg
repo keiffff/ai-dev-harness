@@ -34,7 +34,6 @@
 <text x="824" y="300" font-size="11" font-weight="700" letter-spacing="1.4" fill="#34D399">CODEX → HUMAN</text>
 <text x="824" y="322" font-size="17" font-weight="700">レビュー用資料・完了報告</text>
 <text x="824" y="343" font-size="12" fill="#8E9AB0">HTML・図表・差分・テスト／指摘・残るリスク・判断材料</text>
-<line x1="1132" y1="348" x2="1132" y2="300" stroke="#34D399" stroke-width="1.7" marker-end="url(#a-g)"/>
 <rect x="464" y="352" width="244" height="24" rx="12" fill="#34D399" fill-opacity="0.08" stroke="#34D399" stroke-opacity="0.28"/>
 <text x="586" y="369" text-anchor="middle" font-size="11" fill="#C7CFDC">ANDON: 未確定なら停止して人間へ戻す</text>
 <rect x="724" y="352" width="412" height="24" rx="12" fill="#93A4C4" fill-opacity="0.08" stroke="#93A4C4" stroke-opacity="0.28"/>
