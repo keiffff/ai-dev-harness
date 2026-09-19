@@ -56,6 +56,18 @@ command = "/usr/bin/python3 /absolute/path/to/hooks/codex/shell-policy.py"
 timeout = 10
 statusMessage = "Checking shell safety policy"
 
+# Before the ordinary approval reviewer runs, let Jev evaluate every approval
+# request. Only a high-confidence allow bypasses the ordinary reviewer. Every
+# other result preserves the OpenAI auto-review fallback.
+[[hooks.PermissionRequest]]
+matcher = ".*"
+
+[[hooks.PermissionRequest.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/jev-permission-review.py"
+timeout = 4
+statusMessage = "Checking approval with Jev"
+
 # Require a current-turn decision checkpoint before write-bearing shell or
 # apply_patch operations. This checks the transition contract, not whether the
 # model's semantic judgment is correct.

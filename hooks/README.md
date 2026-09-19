@@ -2,7 +2,7 @@
 
 Codex の誤操作を早い段階で止めるための local safety policy を管理します。
 
-hook は sandbox や approval を置き換えるものではありません。役割は、agent が raw CLI、secret 表示、破壊的操作、危険な shell 構文に進もうとしたときに、会話と実行の境界で止めることです。
+hook は sandbox を置き換えるものではありません。PreToolUse hook は、agent が raw CLI、secret 表示、破壊的操作、危険な shell 構文に進もうとしたときに、会話と実行の境界で止めます。PermissionRequest hook は、Codexが承認を求める操作をJevで先に判定し、確信を持って判断できない場合だけ通常のapprovalへ戻します。
 
 ## Role In The Harness
 
@@ -18,6 +18,16 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 `shell-policy.py` は、Git、AWS、GCP、GitHub CLI、local safety の各検査を1回のPreToolUse hookから呼び出します。個別policyは単体testと責務分離のため残しますが、同じshell呼び出しへ5本のhookを登録しません。
 
 `decision-integrity-policy.py` は、書き込みを伴うshellまたは`apply_patch`の前に、現在のユーザーturnで`decision-checkpoint.py`が有効な判断状態を記録したか検査します。成功したcheckpoint commandの実行結果だけを受け付け、文書や一般tool出力に同じ文字列が含まれていてもcheckpointとは扱いません。`NEW`、`HOLD`、`REVISE`、`SUSPEND`の遷移と許可された根拠種別を機械的に確認し、checkpointなしの変更を拒否します。自然言語の意味や判断の正しさをhookだけで推測するものではありません。
+
+## Jev Permission Review
+
+`jev-permission-review.py` は、承認要求が発生したBash、`apply_patch`、MCPなどのtool呼び出しをJevへ渡します。直近のユーザー依頼、承認理由、tool名と入力を1回のAPI呼び出しで評価し、依頼範囲、既存policyとの整合、リスク、追加reviewの必要性を判定します。すべての許可条件を高信頼で満たす場合だけ`allow`を返します。Jev自身は`deny`を返しません。
+
+secret候補はJevへ送信しません。API key未設定、通信失敗、2秒のtimeout、不正応答、閾値未達、範囲外、高リスク、追加reviewが必要な場合は何も返しません。その場合は既存のOpenAI auto-reviewまたはユーザー承認がそのまま続きます。tool入力へ独自の長さ上限や切り詰めは加えません。PreToolUseの各policyとsandboxも引き続き適用され、Jevの判断がそれらを迂回することはありません。
+
+API keyは環境変数`TYPESAFE_API_KEY`、またはmacOS Keychainのservice `JEV_PERMISSION_REVIEW_API_KEY`から取得します。keyの値はstate、stdout、stderrへ出しません。実行時には`jev-permission-review.py`と依存する`hook_utils.py`の両方を配置します。
+
+`jev-keychain-store.example`を`jev-keychain-store`として配置すると、コマンド名を入力してからAPI keyを非表示で貼り付けられます。クリップボードにあるkeyと保存用commandを持ち替える必要はありません。
 
 ## Browser Permission Gate
 

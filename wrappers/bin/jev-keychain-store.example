@@ -1,0 +1,27 @@
+#!/bin/zsh
+
+service="JEV_PERMISSION_REVIEW_API_KEY"
+account="${USER:-}"
+
+if [[ -z "$account" ]]; then
+  print -u2 "USER is required for macOS Keychain storage."
+  exit 1
+fi
+
+read -r -s "api_key?TypeSafe API key: "
+print
+if [[ -z "$api_key" ]]; then
+  print -u2 "API key was empty; nothing was stored."
+  exit 1
+fi
+
+/usr/bin/security add-generic-password -U -a "$account" -s "$service" -w "$api_key" >/dev/null
+status=$?
+unset api_key
+
+if [[ $status -ne 0 ]]; then
+  print -u2 "Failed to store the TypeSafe API key."
+  exit $status
+fi
+
+print "Stored TypeSafe API key for Jev permission review."
