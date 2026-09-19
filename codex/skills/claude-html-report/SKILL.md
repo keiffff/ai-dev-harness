@@ -37,7 +37,11 @@ Validate the entire candidate against the packet before visual polish:
 
 - every load-bearing fact ID appears in `data-fact` and every used ID exists;
 - every visible fact has the correct `data-weight`; the main flow is dominated by load-bearing facts rather than source completeness;
-- the first viewport communicates the conclusion, current state and reader decision or action;
+- the first viewport communicates what the report establishes, why it matters and any decision or action that actually exists;
+- any visually parallel metrics are intended for comparison and share the relevant definition, unit or denominator, population, time window and aggregation; unrelated numbers remain with the claims they support rather than forming a headline KPI strip;
+- rejected claims, omitted material, missing evidence and verification process have not leaked into reader-facing sections or defensive copy;
+- visible qualifications are necessary to keep a specific claim true or to change the reader's decision, appear once beside that claim, and use a concrete basis rather than generic labels;
+- no follow-up test, open issue, option, risk or next step was invented beyond the packet and reader's task;
 - supporting and context detail is compressed, deferred or omitted with a recorded reason, without hiding a prerequisite;
 - claims not established by the packet are not rendered as settled, and rejected claims are not asserted or implied;
 - every inference in the report metadata is accepted, removed or weakened;

@@ -11,6 +11,10 @@ For an existing product, follow its components, tokens, density, icons and inter
 
 Preserve information hierarchy, readable density, responsive wrapping and relevant loading/empty/error/focus states. Use existing design examples and component previews to establish conventions. Resolve a material conflict between the requested design and product workflow before changing that workflow; an ordinary new component alone is not an approval gate.
 
+Treat visual alignment as a comparison claim. Do not create a headline KPI row, equally weighted statistic cards or a shared chart scale for numbers that differ in metric definition, unit or denominator, population, time window or aggregation unless the source explicitly defines a meaningful comparison. Keep unrelated numbers beside the specific claims they support; a first viewport does not need a metric strip.
+
+Do not turn evidence hygiene into visible UI. Warning cards, caveat badges, unresolved-item blocks, scope disclaimers and repeated footnotes earn space only when they prevent a materially false reading or change the user's decision. Otherwise omit the unsupported claim or irrelevant material instead of displaying an explanation that it was excluded. Keep a necessary qualification adjacent to its claim and state it once.
+
 For freeform work, prefer restrained typography and color, useful visual assets and direct access to the task. Avoid nested cards, oversized tool headings, decorative gradient blobs, padding that hides weak structure and copy explaining how the UI was designed.
 
 For a visual representation of a plan/spec/schema, read [review visualization](references/review-visualization.md). Check source fidelity before visual polish; retain exact contracts and open decisions in the source document.

@@ -35,7 +35,8 @@ Start with a visual representation when the reviewer would otherwise need to rec
    - every load-bearing item from the source is represented;
    - no unsupported item was introduced;
    - labels and directionality preserve the source meaning;
-   - uncertainty and open decisions remain visible.
+   - values shown in one row, card group or shared scale are genuinely comparable; otherwise each value stays with its own claim and context;
+   - a limitation or open decision is visible only when the source makes it actionable for this review; missing evidence and excluded scope are not promoted into explanatory UI.
 6. Run visual QA for hierarchy, readability, wrapping, overflow, density, and responsive layout.
 7. Return review findings through the active agent conversation. Do not create a separate comment-state system by default.
 8. Apply accepted feedback to the canonical source, then regenerate when another visual pass is useful.
