@@ -39,7 +39,7 @@ Validate the entire candidate against the packet before visual polish:
 - every visible fact has the correct `data-weight`; the main flow is dominated by load-bearing facts rather than source completeness;
 - the first viewport communicates the conclusion, current state and reader decision or action;
 - supporting and context detail is compressed, deferred or omitted with a recorded reason, without hiding a prerequisite;
-- uncertainty remains open and rejected claims are not asserted or implied;
+- claims not established by the packet are not rendered as settled, and rejected claims are not asserted or implied;
 - every inference in the report metadata is accepted, removed or weakened;
 - every information-weighting decision in the report metadata matches the visible main flow, deferred detail and intentional omissions;
 - prerequisites precede dependent claims;
@@ -50,7 +50,7 @@ Run desktop and mobile visual QA under `codex-frontend-ui`. Inspect hierarchy, d
 
 Classify a requested revision by its effect on the report, not by who generated the file:
 
-- **Bounded Codex edit:** edit the accepted HTML directly when the target is specific and the report's narrative architecture, fact weighting and cross-section relationships remain intact. This includes wording, labels and typo fixes; color themes, CSS tokens, spacing, typography and responsive overflow; deterministic asset or syntax repairs; and isolated factual-literal or metadata corrections. Preserve or consistently update fact, weight, uncertainty and `REPORT-META` markers, then repeat the relevant factual and visual checks.
+- **Bounded Codex edit:** edit the accepted HTML directly when the target is specific and the report's narrative architecture, fact weighting and cross-section relationships remain intact. This includes wording, labels and typo fixes; color themes, CSS tokens, spacing, typography and responsive overflow; deterministic asset or syntax repairs; and isolated factual-literal or metadata corrections. Preserve or consistently update fact, weight and `REPORT-META` markers, then repeat the relevant factual and visual checks.
 - **Structural Claude recomposition:** return to Claude only when the change alters the ranked takeaway or reader decision, materially reweights facts across sections, changes prerequisite order or comparison structure, replaces the primary visual model, or otherwise requires coordinated redesign of the whole report. Send a refreshed packet with the new evidence, accepted decisions and observed reader-level symptoms; Claude returns one complete replacement document.
 
 Do not send a revision to Claude solely because Claude produced the original HTML. Do not use whole-document regeneration for a color theme, localized wording, a few stale literals, metadata cleanup or a bounded responsive fix. If repeated local edits begin to change the information hierarchy or make sections inconsistent, stop patching and use structural recomposition from a corrected source packet.

@@ -190,14 +190,13 @@ def require_safe_mode(claude_cli: str) -> None:
 
 def fixed_contract() -> str:
     return """You are composing one evidence-backed standalone HTML report.
-Use only the facts, uncertainty, rejected claims, dependencies and asset descriptions in the packet below.
+Use only the facts, rejected claims, dependencies and asset descriptions in the packet below.
 Do not inspect files, use tools, infer unseen image content, or add causal explanations to complete the story.
 Return only one complete HTML document beginning with <!doctype html>. Do not use Markdown fences or surrounding commentary.
 Keep CSS and behavior self-contained. Do not fetch remote scripts, styles, fonts or images.
 Treat fact weight as a display contract, not a completeness score. Load-bearing facts form the visible main narrative. Show supporting facts only when they change the reader's understanding; otherwise compress or defer them. Keep context in progressive disclosure, a reference appendix or the canonical source unless it is a prerequisite. Do not make the reader reconstruct priority from exhaustive prose.
 The first viewport must communicate what matters, where things stand and what the reader must decide or do.
 Attach data-fact="F1 F4" and data-weight="load-bearing|supporting|context" to the nearest meaningful element carrying each visible claim. Split elements when combined facts have different weights. Every attached ID must exist in the packet.
-Attach data-uncertainty="U2" to the nearest meaningful element presenting each open question or assumption.
 Use exactly {{ASSET:A1}} as the source placeholder for each described asset. Do not invent asset IDs or unseen details.
 Preserve the distinction between general explanation and concrete examples. Do not assert or imply rejected claims.
 Immediately before </body>, include exactly one non-rendered HTML comment in this shape; never render REPORT-META as visible content:

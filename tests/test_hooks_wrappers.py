@@ -663,7 +663,7 @@ class WrapperTests(unittest.TestCase):
 
         self.assertIn('data-fact="F1 F4"', contract)
         self.assertIn('data-weight="load-bearing|supporting|context"', contract)
-        self.assertIn('data-uncertainty="U2"', contract)
+        self.assertNotIn('data-uncertainty', contract)
         self.assertIn('{{ASSET:A1}}', contract)
         self.assertIn('<!-- REPORT-META', contract)
         self.assertIn('information_weighting:', contract)
