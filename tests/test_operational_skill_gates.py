@@ -95,6 +95,45 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("codex-artifact-integrity", frontend)
         self.assertIn("codex-artifact-integrity", gemini)
 
+    def test_static_visuals_require_rendered_grid_overlay_qa(self):
+        frontend = (
+            ROOT / "codex" / "skills" / "codex-frontend-ui" / "SKILL.md"
+        ).read_text()
+        report = (
+            ROOT / "codex" / "skills" / "claude-html-report" / "SKILL.md"
+        ).read_text()
+        report_contract = (
+            ROOT
+            / "codex"
+            / "skills"
+            / "claude-html-report"
+            / "references"
+            / "report-contract.md"
+        ).read_text()
+        visualization = (
+            ROOT
+            / "codex"
+            / "skills"
+            / "codex-frontend-ui"
+            / "references"
+            / "review-visualization.md"
+        ).read_text()
+
+        self.assertIn("temporary QA copy", frontend)
+        self.assertIn("visible component bounds", frontend)
+        self.assertIn("intended content insets", frontend)
+        self.assertIn("enlarged crops", frontend)
+        self.assertIn("Never ship or adopt the QA overlay", frontend)
+        self.assertIn("overlay component bounds", visualization)
+        self.assertIn("repeated row or column tracks", visualization)
+        self.assertIn("never publish or adopt the QA overlay", visualization)
+        self.assertIn("Codex, not Claude", report)
+        self.assertIn("temporary QA copy or screenshot overlay", report)
+        self.assertIn("Do not ask Claude to produce the QA overlay", report)
+        self.assertIn("grid alignment", report)
+        self.assertIn("temporary rendered QA overlay", report_contract)
+        self.assertIn("never published", report_contract)
+
     def test_html_report_keeps_bounded_revisions_in_codex(self):
         report = (
             ROOT / "codex" / "skills" / "claude-html-report" / "SKILL.md"

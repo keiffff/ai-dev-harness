@@ -37,7 +37,13 @@ Start with a visual representation when the reviewer would otherwise need to rec
    - labels and directionality preserve the source meaning;
    - values shown in one row, card group or shared scale are genuinely comparable; otherwise each value stays with its own claim and context;
    - a limitation or open decision is visible only when the source makes it actionable for this review; missing evidence and excluded scope are not promoted into explanatory UI.
-6. Run visual QA for hierarchy, readability, wrapping, overflow, density, and responsive layout.
+6. Run visual QA for hierarchy, readability, wrapping, overflow, density, and responsive layout. For SVGs, diagrams and card- or grid-based static artifacts:
+   - keep the clean candidate unchanged while creating a temporary QA copy;
+   - overlay component bounds, intended content insets, repeated row or column tracks, and any baseline guides needed for multi-line labels;
+   - render the QA copy and inspect the complete canvas and enlarged crops of every dense region;
+   - check that glyphs, icons and arrowheads do not cross the intended inset, repeated blocks align, line spacing remains visible, and nearby whitespace is not merely non-overlapping but comfortable;
+   - apply corrections to the clean candidate, regenerate the overlay, and render the clean candidate once more;
+   - never publish or adopt the QA overlay.
 7. Return review findings through the active agent conversation. Do not create a separate comment-state system by default.
 8. Apply accepted feedback to the canonical source, then regenerate when another visual pass is useful.
 

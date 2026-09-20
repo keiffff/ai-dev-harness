@@ -63,7 +63,7 @@ An empty inference list is valid. An unlisted inference is not. Empty `deferred`
 
 ### Local Codex revision
 
-Codex edits the accepted HTML directly when the requested change is bounded and does not change the report's narrative architecture, fact weighting or cross-section relationships. Examples include localized wording, labels, color themes, CSS tokens, spacing, typography, responsive overflow, deterministic asset or syntax repairs, and isolated factual-literal or metadata corrections. Keep `data-fact`, `data-weight` and `REPORT-META` consistent with the edited content, then rerun the relevant full-document and visual checks. Do not invoke Claude merely because it generated the original file.
+Codex edits the accepted HTML directly when the requested change is bounded and does not change the report's narrative architecture, fact weighting or cross-section relationships. Examples include localized wording, labels, color themes, CSS tokens, spacing, typography, grid alignment, responsive overflow, deterministic asset or syntax repairs, and isolated factual-literal or metadata corrections. For card-, grid- or diagram-heavy reports, Codex creates a temporary rendered QA overlay with component bounds, intended content insets and layout tracks, uses it to correct the clean HTML, then renders the clean report again. The overlay is inspection-only and is never published. Keep `data-fact`, `data-weight` and `REPORT-META` consistent with the edited content, then rerun the relevant full-document and visual checks. Do not invoke Claude merely because it generated the original file.
 
 ### Structural Claude revision
 
