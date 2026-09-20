@@ -1,44 +1,44 @@
 # Wrappers
 
-Wrappers are narrow execution entrypoints for tools that can mutate shared state or expose sensitive data.
+ラッパー（wrapper）は、共有状態を変更したり機密情報を露出したりする可能性があるツールに対して、狭く限定した実行経路です。
 
-The goal is not to make the agent think harder about dangerous commands. The goal is to remove unnecessary choices from the agent. Git, GitHub, AWS, and Google Cloud operations should enter through small commands whose allowed behavior is already encoded.
+目的は、危険なコマンドをエージェントに慎重に判断させることではなく、不要な選択肢をなくすことです。Git、GitHub、AWS、Google Cloudの操作は、許可された動作だけを実装した小さな専用コマンドへ集約します。
 
-## Role In The Harness
+## ハーネスにおける役割
 
-wrapper は、AI agent に期待する実行境界を command level で表現します。
+ラッパーは、AI エージェントに求める実行境界をコマンドレベルで規定します。
 
-- Git は explicit path staging、user-requested push、force-with-lease などの運用に寄せる
-- GitHub CLI は read-only lookup に寄せ、作成・更新・削除は直接実行させない
-- AWS/GCP は read-only allowlist に寄せ、secret/token 取得や mutation を拒否する
-- project 固有の profile、branch protection、cloud account policy は local adaptation として分離する
+- Gitは、明示的なパスのステージング、ユーザーが明示したプッシュ、force-with-leaseなどの運用に限定する
+- GitHub CLI は読み取り専用（read-only）の参照に限定し、作成・更新・削除を直接実行させない
+- AWS/Google Cloud は読み取り専用の許可リスト（allowlist）に限定し、シークレットやトークンの取得、および状態変更操作（mutation）を拒否する
+- プロジェクト固有のプロファイル、ブランチ保護ルール、クラウドポリシーはローカル適応（Local Adaptation）として切り離す
 
-## Included Examples
+## 含まれるサンプル（Included Examples）
 
-- `bin/git-user-approved.example`: explicit-path add, explicitly requested branch creation from current HEAD or an explicit start point, branch switching and single-upstream merge, no implicit push, no amend/commit-a fallback
-- `bin/gh-readonly.example`: read-only GitHub CLI commands plus generic REST API `GET`/`HEAD`; mutation methods and HTTP method-override headers are blocked
-- `bin/aws-readonly.example`: read-only AWS CLI commands with secret/token and broad data-plane reads blocked by default
-- `bin/gcloud-readonly.example`: explicit read-only Google Cloud CLI allowlist with secret/token access blocked
-- `bin/grok-x-research.example`: one bounded xAI X Search request with date limits, no Web Search, normalized citation annotations, and explicit cost reporting
-- `bin/claude-strategic-review.example`: one bounded Claude Opus review with a 600-second default timeout, heartbeat diagnostics, and tools, project customizations, session persistence, and extra agent turns disabled
-- `bin/claude-fable-strategic-review.example`: Fable review entrypoint using the shared Keychain credential launcher
-- `bin/claude-html-report.example`: one bounded Claude Opus or explicitly requested Fable whole-HTML composition with a 600-second default timeout, safe mode, no tools, no session persistence, complete-document validation, bounded redacted failure diagnostics, and a new-file-only output boundary
-- `bin/gemini-japanese-polish.example`: one stateless Gemini 3.8 Flash Medium whole-document Japanese composition run through an isolated Antigravity CLI workspace with structured output, strict tool permissions, sandboxing, protected fact-span difference reporting, complete-HTML validation with one bounded regeneration, token usage reporting, Keychain lookup, and a new-file-only output boundary
-- `bin/jev-artifact-review.example`: one Jev semantic review of explicit requirements against a complete candidate and optional baseline; high-confidence material violations return `review`, while API unavailability remains non-blocking
-- `bin/jev-evidence-check.example`: one Jev check of whether observed failure evidence directly supports an exact causal or remediation claim; unsupported claims return a review signal without inventing a remedy
-- `bin/keychain-env-exec.example`: generic macOS Keychain credential injection that places one secret in a child process environment without exposing it through command arguments or output
+- `bin/git-user-approved.example`: パス明示による `git add`、現在の HEAD または明示された開始点からのユーザー指示に基づくブランチ作成、ブランチ切り替え、単一アップストリームのマージに限定。暗黙的なプッシュや、amend / `commit -a` へのフォールバックは禁止。
+- `bin/gh-readonly.example`: 読み取り専用の GitHub CLI コマンドおよび汎用 REST API の `GET` / `HEAD` リクエストのみを許可。変更を伴う HTTP メソッドや、HTTP メソッド上書きヘッダー（method-override headers）はブロック。
+- `bin/aws-readonly.example`: 読み取り専用の AWS CLI コマンドに限定し、シークレットやトークンの取得、および広範なデータプレーンの読み取りはデフォルトでブロック。
+- `bin/gcloud-readonly.example`: Google Cloud CLI の明示的な読み取り専用許可リストを適用し、シークレットやトークンへのアクセスはブロック。
+- `bin/grok-x-research.example`: 日付範囲を制限した 1 回限りの xAI X Search リクエストを実行。Web Search は無効化し、正規化された引用注記の付与と明示的なコスト報告を実施。
+- `bin/claude-strategic-review.example`: デフォルトのタイムアウトを 600 秒に設定した 1 回限りの Claude Opus レビューを実行。ハートビート診断を備え、ツール、プロジェクトのカスタマイズ、セッションの永続化、および追加のエージェントターンは無効化。
+- `bin/claude-fable-strategic-review.example`: 共有 Keychain 認証情報ランチャーを使用する Fable レビュー実行用エントリポイント。
+- `bin/claude-html-report.example`: デフォルトのタイムアウトを 600 秒に設定した、Claude Opus または明示的に要求された Fable による 1 回限りの HTML 全体生成。セーフモードを適用し、ツール、セッション永続化は無効化。完全なドキュメント検証、範囲を限定した秘匿化済み失敗診断、新規ファイル限定（new-file-only）の出力境界を適用。
+- `bin/gemini-japanese-polish.example`: 隔離された Antigravity CLI ワークスペース経由で実行される、ステートレスな Gemini 3.8 Flash Medium による 1 回限りのドキュメント全体の日本語推敲。構造化出力、厳格なツール権限、サンドボックス環境、保護対象事実スパンの差分報告、最大 1 回の再生成を含む完全 HTML 検証、トークン使用量報告、Keychain 参照、新規ファイル限定の出力境界を適用。
+- `bin/jev-artifact-review.example`: 完全な候補成果物および任意のベースライン成果物に対する、明示的な要件に基づく 1 回の Jev セマンティックレビュー。確度の高い重大な違反には `review` を返すが、API が不通であってもブロッカー（blocker）にはしない。
+- `bin/jev-evidence-check.example`: 観測された障害の証拠が、特定の原因または対処法の主張を直接裏付けているかを評価する1回のJevチェック。裏付けのない主張には対処法を作らず、レビューシグナルを返す。
+- `bin/keychain-env-exec.example`: macOS Keychain を用いた汎用的な認証情報注入スクリプト。コマンド引数や標準出力・標準エラー出力にシークレットを露出させることなく、単一のシークレットを子プロセスの環境変数に設定。
 
-## Local Adaptation
+## ローカル環境への適応（Local Adaptation）
 
-Copy examples to a local bin directory and adapt:
+サンプルファイルをローカルの `bin` ディレクトリにコピーし、以下の項目を環境に合わせて調整してください。
 
-- local secret manager lookup
-- allowed read operations
-- cloud profiles and accounts
-- repository-specific history protection
-- organization-specific approval requirements
-- xAI API key service/account selection before shared Keychain launcher injection
-- Gemini API key injection from the `GEMINI_JAPANESE_POLISH_API_KEY` Keychain item through the shared launcher
-- an absolute `CLAUDE_STRATEGIC_CLI` path so escalated execution cannot select a different Claude CLI from `PATH`
+- ローカルのシークレットマネージャー参照処理
+- 許可する読み取り操作の定義
+- 使用するクラウドプロファイルおよびアカウント
+- リポジトリ固有の履歴保護設定
+- 組織固有の承認要件
+- 共有 Keychain ランチャー経由で注入する前の、xAI API キーのサービス／アカウント選択
+- 共有ランチャーを経由した、Keychain 項目 `GEMINI_JAPANESE_POLISH_API_KEY` からの Gemini API キー注入
+- 権限昇格を伴う実行時に `PATH` 上の別の Claude CLI が選択されないようにするための、`CLAUDE_STRATEGIC_CLI` の絶対パス指定
 
-Keep project-specific rules out of this repository unless they are rewritten as reusable patterns.
+再利用可能なパターンとして再設計されている場合を除き、プロジェクト固有のルールを本リポジトリに直接持ち込まないでください。

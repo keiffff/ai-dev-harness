@@ -1,53 +1,53 @@
 # Hooks
 
-Codex の誤操作を早い段階で止めるための local safety policy を管理します。
+Codexによる誤操作を早い段階で止めるためのlocal safety policyを管理します。
 
-hook は sandbox を置き換えるものではありません。PreToolUse hook は、agent が raw CLI、secret 表示、破壊的操作、危険な shell 構文に進もうとしたときに、会話と実行の境界で止めます。PermissionRequest hook は、Codexが承認を求める操作をJevで先に判定し、確信を持って判断できない場合だけ通常のapprovalへ戻します。
+hook は sandbox を置き換えるものではありません。PreToolUse hook は、agent が raw CLI の直接実行、secret の表示、破壊的な操作、あるいは危険な shell 構文の実行へ進もうとした際、会話と実行の境界でそれを阻止します。PermissionRequest hook は、Codex が承認を要求する操作を Jev で事前に判定し、確信を持って判断できない場合に限って通常の approval に差し戻します。
 
 ## Role In The Harness
 
-AI agent に期待する振る舞いは、プロンプトだけでは固定できません。hook は、その期待を実行前の検査として置くための層です。
+AIエージェントに期待する振る舞いは、プロンプトの指定だけでは固定できません。hookは、その期待を実行前に検査するための層です。
 
-- Git の commit/push は approved wrapper に寄せる
-- AWS/GCP/GitHub CLI は raw command ではなく read-only wrapper に寄せる
-- `.env` や credential file を直接表示する代表的なshell commandを止める
-- `rm -rf`、`git clean`、recursive chmod/chown などの破壊的操作を止める
+- Git の commit/push は approved wrapper に集約する
+- AWS / GCP / GitHub CLI は raw command ではなく read-only wrapper に集約する
+- `.env` や credential file を直接出力・表示する代表的な shell command を阻止する
+- `rm -rf`、`git clean`、recursive chmod/chown などの破壊的操作を阻止する
 - shell interpreter、command substitution、process substitution、multiline shell、shell grouping、xargs、sudo を保守的に拒否する
-- Browser / CUA runtime は `iab` を明示したin-app操作を許可し、ユーザーのブラウザや接続先が不明な操作を制限する
+- Browser / CUA runtime では `iab` を明示した in-app 操作のみを許可し、ユーザーのブラウザ操作や接続先が不明な操作を制限する
 
-`shell-policy.py` は、Git、AWS、GCP、GitHub CLI、local safety の各検査を1回のPreToolUse hookから呼び出します。個別policyは単体testと責務分離のため残しますが、同じshell呼び出しへ5本のhookを登録しません。
+`shell-policy.py` は、Git、AWS、GCP、GitHub CLI、local safety に関する各検査を 1 回の PreToolUse hook からまとめて呼び出します。各 policy は単体テストの実施と責務分離のために個別のファイルとして維持しますが、1 つの shell 呼び出しに対して 5 本の hook を重複して登録することはありません。
 
 ## Jev Permission Review
 
-`jev-permission-review.py` は、承認要求が発生したBash、`apply_patch`、MCPなどのtool呼び出しをJevへ渡します。注入されたpolicy messageを除いた直近のユーザー依頼、承認理由、tool名と入力を1回のAPI呼び出しで評価し、policy整合度と指示一致度がそれぞれ0.70以上かつ高リスク度が0.15以下の場合だけ`allow`を返します。指示一致度では、対象projectや操作の取り違え、質問を操作許可として扱う誤読、部分修正から全体再生成への拡大も検査します。この境界は、通常のread・edit・test・明示されたcommit/push・外部model資料生成と、secret読取・cloud変更・無関係な外部操作を分けた実測ケースに基づきます。Jev自身は`deny`を返しません。
+`jev-permission-review.py` は、承認要求が発生した Bash、`apply_patch`、MCP などの tool 呼び出しを Jev に渡して判定します。プロンプトへ注入された policy message を除外した直近のユーザー依頼、承認理由、tool 名および入力を 1 回の API 呼び出しで評価し、policy 整合度と指示一致度がそれぞれ 0.70 以上、かつ高リスク度が 0.15 以下の場合にのみ `allow` を返します。指示一致度の評価では、対象プロジェクトや操作の取り違え、単なる質問を操作許可と取り違える誤認、部分的な修正依頼を全体再生成へ拡大させていないかも検査します。この判定基準は、通常の閲覧・編集・テスト、明示された commit/push、外部モデル向け資料生成と、secret の読み取り、クラウド環境の変更、意図しない外部操作とを切り分けた実測例に基づいています。なお、Jev 自身が `deny` を返すことはありません。
 
-secret候補はJevへ送信しません。API key未設定、通信失敗、2秒のtimeout、不正応答、またはscore不足の場合は何も返さず、既存のOpenAI auto-reviewまたはユーザー承認へ戻します。tool入力へ独自の長さ上限や切り詰めは加えません。PreToolUseの各policyとsandboxも引き続き適用され、Jevの判断がそれらを迂回することはありません。
+secret の候補となる文字列は Jev へ送信しません。API key が設定されていない場合や、通信失敗、2 秒の timeout、不正な応答、あるいは score が基準に満たない場合は何も返さず、既存の OpenAI auto-review またはユーザー自身による承認へと差し戻します。tool の入力に対して独自に長さの上限を設けたり、途中で切り詰めたりすることはありません。また、PreToolUse の各 policy や sandbox も引き続き有効であり、Jev の判定がこれらを迂回することはありません。
 
-Jevが実際に許可しているか確認できるよう、raw入力を残さず、結果別件数と直近のtool名・scoreだけを`~/.codex/hook-state/jev-permission-review/status.json`へ記録します。
+Jev による実際の許可状況を確認できるよう、生（raw）の入力内容は残さず、判定結果ごとの件数および直近の tool 名と score のみを `~/.codex/hook-state/jev-permission-review/status.json` に記録します。
 
-Jev hook自身は`TYPESAFE_API_KEY`だけを読み、Keychainへアクセスしません。PermissionRequestのcommandは汎用`keychain-env-exec`を経由し、macOS Keychainのservice `JEV_PERMISSION_REVIEW_API_KEY`を子processの`TYPESAFE_API_KEY`へ注入します。keyの値は引数、stdout、stderr、Jev stateへ出しません。実行時には`keychain-env-exec`、`jev-permission-review.py`、依存する`hook_utils.py`を配置します。
+Jev hook 自体は環境変数 `TYPESAFE_API_KEY` のみを読み取り、Keychain に直接アクセスすることはありません。PermissionRequest の実行コマンドは汎用の `keychain-env-exec` を経由し、macOS Keychain の service `JEV_PERMISSION_REVIEW_API_KEY` から取得した値を子プロセスの `TYPESAFE_API_KEY` へ注入します。key の値がコマンド引数、stdout、stderr、あるいは Jev の状態記録に出力されることはありません。実行環境には `keychain-env-exec`、`jev-permission-review.py`、および依存関係である `hook_utils.py` を配置します。
 
-`jev-keychain-store.example`を`jev-keychain-store`として配置すると、コマンド名を入力してからAPI keyを非表示で貼り付けられます。クリップボードにあるkeyと保存用commandを持ち替える必要はありません。
+`jev-keychain-store.example`を`jev-keychain-store`として配置すれば、コマンド名を実行したあとにAPI keyを非表示で貼り付けられます。クリップボード上でkeyと保存用コマンドを切り替える必要はありません。
 
 ## Browser Permission Gate
 
-`browser-policy.py` は Browser runtime を使う Node REPL と CUA REPL の呼び出しを検査します。`cua.createBrowserTab("iab", ...)`、`cua.getTab(id, { browser: "iab" })`、`agent.browsers.get("iab")`、`cua.getBrowser({ id: "iab" })`、`cua.listTabs({ browser: "iab" })`と、そのREPLで取得したタブの操作には許可行を求めません。Browser SDKの初期化も許可します。REPLをresetした後は、再び`iab`を明示して選択します。
+`browser-policy.py` は、Browser runtime を利用する Node REPL および CUA REPL の呼び出しを検査します。`cua.createBrowserTab("iab", ...)`、`cua.getTab(id, { browser: "iab" })`、`agent.browsers.get("iab")`、`cua.getBrowser({ id: "iab" })`、`cua.listTabs({ browser: "iab" })` と、当該 REPL セッション内で取得されたタブの操作に対しては許可行を要求しません。Browser SDK の初期化も許可対象です。REPL を reset した後は、再度 `iab` を明示的に指定して選択する必要があります。
 
-接続先の省略・動的指定、全ブラウザの一覧取得、既存ブラウザの選択は通常許可しません。外部ブラウザはAGENTS.mdに従ってユーザーが対象を明示的に依頼した場合だけ扱い、従来の現在turnの許可行も必要です。通常のin-app操作のためにこの許可行を求めません。
+接続先の省略や動的な指定、全ブラウザの一覧取得、既存ブラウザの選択は原則として許可しません。外部ブラウザの操作は、AGENTS.md の定めに従ってユーザーが対象を明示的に指定して依頼した場合にのみ扱い、その際にも従来どおり現行ターンにおける許可行の提示が必要です。通常の in-app 操作ではこの許可行を求めません。
 
-hookは文書化されたAPIの選択先と同じREPLの履歴を確認する補助で、任意のJavaScriptの意味やタブ変数の由来を完全に検証するものではありません。ユーザーのブラウザを操作しない責務はAGENTS.mdにも残します。実行時には`browser-policy.py`と依存する`hook_utils.py`の両方を配置します。
+本 hook は、仕様化された API 呼び出し先と同一 REPL 内の実行履歴を確認する補助的な仕組みであり、任意の JavaScript コードの意味解析や、タブ変数の厳密な出自の検証までを行うものではありません。ユーザー自身のブラウザを勝手に操作しないという規律は、引き続き AGENTS.md 側の責務としても担保します。実行環境には `browser-policy.py` と、依存する `hook_utils.py` の双方を配置します。
 
-`local-safety-policy.py` は任意のPython、Node.js、Rubyなどのソースコードを解析するDLPではありません。開発用interpreterを一律に禁止すると通常のtest、生成、検証を妨げるため、既知のshell経由の誤表示だけを止めます。secretはCodexから読めるworkspaceへ置かず、sandbox、OSの権限、secret managerを実際の読み取り境界として使います。
+`local-safety-policy.py` は、Python、Node.js、Ruby などの任意のソースコードを精査する DLP（情報漏洩防止）ツールではありません。開発用 interpreter を一律に禁止してしまうと通常のテスト、コード生成、動作検証に支障をきたすため、既知の shell コマンドを経由した不用意な内容出力のみを阻止します。secret は Codex が参照可能な workspace 内には配置せず、sandbox や OS のアクセス権限、secret manager を実質的な読み取り境界として運用してください。
 
 ## Local Database Work
 
-ローカルDBのCLI操作、migration、seed、DBを使うテストは追加承認なしで実行できます。DB CLIのhookは、明示された`localhost`、`127.0.0.1`、`::1`への接続を許可します。接続先の省略や未対応の接続形式は拒否するため、確認したローカル接続先をhost引数またはURIで明示します。
+ローカルデータベースに対する CLI 操作、マイグレーション、シードデータの投入、および DB を利用するテストは、追加承認なしで実行できます。DB CLI 向けの hook は、接続先として `localhost`、`127.0.0.1`、`::1` が明示されている場合に接続を許可します。接続先ホストの省略や未対応の接続形式は拒否されるため、確認済みのローカル接続先を host 引数または URI の形式で明示してください。
 
-client設定や環境変数による接続先、port forwardingの先はhookでは確定できないため、agentが実際の接続先を確認します。リモートDBの操作は引き続きAGENTS.mdで禁止します。DB、migration、seed、ORM名を含むことだけではpackage scriptを拒否しません。agentがscriptから呼び出される内部処理とテストの準備・後片付けまで追い、設定や環境変数によって決まる実際のDB接続先がすべてローカルであると確認できた場合だけ実行します。script名や入口の接続設定だけでは判断せず、接続先を確認できない処理があれば実行しません。deploy、release、publish、IaC、prod系のscript名に対するブロックは維持します。
+クライアントの設定ファイルや環境変数で決まる接続先、およびポートフォワーディング先はhookだけでは判別できないため、agentが実際の接続先を確認します。リモートDBの直接操作は引き続きAGENTS.mdで禁止します。package scriptは、名前にDB、migration、seed、ORM名が含まれていることだけを理由に拒否しません。agentは、scriptから呼び出される内部処理やテストの準備・後片付けまで追跡し、設定や環境変数によって決まる実際のDB接続先がすべてローカルであると確認できた場合に限って実行します。script名や入口の設定だけで判断せず、接続先を確認できない処理が含まれる場合は実行しません。deploy、release、publish、IaC、prodなどを含むscript名に対するブロックは引き続き維持します。
 
 ## Japanese Output
 
-日本語の品質基準は、常時読む `AGENTS.md` と文章作成時の `codex-writing` が持ちます。Stop hook の continuation prompt は会話に feedback として表示され、回答を遮ったように見えるため、日本語の推敲には使用しません。
+日本語の品質基準については、常時参照される `AGENTS.md` と文章作成時に適用される `codex-writing` が管理します。Stop hook による continuation prompt は、会話上でフィードバックとして表示されてユーザーへの回答を途中で遮ったような挙動に見えるため、日本語の推敲用途には使用しません。
 
 ## Parse Failure Policy
 
