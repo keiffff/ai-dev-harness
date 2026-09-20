@@ -1,0 +1,1 @@
+Change only the report heading. Preserve the embedded demo and keep it usable when the report is opened from both file:// and a local HTTP server.

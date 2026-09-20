@@ -49,19 +49,24 @@
 <text x="76" y="536" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#5F6B82">ALWAYS ON</text>
 <text x="76" y="559" font-size="15" font-weight="700">codex/AGENTS.md</text>
 <text x="76" y="577" font-size="11.5" fill="#8E9AB0">権限・ANDON・対話・実行の常時ルール</text>
-<text x="76" y="608" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#5F6B82">TASK SCOPED</text>
-<text x="76" y="631" font-size="15" font-weight="700">codex/skills/*</text>
-<text x="76" y="649" font-size="11.5" fill="#8E9AB0">作業ごとの手順と確認基準</text>
-<text x="76" y="680" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#5F6B82">CHANGE SCOPED</text>
-<text x="76" y="703" font-size="15" font-weight="700">OpenSpec / リポジトリ固有の仕様</text>
-<text x="76" y="721" font-size="11.5" fill="#8E9AB0">対象範囲・仕様・非目標・受入条件・検証条件</text>
-<line x1="76" y1="744" x2="360" y2="744" stroke="#263247"/>
-<text x="76" y="768" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#34D399">IMPROVEMENT LOOP</text>
-<text x="76" y="790" font-size="12.5" font-weight="700">指摘・失敗の分析から再発防止策を作る</text>
-<text x="76" y="812" font-size="10.5" fill="#8E9AB0">AGENTS.md・スキル・フック・ルールへ反映</text>
-<text x="76" y="829" font-size="10.5" fill="#8E9AB0">専用コマンド・テスト・OpenSpecへ必要時のみ反映</text>
-<line x1="396" y1="633" x2="432" y2="633" stroke="#93A4C4" stroke-width="1.7" marker-end="url(#a-w)"/>
-<text x="414" y="619" text-anchor="middle" font-size="11.5" fill="#8E9AB0">根拠</text>
+<rect x="76" y="590" width="284" height="48" rx="9" fill="#34D399" fill-opacity="0.06" stroke="#34D399" stroke-opacity="0.28"/>
+<text x="90" y="610" font-size="12.5" font-weight="700" fill="#34D399">最新ルールを既存タスクへ再注入</text>
+<text x="90" y="627" font-size="10.5" fill="#8E9AB0">SessionStart / UserPromptSubmit</text>
+<text x="76" y="664" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#5F6B82">TASK SCOPED</text>
+<text x="76" y="687" font-size="15" font-weight="700">codex/skills/*</text>
+<text x="76" y="705" font-size="11.5" fill="#8E9AB0">作業ごとの手順と確認基準</text>
+<text x="76" y="732" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#5F6B82">CHANGE SCOPED</text>
+<text x="76" y="755" font-size="15" font-weight="700">OpenSpec / リポジトリ固有の仕様</text>
+<text x="76" y="773" font-size="11.5" fill="#8E9AB0">対象範囲・仕様・非目標・受入条件・検証条件</text>
+<line x1="76" y1="792" x2="360" y2="792" stroke="#263247"/>
+<text x="76" y="816" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#34D399">IMPROVEMENT LOOP</text>
+<text x="76" y="838" font-size="12.5" font-weight="700">指摘・失敗の分析から再発防止策を作る</text>
+<text x="76" y="858" font-size="10.5" fill="#8E9AB0">AGENTS.md・スキル・フック・ルールへ反映</text>
+<text x="76" y="875" font-size="10.5" fill="#8E9AB0">専用コマンド・テスト・OpenSpecへ必要時のみ反映</text>
+<line x1="396" y1="614" x2="432" y2="614" stroke="#34D399" stroke-width="1.7" marker-end="url(#a-g)"/>
+<text x="414" y="600" text-anchor="middle" font-size="11.5" fill="#34D399">再注入</text>
+<line x1="396" y1="705" x2="432" y2="705" stroke="#93A4C4" stroke-width="1.7" marker-end="url(#a-w)"/>
+<text x="414" y="691" text-anchor="middle" font-size="11.5" fill="#8E9AB0">根拠</text>
 
 <rect x="440" y="408" width="720" height="482" rx="16" fill="#0E1F1C" stroke="#34D399" stroke-width="1.7" filter="url(#gglow)"/>
 <rect x="468" y="438" width="52" height="52" rx="14" fill="#34D399" fill-opacity="0.14" stroke="#34D399" stroke-opacity="0.45"/>
@@ -78,23 +83,24 @@
 <text x="520" y="632" font-size="17" font-weight="700">検証</text><text x="620" y="632" font-size="15.5" fill="#C7CFDC">差分とテストで検証</text>
 
 <rect x="468" y="652" width="664" height="112" rx="12" fill="#111A2B" fill-opacity="0.72" stroke="#34D399" stroke-opacity="0.24"/>
-<text x="486" y="675" font-size="12.5" font-weight="700" fill="#34D399">Jevの証拠照合（失敗時）</text>
-<text x="660" y="675" font-size="11.5" fill="#8E9AB0">原因や対処を採用する前に、観測した事実と整合するか検証</text>
-<rect x="486" y="694" width="112" height="42" rx="9" fill="#93A4C4" fill-opacity="0.08" stroke="#93A4C4" stroke-opacity="0.34"/>
-<text x="542" y="719" text-anchor="middle" font-size="12" fill="#C7CFDC">観測した事実</text>
-<text x="610" y="720" text-anchor="middle" font-size="17" fill="#5F6B82">＋</text>
-<rect x="622" y="694" width="126" height="42" rx="9" fill="#93A4C4" fill-opacity="0.08" stroke="#93A4C4" stroke-opacity="0.34"/>
-<text x="685" y="719" text-anchor="middle" font-size="12" fill="#C7CFDC">原因・対処の候補</text>
-<line x1="756" y1="715" x2="776" y2="715" stroke="#FBBF24" stroke-width="1.5" marker-end="url(#a-y)"/>
-<rect x="784" y="694" width="88" height="42" rx="9" fill="#FBBF24" fill-opacity="0.10" stroke="#FBBF24" stroke-opacity="0.48"/>
-<text x="828" y="711" text-anchor="middle" font-size="11" font-weight="700" fill="#FBBF24">Jev</text>
-<text x="828" y="727" text-anchor="middle" font-size="11.5" fill="#C7CFDC">証拠を照合</text>
-<path d="M872 715 H892 V700 H900" fill="none" stroke="#34D399" stroke-width="1.5" marker-end="url(#a-g)"/>
-<path d="M892 715 V739 H900" fill="none" stroke="#93A4C4" stroke-width="1.5" marker-end="url(#a-w)"/>
-<rect x="908" y="685" width="204" height="30" rx="9" fill="#34D399" fill-opacity="0.09" stroke="#34D399" stroke-opacity="0.35"/>
-<text x="1010" y="705" text-anchor="middle" font-size="11.5" fill="#C7CFDC">支持 → Codexが採否</text>
-<rect x="908" y="724" width="204" height="30" rx="9" fill="#93A4C4" fill-opacity="0.07" stroke="#93A4C4" stroke-opacity="0.32"/>
-<text x="1010" y="744" text-anchor="middle" font-size="11.5" fill="#C7CFDC">不支持 → 追加観測へ戻る</text>
+<line x1="800" y1="666" x2="800" y2="750" stroke="#263247"/>
+<text x="486" y="675" font-size="12.5" font-weight="700" fill="#34D399">失敗原因の証拠照合</text>
+<text x="486" y="697" font-size="11" fill="#8E9AB0">観測した事実 ＋ 原因・対処候補</text>
+<rect x="486" y="709" width="104" height="30" rx="8" fill="#FBBF24" fill-opacity="0.10" stroke="#FBBF24" stroke-opacity="0.48"/>
+<text x="538" y="729" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FBBF24">Jevが照合</text>
+<line x1="598" y1="724" x2="618" y2="724" stroke="#34D399" stroke-width="1.5" marker-end="url(#a-g)"/>
+<rect x="626" y="709" width="144" height="30" rx="8" fill="#34D399" fill-opacity="0.09" stroke="#34D399" stroke-opacity="0.35"/>
+<text x="698" y="729" text-anchor="middle" font-size="11.5" fill="#C7CFDC">Codexが採否</text>
+<text x="486" y="756" font-size="10.5" fill="#8E9AB0">不支持なら追加観測へ戻る</text>
+
+<text x="818" y="675" font-size="12.5" font-weight="700" fill="#34D399">成果物の検証方針を選ぶ</text>
+<text x="818" y="697" font-size="11" fill="#8E9AB0">差分の意味・構造・実行時の動作を分類</text>
+<rect x="818" y="709" width="78" height="30" rx="8" fill="#FBBF24" fill-opacity="0.10" stroke="#FBBF24" stroke-opacity="0.48"/>
+<text x="857" y="729" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FBBF24">Jev判定</text>
+<line x1="904" y1="724" x2="918" y2="724" stroke="#34D399" stroke-width="1.5" marker-end="url(#a-g)"/>
+<rect x="926" y="706" width="196" height="50" rx="8" fill="#34D399" fill-opacity="0.08" stroke="#34D399" stroke-opacity="0.32"/>
+<text x="1024" y="726" text-anchor="middle" font-size="11.5" font-weight="700">検証方針を選択</text>
+<text x="1024" y="746" text-anchor="middle" font-size="10.5" fill="#8E9AB0">内容の整合性・構造・実行時の動作</text>
 
 <g transform="translate(474,778) scale(0.75)" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g>
 <text x="520" y="794" font-size="17" font-weight="700">統合・実務判断</text>

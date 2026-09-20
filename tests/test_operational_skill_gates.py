@@ -85,6 +85,10 @@ class OperationalSkillGateTests(unittest.TestCase):
         ).read_text()
 
         self.assertIn("JEV_ARTIFACT_REVIEW_WRAPPER", integrity)
+        self.assertIn("--route-checks", integrity)
+        self.assertIn("required_checks", integrity)
+        self.assertIn("cannot remove an inherited runtime check", integrity)
+        self.assertIn("routing evidence, not proof", integrity)
         self.assertIn("unavailable", integrity)
         self.assertIn("does not establish pixel overlap", integrity)
         self.assertIn("codex-artifact-integrity", report)

@@ -32,6 +32,22 @@ default_subagent_reasoning_effort = "medium"
 # AWS_READONLY_WRAPPER=$HOME/.local/bin/aws-readonly
 # GCLOUD_READONLY_WRAPPER=$HOME/.local/bin/gcloud-readonly
 
+# Reinject the small, current runtime contract when a session starts, resumes,
+# compacts, or observes a changed contract on a later user turn. The hook stores
+# only the last delivered contract digest for each session.
+[[hooks.SessionStart]]
+matcher = "^(startup|resume|clear|compact)$"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-context.py"
+
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-context.py"
+
 # Run Git, cloud CLI, and local shell safety checks through one hook process.
 [[hooks.PreToolUse]]
 matcher = "^Bash$"

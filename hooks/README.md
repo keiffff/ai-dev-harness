@@ -4,6 +4,12 @@ Codexによる誤操作を早い段階で止めるためのlocal safety policy�
 
 hook は sandbox を置き換えるものではありません。PreToolUse hook は、agent が raw CLI の直接実行、secret の表示、破壊的な操作、あるいは危険な shell 構文の実行へ進もうとした際、会話と実行の境界でそれを阻止します。PermissionRequest hook は、Codex が承認を要求する操作を Jev で事前に判定し、確信を持って判断できない場合に限って通常の approval に差し戻します。
 
+## Runtime Contract
+
+`runtime-contract-context.py` は、既に開いているtaskにも現在の短い運用規則を届けます。`SessionStart` の startup、resume、clear、compact では必ず注入し、`UserPromptSubmit` では同じtaskへ最後に届けた内容から `runtime-contract.md` が変わった場合だけ再注入します。これにより、AGENTS.mdを更新した後に既存taskが古い要約や開始時の文脈だけで動き続ける状態を避けます。
+
+`runtime-contract.md` はAGENTS.mdの代替ではありません。全体の規則はAGENTS.mdに置き、そのうち既存taskへ即時に反映する必要がある短い規則だけをこのファイルにも記載します。hookは契約本文のSHA-256だけをtaskごとに `~/.codex/hook-state/runtime-contract/` へ保存し、会話や入力文は保存しません。ファイルの欠落、入力形式の不一致、状態ファイルへの書き込み失敗は実行を止めません。
+
 ## Role In The Harness
 
 AIエージェントに期待する振る舞いは、プロンプトの指定だけでは固定できません。hookは、その期待を実行前に検査するための層です。

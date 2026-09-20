@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 
 DEFAULT_API_URL = "https://api.typesafe.ai/v1/systemone"
 VIOLATION_REVIEW_THRESHOLD = 0.70
+CHECK_ROUTE_THRESHOLD = 0.70
 SECRET_RE = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----|"
     r"\bAuthorization\s*:\s*(?:Bearer|Basic)\s+[^\s'\"]+|"
@@ -40,6 +41,11 @@ def parse_args(argv):
     parser.add_argument("--requirements-file", required=True)
     parser.add_argument("--candidate-file", required=True)
     parser.add_argument("--baseline-file")
+    parser.add_argument(
+        "--route-checks",
+        action="store_true",
+        help="Return evidence-based deterministic and Jev-routed verification checks.",
+    )
     return parser.parse_args(argv)
 
 
@@ -60,7 +66,7 @@ def read_utf8(path, option):
     return value
 
 
-def load_api_key():
+def load_api_key(fallback=None):
     key = os.environ.get("TYPESAFE_API_KEY", "").strip()
     if key:
         return key
@@ -82,7 +88,7 @@ def load_api_key():
             check=False,
         )
     except OSError as error:
-        unavailable(type(error).__name__)
+        unavailable(type(error).__name__, fallback)
         return None
     try:
         child_output = json.loads(completed.stdout)
@@ -93,7 +99,7 @@ def load_api_key():
         or not isinstance(child_output, dict)
         or child_output.get("decision") not in {"pass", "review", "unavailable"}
     ):
-        unavailable("credential unavailable")
+        unavailable("credential unavailable", fallback)
         return None
     sys.stdout.write(completed.stdout)
     sys.stderr.write(completed.stderr)
@@ -110,24 +116,86 @@ def api_url():
     return DEFAULT_API_URL
 
 
-def probability(payload):
+def probability(payload, name):
     answers = payload.get("answers") if isinstance(payload, dict) else None
-    answer = answers.get("material_violation") if isinstance(answers, dict) else None
+    answer = answers.get(name) if isinstance(answers, dict) else None
     value = answer.get("noul") if isinstance(answer, dict) else None
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError("material_violation")
+        raise TypeError(name)
     result = float(value)
     if not math.isfinite(result) or not 0.0 <= result <= 1.0:
-        raise ValueError("material_violation")
+        raise ValueError(name)
     return result
 
 
-def unavailable(reason):
+def unavailable(reason, extra=None):
     print(f"Jev artifact review unavailable: {reason}", file=sys.stderr)
-    print(json.dumps({"decision": "unavailable"}, sort_keys=True))
+    output = {"decision": "unavailable"}
+    if isinstance(extra, dict):
+        output.update(extra)
+    print(json.dumps(output, sort_keys=True))
 
 
-def request_review(key, requirements, candidate, baseline, candidate_name):
+def artifact_features(value):
+    lowered = value.lower()
+    patterns = {
+        "iframe": r"<iframe\b",
+        "script": r"<script\b",
+        "media": r"<(?:video|audio)\b",
+        "controls": r"<(?:button|select|input|textarea|form)\b",
+    }
+    return sorted(name for name, pattern in patterns.items() if re.search(pattern, lowered))
+
+
+def runtime_fragments(value):
+    patterns = (
+        r"<script\b[^>]*>.*?</script>",
+        r"<iframe\b[^>]*>",
+        r"<(?:video|audio|button|select|input|textarea|form)\b[^>]*>",
+    )
+    fragments = []
+    for pattern in patterns:
+        fragments.extend(re.findall(pattern, value, flags=re.IGNORECASE | re.DOTALL))
+    return [re.sub(r"\s+", " ", fragment).strip() for fragment in fragments]
+
+
+def inherited_route(candidate, baseline):
+    baseline_features = artifact_features(baseline or "")
+    candidate_features = artifact_features(candidate)
+    inherited = set(baseline_features or candidate_features)
+    runtime = bool(inherited & {"iframe", "script", "media", "controls"})
+    interactive = bool(inherited & {"iframe", "media", "controls"})
+    runtime_changed = baseline is not None and runtime_fragments(baseline) != runtime_fragments(candidate)
+    return {
+        "inherited_runtime_features": sorted(inherited),
+        "runtime_contract_changed": runtime_changed,
+        "required_checks": {
+            "fact_and_comparison_check": False,
+            "changed_region_visual": False,
+            "full_page_visual": False,
+            "browser_smoke": runtime,
+            "interaction_journey": runtime_changed or (baseline is None and interactive),
+        },
+    }
+
+
+def routed_checks(base, scores):
+    checks = dict(base["required_checks"])
+    checks["fact_and_comparison_check"] = scores.get("meaning_changed", 0.0) >= CHECK_ROUTE_THRESHOLD
+    checks["changed_region_visual"] = scores.get("layout_changed", 0.0) >= CHECK_ROUTE_THRESHOLD
+    checks["full_page_visual"] = scores.get("whole_artifact_changed", 0.0) >= CHECK_ROUTE_THRESHOLD
+    interaction_changed = scores.get("interaction_changed", 0.0) >= CHECK_ROUTE_THRESHOLD
+    checks["browser_smoke"] = checks["browser_smoke"] or interaction_changed
+    checks["interaction_journey"] = checks["interaction_journey"] or interaction_changed
+    return {
+        "inherited_runtime_features": base["inherited_runtime_features"],
+        "runtime_contract_changed": base["runtime_contract_changed"],
+        "route_scores": scores,
+        "required_checks": checks,
+    }
+
+
+def request_review(key, requirements, candidate, baseline, candidate_name, route_checks):
     state = {
         "requirements": requirements,
         "candidate_name": candidate_name,
@@ -135,25 +203,57 @@ def request_review(key, requirements, candidate, baseline, candidate_name):
     }
     if baseline is not None:
         state["baseline"] = baseline
+    questions = {
+        "material_violation": {
+            "type": "noul",
+            "instructions": (
+                "Does the candidate artifact materially violate the explicit requirements or preservation "
+                "constraints? When a baseline is present, judge the described change from baseline to "
+                "candidate. Count unrequested scope, structure or theme changes; deleted required content; "
+                "misleading parallel presentation of metrics with different definitions or comparison "
+                "conditions; unrequested defensive, process or excuse copy; and factual misrepresentation "
+                "of roles or flows as violations. Do not flag requested limitations, requested structural "
+                "changes, ordinary implementation details, or visual geometry that cannot be established "
+                "from the text. Judge only the supplied artifact and requirements; do not invent unseen defects."
+            ),
+        }
+    }
+    if route_checks:
+        questions.update({
+            "meaning_changed": {
+                "type": "noul",
+                "instructions": (
+                    "Does the candidate change factual claims, metric definitions, comparison conditions, roles, "
+                    "flows or conclusions beyond a local wording-only edit?"
+                ),
+            },
+            "layout_changed": {
+                "type": "noul",
+                "instructions": (
+                    "Does the candidate change layout, SVG geometry, CSS, visual grouping or information placement "
+                    "so that the changed region should be rendered and inspected?"
+                ),
+            },
+            "interaction_changed": {
+                "type": "noul",
+                "instructions": (
+                    "Does the candidate change scripts, embeds, media, links, controls, file versus HTTP loading, "
+                    "or another runtime interaction path that should be exercised in a browser?"
+                ),
+            },
+            "whole_artifact_changed": {
+                "type": "noul",
+                "instructions": (
+                    "Does the candidate change cross-section structure, hierarchy, theme or composition broadly "
+                    "enough that the complete artifact should be rendered instead of only the changed region?"
+                ),
+            },
+        })
     body = json.dumps(
         {
             "model": "jev-latest",
             "state": state,
-            "questions": {
-                "material_violation": {
-                    "type": "noul",
-                    "instructions": (
-                        "Does the candidate artifact materially violate the explicit requirements or preservation "
-                        "constraints? When a baseline is present, judge the described change from baseline to "
-                        "candidate. Count unrequested scope, structure or theme changes; deleted required content; "
-                        "misleading parallel presentation of metrics with different definitions or comparison "
-                        "conditions; unrequested defensive, process or excuse copy; and factual misrepresentation "
-                        "of roles or flows as violations. Do not flag requested limitations, requested structural "
-                        "changes, ordinary implementation details, or visual geometry that cannot be established "
-                        "from the text. Judge only the supplied artifact and requirements; do not invent unseen defects."
-                    ),
-                }
-            },
+            "questions": questions,
         },
         ensure_ascii=False,
     ).encode("utf-8")
@@ -169,7 +269,20 @@ def request_review(key, requirements, candidate, baseline, candidate_name):
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             payload = json.load(response)
-        return probability(payload)
+        material = probability(payload, "material_violation")
+        scores = {}
+        if route_checks:
+            for name in (
+                "meaning_changed",
+                "layout_changed",
+                "interaction_changed",
+                "whole_artifact_changed",
+            ):
+                try:
+                    scores[name] = probability(payload, name)
+                except (TypeError, ValueError):
+                    continue
+        return material, scores, None
     except (
         OSError,
         TypeError,
@@ -177,8 +290,7 @@ def request_review(key, requirements, candidate, baseline, candidate_name):
         urllib.error.HTTPError,
         urllib.error.URLError,
     ) as error:
-        unavailable(type(error).__name__)
-        return None
+        return None, {}, type(error).__name__
 
 
 def main():
@@ -199,23 +311,29 @@ def main():
     if SECRET_RE.search("\n".join(values)):
         stop("Artifact review input contains a credential or secret candidate; nothing was sent.")
 
-    key = load_api_key()
+    base_route = inherited_route(candidate, baseline) if args.route_checks else None
+    key = load_api_key(base_route)
     if key is None:
         return
-    score = request_review(
+    score, route_scores, unavailable_reason = request_review(
         key,
         requirements,
         candidate,
         baseline,
         candidate_file.name,
+        args.route_checks,
     )
     if score is None:
+        unavailable(unavailable_reason or "invalid response", base_route)
         return
     decision = "review" if score >= VIOLATION_REVIEW_THRESHOLD else "pass"
-    print(json.dumps({
+    output = {
         "decision": decision,
         "material_violation": score,
-    }, sort_keys=True))
+    }
+    if args.route_checks:
+        output.update(routed_checks(base_route, route_scores))
+    print(json.dumps(output, sort_keys=True))
     if decision == "review":
         raise SystemExit(1)
 

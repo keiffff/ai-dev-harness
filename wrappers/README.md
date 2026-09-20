@@ -24,7 +24,7 @@
 - `bin/claude-fable-strategic-review.example`: 共有 Keychain 認証情報ランチャーを使用する Fable レビュー実行用エントリポイント。
 - `bin/claude-html-report.example`: デフォルトのタイムアウトを 600 秒に設定した、Claude Opus または明示的に要求された Fable による 1 回限りの HTML 全体生成。セーフモードを適用し、ツール、セッション永続化は無効化。完全なドキュメント検証、範囲を限定した秘匿化済み失敗診断、新規ファイル限定（new-file-only）の出力境界を適用。
 - `bin/gemini-japanese-polish.example`: 隔離された Antigravity CLI ワークスペース経由で実行される、ステートレスな Gemini 3.8 Flash Medium による 1 回限りのドキュメント全体の日本語推敲。構造化出力、厳格なツール権限、サンドボックス環境、保護対象事実スパンの差分報告、最大 1 回の再生成を含む完全 HTML 検証、トークン使用量報告、Keychain 参照、新規ファイル限定の出力境界を適用。
-- `bin/jev-artifact-review.example`: 完全な候補成果物および任意のベースライン成果物に対する、明示的な要件に基づく 1 回の Jev セマンティックレビュー。確度の高い重大な違反には `review` を返すが、API が不通であってもブロッカー（blocker）にはしない。
+- `bin/jev-artifact-review.example`: 完全な候補成果物および任意のベースライン成果物に対する、明示的な要件に基づく1回のJevレビュー。`--route-checks`を指定すると、意味、レイアウト、全体構成、操作経路の変更を判定し、必要な事実確認、部分・全体の目視確認、ブラウザ確認だけを返す。HTMLのscript、iframe、media、controlはローカルでも検出するため、APIが不通でも既存の実行時確認は失われない。確度の高い重大な違反には`review`を返すが、APIが不通であること自体は作業を止める理由にしない。
 - `bin/jev-evidence-check.example`: 観測された障害の証拠が、特定の原因または対処法の主張を直接裏付けているかを評価する1回のJevチェック。裏付けのない主張には対処法を作らず、レビューシグナルを返す。
 - `bin/keychain-env-exec.example`: macOS Keychain を用いた汎用的な認証情報注入スクリプト。コマンド引数や標準出力・標準エラー出力にシークレットを露出させることなく、単一のシークレットを子プロセスの環境変数に設定。
 

@@ -1,0 +1,12 @@
+<!doctype html>
+<html>
+  <body>
+    <h1>Original report</h1>
+    <iframe id="demo" src="demo/index.html"></iframe>
+    <script>
+      if (window.location.protocol === "file:") {
+        document.getElementById("demo").src = "http://127.0.0.1:8765/demo/index.html";
+      }
+    </script>
+  </body>
+</html>
