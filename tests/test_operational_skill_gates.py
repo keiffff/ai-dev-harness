@@ -141,6 +141,20 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("coarse spot checks cannot support", content)
         self.assertIn("A successful fallback does not verify the primary path", content)
 
+    def test_failure_diagnosis_separates_stopping_layer_from_cause(self):
+        content = (
+            ROOT / "codex" / "skills" / "codex-debugging-loop" / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("immediate stopping layer", content)
+        self.assertIn("Do not present that layer as a root cause", content)
+        self.assertIn("plausible alternative", content)
+        self.assertIn("smallest additional observation", content)
+        self.assertIn("successful fallback does not verify", content)
+        self.assertIn("JEV_EVIDENCE_CHECK_WRAPPER", content)
+        self.assertIn("non-secret evidence and the proposed claim", content)
+        self.assertIn("do not retry automatically", content)
+
     def test_operational_sequence_traces_implicit_triggers(self):
         content = (
             ROOT / "codex" / "skills" / "codex-context-engineering" / "SKILL.md"

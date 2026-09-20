@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import math
+import os
+import re
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+from urllib.parse import urlsplit
+
+
+DEFAULT_API_URL = "https://api.typesafe.ai/v1/systemone"
+SUPPORT_THRESHOLD = 0.70
+SECRET_RE = re.compile(
+    r"-----BEGIN [A-Z ]*PRIVATE KEY-----|"
+    r"\bAuthorization\s*:\s*(?:Bearer|Basic)\s+[^\s'\"]+|"
+    r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}|"
+    r"\bAKIA[0-9A-Z]{16}\b|"
+    r"\bglpat-[A-Za-z0-9_-]{12,}\b|"
+    r"\b(?:sk|xai)-[A-Za-z0-9_-]{16,}\b|"
+    r"\bAIza[0-9A-Za-z_-]{20,}\b|"
+    r"\bgh[opusr]_[A-Za-z0-9]{20,}\b|"
+    r"\b(?:api[_-]?key|token|password|secret)\s*[:=]\s*[^\s'\"]{8,}",
+    re.IGNORECASE,
+)
+
+
+def stop(message, exit_code=2):
+    print(message, file=sys.stderr)
+    raise SystemExit(exit_code)
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description="Check whether observed evidence directly supports an exact causal or remediation claim."
+    )
+    parser.add_argument("--evidence-file", required=True)
+    parser.add_argument("--claim-file", required=True)
+    return parser.parse_args(argv)
+
+
+def read_utf8(raw, option):
+    path = Path(raw).expanduser()
+    if not path.is_file():
+        stop(f"{option} requires an existing regular file.")
+    try:
+        value = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        stop(f"{option} must be UTF-8.")
+    if not value.strip():
+        stop(f"{option} must not be empty.")
+    return value
+
+
+def unavailable(reason):
+    print(f"Jev evidence check unavailable: {reason}", file=sys.stderr)
+    print(json.dumps({"decision": "unavailable"}, sort_keys=True))
+
+
+def load_api_key():
+    key = os.environ.get("TYPESAFE_API_KEY", "").strip()
+    if key:
+        return key
+    launcher = os.environ.get("KEYCHAIN_ENV_EXEC", "/Users/kei/.local/bin/keychain-env-exec")
+    try:
+        completed = subprocess.run(
+            [
+                launcher,
+                "TYPESAFE_API_KEY",
+                "JEV_PERMISSION_REVIEW_API_KEY",
+                "--",
+                sys.executable,
+                str(Path(__file__).resolve()),
+                *sys.argv[1:],
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    except OSError as error:
+        unavailable(type(error).__name__)
+        return None
+    try:
+        child_output = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        child_output = None
+    if (
+        completed.returncode not in (0, 1)
+        or not isinstance(child_output, dict)
+        or child_output.get("decision") not in {"supported", "unsupported", "unavailable"}
+    ):
+        unavailable("credential unavailable")
+        return None
+    sys.stdout.write(completed.stdout)
+    sys.stderr.write(completed.stderr)
+    raise SystemExit(completed.returncode)
+
+
+def api_url():
+    configured = os.environ.get("JEV_EVIDENCE_CHECK_API_URL", "").strip()
+    if not configured:
+        return DEFAULT_API_URL
+    parsed = urlsplit(configured)
+    if parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "::1", "localhost"}:
+        return configured
+    return DEFAULT_API_URL
+
+
+def probability(payload):
+    answers = payload.get("answers") if isinstance(payload, dict) else None
+    answer = answers.get("claim_supported") if isinstance(answers, dict) else None
+    value = answer.get("noul") if isinstance(answer, dict) else None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError("claim_supported")
+    result = float(value)
+    if not math.isfinite(result) or not 0.0 <= result <= 1.0:
+        raise ValueError("claim_supported")
+    return result
+
+
+def request_check(key, evidence, claim):
+    body = json.dumps(
+        {
+            "model": "jev-latest",
+            "state": {
+                "observed_evidence": evidence,
+                "proposed_claim": claim,
+            },
+            "questions": {
+                "claim_supported": {
+                    "type": "noul",
+                    "instructions": (
+                        "Does the observed evidence directly support the proposed claim at the claim's exact "
+                        "specificity? Mere consistency is insufficient. Reject a root-cause, remedy, ownership, "
+                        "policy, configuration, plan-adequacy, or system-wide claim when plausible alternatives "
+                        "remain. An explicit error can support the immediate stopping layer without supporting a "
+                        "deeper cause or prescribed remedy. Judge only the supplied evidence and claim."
+                    ),
+                }
+            },
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        api_url(),
+        data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return probability(json.load(response))
+    except (
+        OSError,
+        TypeError,
+        ValueError,
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+    ) as error:
+        unavailable(type(error).__name__)
+        return None
+
+
+def main():
+    args = parse_args(sys.argv[1:])
+    evidence = read_utf8(args.evidence_file, "--evidence-file")
+    claim = read_utf8(args.claim_file, "--claim-file")
+    if SECRET_RE.search(f"{evidence}\n{claim}"):
+        stop("Evidence check input contains a credential or secret candidate; nothing was sent.")
+    key = load_api_key()
+    if key is None:
+        return
+    score = request_check(key, evidence, claim)
+    if score is None:
+        return
+    decision = "supported" if score >= SUPPORT_THRESHOLD else "unsupported"
+    print(json.dumps({"claim_supported": score, "decision": decision}, sort_keys=True))
+    if decision == "unsupported":
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

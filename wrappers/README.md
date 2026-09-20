@@ -25,6 +25,7 @@ wrapper は、AI agent に期待する実行境界を command level で表現し
 - `bin/claude-html-report.example`: one bounded Claude Opus or explicitly requested Fable whole-HTML composition with a 600-second default timeout, safe mode, no tools, no session persistence, complete-document validation, bounded redacted failure diagnostics, and a new-file-only output boundary
 - `bin/gemini-japanese-polish.example`: one stateless Gemini 3.8 Flash Medium whole-document Japanese composition run through an isolated Antigravity CLI workspace with structured output, strict tool permissions, sandboxing, protected fact-span difference reporting, complete-HTML validation with one bounded regeneration, token usage reporting, Keychain lookup, and a new-file-only output boundary
 - `bin/jev-artifact-review.example`: one Jev semantic review of explicit requirements against a complete candidate and optional baseline; high-confidence material violations return `review`, while API unavailability remains non-blocking
+- `bin/jev-evidence-check.example`: one Jev check of whether observed failure evidence directly supports an exact causal or remediation claim; unsupported claims return a review signal without inventing a remedy
 - `bin/keychain-env-exec.example`: generic macOS Keychain credential injection that places one secret in a child process environment without exposing it through command arguments or output
 
 ## Local Adaptation

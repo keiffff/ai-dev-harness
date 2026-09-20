@@ -12,7 +12,7 @@ skillには、証拠の探し先、レビュー基準、成果物の形式、外
 | `codex-git-publish` | 明示依頼されたbranch作成・切替、commit、push、PR branch更新、submodule sync | wrapper経由のGit mutation手順を管理する | skill自体からmutation権限を推定しない |
 | `codex-context-engineering` | repo の既存パターン、関連テスト、仕様、PR 状況を読む必要があるとき | 問いに合う証拠の探し先と、既存の所有者・実行経路を確認する | 無関係なファイルを広く読み込まない |
 | `codex-incremental-implementation` | 複数ファイルの実装、OpenSpec tasks、refactor、feature work | 既存経路、観測可能な契約、適切なテスト範囲を保つ | 大きな speculative edit を一気に入れない |
-| `codex-debugging-loop` | test、build、CI、API、browser、runtime log が失敗したとき | 再現、原因特定、修正、再確認の loop に戻す | 推測だけで修正しない |
+| `codex-debugging-loop` | test、build、CI、API、browser、runtime log が失敗したとき | 直接観測と原因仮説を分け、再現、原因特定、修正、再確認の loop に戻す | エラー表示だけから原因や対処を決めない |
 | `codex-code-review` | diff review、完了前 review、AI 生成コードの確認 | bug、regression、missing test、構造、残リスクを見る | 変更内容の要約だけで終わらない |
 | `codex-interface-review` | API、schema、state、persisted data、module boundary を変えるとき | I/F 契約、互換性、境界条件を確認する | 実装都合で契約変更を通さない |
 | `codex-doubt-review` | 非自明な判断、移行、順序、idempotency、production risk があるとき | 採用案を敵対的に見直し、弱い前提を探す | 何でも否定するために使わない |
