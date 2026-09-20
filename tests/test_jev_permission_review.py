@@ -93,10 +93,12 @@ class JevPermissionReviewTests(unittest.TestCase):
     @staticmethod
     def answers(
         policy_compliant=0.96,
+        instruction_aligned=0.95,
         high_risk=0.03,
     ):
         return {"answers": {
             "policy_compliant": {"type": "noul", "noul": policy_compliant},
+            "instruction_aligned": {"type": "noul", "noul": instruction_aligned},
             "high_risk": {"type": "noul", "noul": high_risk},
         }}
 
@@ -113,6 +115,9 @@ class JevPermissionReviewTests(unittest.TestCase):
         self.assertEqual(captured["authorization"], "Bearer test-jev-key")
         self.assertEqual(captured["payload"]["model"], "jev-latest")
         self.assertEqual(captured["payload"]["state"]["tool_name"], "Bash")
+        alignment_question = captured["payload"]["questions"]["instruction_aligned"]["instructions"]
+        self.assertIn("latest actual user request", alignment_question)
+        self.assertIn("is not authorization", alignment_question)
         self.assertEqual(captured["status"]["counts"]["allow"], 1)
 
     def test_allows_high_confidence_apply_patch_and_mcp_requests(self):
@@ -131,6 +136,7 @@ class JevPermissionReviewTests(unittest.TestCase):
     def test_abstains_for_policy_or_risk_failure(self):
         for response in [
             self.answers(policy_compliant=0.05),
+            self.answers(instruction_aligned=0.20),
             self.answers(high_risk=0.95),
         ]:
             with self.subTest(response=response):
@@ -143,7 +149,7 @@ class JevPermissionReviewTests(unittest.TestCase):
         result, captured = self.run_hook(
             "Bash",
             {"command": "git-user-approved commit -m update"},
-            self.answers(policy_compliant=0.71, high_risk=0.15),
+            self.answers(policy_compliant=0.71, instruction_aligned=0.70, high_risk=0.15),
             messages=["コミットプッシュを"],
         )
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -190,7 +196,12 @@ class JevPermissionReviewTests(unittest.TestCase):
             {"unexpected": True},
             self.answers(high_risk=-1),
             self.answers(policy_compliant=float("nan")),
-            {"answers": {"policy_compliant": {"type": "noul", "noul": True}, "high_risk": {"type": "noul", "noul": 0.1}}},
+            self.answers(instruction_aligned=float("nan")),
+            {"answers": {
+                "policy_compliant": {"type": "noul", "noul": 0.9},
+                "instruction_aligned": {"type": "noul", "noul": True},
+                "high_risk": {"type": "noul", "noul": 0.1},
+            }},
         ]
         for response in invalid_responses:
             with self.subTest(response=response):

@@ -33,6 +33,8 @@ For images, charts or screenshots, include dimensions, a faithful description an
 
 ## Accept And Revise
 
+Before adopting Claude's candidate, run `codex-artifact-integrity` with the packet as the requirements file and the complete HTML as the candidate. A `review` result keeps the candidate unadopted while Codex identifies and corrects the concrete offending change. An `unavailable` result does not discard the candidate or trigger another Claude call; continue the checks below.
+
 Validate the entire candidate against the packet before visual polish:
 
 - every load-bearing fact ID appears in `data-fact` and every used ID exists;

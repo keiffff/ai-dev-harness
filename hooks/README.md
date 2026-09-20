@@ -19,7 +19,7 @@ AI agent に期待する振る舞いは、プロンプトだけでは固定で�
 
 ## Jev Permission Review
 
-`jev-permission-review.py` は、承認要求が発生したBash、`apply_patch`、MCPなどのtool呼び出しをJevへ渡します。注入されたpolicy messageを除いた直近のユーザー依頼、承認理由、tool名と入力を1回のAPI呼び出しで評価し、policy整合度が0.70以上かつ高リスク度が0.15以下の場合だけ`allow`を返します。この境界は、通常のread・edit・test・明示されたcommit/push・外部model資料生成と、secret読取・cloud変更・無関係な外部操作を分けた実測ケースに基づきます。Jev自身は`deny`を返しません。
+`jev-permission-review.py` は、承認要求が発生したBash、`apply_patch`、MCPなどのtool呼び出しをJevへ渡します。注入されたpolicy messageを除いた直近のユーザー依頼、承認理由、tool名と入力を1回のAPI呼び出しで評価し、policy整合度と指示一致度がそれぞれ0.70以上かつ高リスク度が0.15以下の場合だけ`allow`を返します。指示一致度では、対象projectや操作の取り違え、質問を操作許可として扱う誤読、部分修正から全体再生成への拡大も検査します。この境界は、通常のread・edit・test・明示されたcommit/push・外部model資料生成と、secret読取・cloud変更・無関係な外部操作を分けた実測ケースに基づきます。Jev自身は`deny`を返しません。
 
 secret候補はJevへ送信しません。API key未設定、通信失敗、2秒のtimeout、不正応答、またはscore不足の場合は何も返さず、既存のOpenAI auto-reviewまたはユーザー承認へ戻します。tool入力へ独自の長さ上限や切り詰めは加えません。PreToolUseの各policyとsandboxも引き続き適用され、Jevの判断がそれらを迂回することはありません。
 

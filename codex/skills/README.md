@@ -18,6 +18,7 @@ skillには、証拠の探し先、レビュー基準、成果物の形式、外
 | `codex-doubt-review` | 非自明な判断、移行、順序、idempotency、production risk があるとき | 採用案を敵対的に見直し、弱い前提を探す | 何でも否定するために使わない |
 | `codex-decision-integrity` | 既存判断への反論、競合情報、方針転換が出たとき | 新情報を分類し、根拠のある維持・変更・保留を選ぶ | ユーザーの圧力やreviewerの断言だけで判断を変えない |
 | `codex-frontend-ui` | UI 方針、HTML/mock/report、review visualization、既存デザインシステム準拠、visual QA | 既存デザインへの準拠、見た目、元資料との整合、視覚検証を確認する | canonical source を生成 HTML へ置き換えたり、full app browser 検証を勝手に始めたりしない |
+| `codex-artifact-integrity` | HTML、SVG、図、資料、長文の生成・大幅修正後 | 明示要件と候補成果物をJevで照合し、勝手な構成変更、情報削除、誤解を招く比較、不要な言い訳、役割や流れの誤記を採用前に検出する | pixel単位の重なりや余白を判定せず、API不通を新しいblockerにしない |
 | `claude-html-report` | 複数章、比較図、画像、密な情報設計が必要な standalone HTML 資料 | Codexが証拠契約を作り、Claudeが資料全体を構成し、Codexが事実と表示を検証する | Claudeへrepo調査、事実判断、直接のファイル編集を任せない |
 | `codex-writing` | PR説明、README、チーム共有、release note、返信案などの文章成果物 | 読者、目的、事実、書かないことを整理して本文を書く | `claude-html-report`のstandalone HTMLを除き、Claudeに文章草稿を外注しない |
 | `gemini-japanese-polish` | 検証済みの事実や素材から日本語成果物全体をGeminiに構成させたいとき | Codexが事実と執筆条件を確定し、隔離したAntigravity CLI上のGemini 3.8 Flash Mediumが構成・見出し・文章を全面的に作り、Codexが事実を検証する。HTMLは完了を検証し、不完全なら1回だけ再生成する | 事実調査、暗黙実行、モデル切替、無制限の再試行を任せない |

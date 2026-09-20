@@ -70,6 +70,27 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("PR or issue identifiers", skill)
         self.assertIn("other secret-bearing content", skill)
 
+    def test_reader_facing_artifacts_use_semantic_and_visual_review_separately(self):
+        integrity = (
+            ROOT / "codex" / "skills" / "codex-artifact-integrity" / "SKILL.md"
+        ).read_text()
+        report = (
+            ROOT / "codex" / "skills" / "claude-html-report" / "SKILL.md"
+        ).read_text()
+        frontend = (
+            ROOT / "codex" / "skills" / "codex-frontend-ui" / "SKILL.md"
+        ).read_text()
+        gemini = (
+            ROOT / "codex" / "skills" / "gemini-japanese-polish" / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("JEV_ARTIFACT_REVIEW_WRAPPER", integrity)
+        self.assertIn("unavailable", integrity)
+        self.assertIn("does not establish pixel overlap", integrity)
+        self.assertIn("codex-artifact-integrity", report)
+        self.assertIn("codex-artifact-integrity", frontend)
+        self.assertIn("codex-artifact-integrity", gemini)
+
     def test_html_report_keeps_bounded_revisions_in_codex(self):
         report = (
             ROOT / "codex" / "skills" / "claude-html-report" / "SKILL.md"

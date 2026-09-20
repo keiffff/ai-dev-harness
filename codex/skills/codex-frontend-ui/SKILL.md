@@ -21,6 +21,8 @@ For a visual representation of a plan/spec/schema, read [review visualization](r
 
 ## Verification Boundary
 
+For a new or substantially revised HTML report, SVG, diagram or other reader-facing artifact with explicit preservation or comparison constraints, run `codex-artifact-integrity` before adoption. Supply the user requirements, the complete candidate and, for an existing artifact, its pre-edit baseline. Keep this semantic check separate from rendered inspection.
+
 Start with isolated component, static artifact or screenshot checks when sufficient. Inspect overflow, long labels, mobile layout, keyboard focus, labels, contrast and relevant interaction states.
 
 After changing an SVG, diagram or report layout, render the final artifact and inspect both the changed region and the complete canvas. Check text against icons and shapes, every arrow along its full path, nearby whitespace, clipping and density. Source validity, successful generation or non-overlapping bounding boxes alone do not establish visual completion.
