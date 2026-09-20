@@ -14,29 +14,29 @@
 <rect width="1600" height="1180" fill="url(#dots)"/>
 <rect x="260" y="140" width="1080" height="750" fill="url(#glow)"/>
 <text x="800" y="64" text-anchor="middle" font-size="44" font-weight="700" letter-spacing="-0.5">AI Agent Development Harness</text>
-<text x="800" y="100" text-anchor="middle" font-size="18" fill="#8E9AB0">人間が最終判断を持ち、Codexがリポジトリの文脈と実務を担う</text>
+<text x="800" y="100" text-anchor="middle" font-size="18" fill="#8E9AB0">開発者が最終判断を持ち、Codexがリポジトリの文脈と実務を担う</text>
 
 <rect x="440" y="130" width="720" height="100" rx="14" fill="#111A2B" stroke="#3A4A6B" stroke-width="1.2" filter="url(#shadow)"/>
 <rect x="468" y="158" width="44" height="44" rx="11" fill="#93A4C4" fill-opacity="0.14" stroke="#93A4C4" stroke-opacity="0.45"/>
 <circle cx="490" cy="171" r="5" fill="none" stroke="#93A4C4" stroke-width="1.8"/><path d="M480 194a10 10 0 0 1 20 0" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round"/>
-<text x="530" y="158" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#5F6B82">AUTHORITY · HUMAN</text>
-<text x="530" y="186" font-size="25" font-weight="700">人間</text>
-<text x="530" y="212" font-size="14" fill="#8E9AB0">目的・制約・仕様・権限・停止判断・対象外を決定</text>
+<text x="530" y="158" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#5F6B82">AUTHORITY · DEVELOPER</text>
+<text x="530" y="186" font-size="25" font-weight="700">開発者</text>
+<text x="530" y="212" font-size="14" fill="#8E9AB0">目的・制約・仕様・権限・停止条件・対象外を決定</text>
 
 <line x1="800" y1="230" x2="800" y2="250" stroke="#3A4A6B" stroke-width="1.8"/>
 <rect x="440" y="250" width="720" height="134" rx="14" fill="#0D1925" stroke="#2B3A55" stroke-width="1.1"/>
-<text x="464" y="272" font-size="10.5" font-weight="700" letter-spacing="2" fill="#5F6B82">HUMAN ↔ CODEX CONTROL LOOP</text>
+<text x="464" y="272" font-size="10.5" font-weight="700" letter-spacing="2" fill="#5F6B82">DEVELOPER ↔ CODEX CONTROL LOOP</text>
 <line x1="800" y1="282" x2="800" y2="330" stroke="#2B3A55"/>
-<text x="464" y="300" font-size="11" font-weight="700" letter-spacing="1.4" fill="#93A4C4">HUMAN → CODEX</text>
+<text x="464" y="300" font-size="11" font-weight="700" letter-spacing="1.4" fill="#93A4C4">DEVELOPER → CODEX</text>
 <text x="464" y="322" font-size="17" font-weight="700">目的・制約・権限</text>
 <text x="464" y="343" font-size="12" fill="#8E9AB0">最新指示でCodexに実行権限を付与</text>
-<text x="824" y="300" font-size="11" font-weight="700" letter-spacing="1.4" fill="#34D399">CODEX → HUMAN</text>
+<text x="824" y="300" font-size="11" font-weight="700" letter-spacing="1.4" fill="#34D399">CODEX → DEVELOPER</text>
 <text x="824" y="322" font-size="17" font-weight="700">レビュー用資料・完了報告</text>
-<text x="824" y="343" font-size="12" fill="#8E9AB0">HTML・図表・差分・テスト／指摘・残るリスク・判断材料</text>
+<text x="824" y="343" font-size="12" fill="#8E9AB0">HTML・図表・差分・テスト結果／指摘・リスク・判断材料</text>
 <rect x="464" y="352" width="244" height="24" rx="12" fill="#34D399" fill-opacity="0.08" stroke="#34D399" stroke-opacity="0.28"/>
-<text x="586" y="369" text-anchor="middle" font-size="11" fill="#C7CFDC">ANDON: 未確定なら停止して人間へ戻す</text>
+<text x="586" y="369" text-anchor="middle" font-size="11" fill="#C7CFDC">ANDON: 未確定なら停止して開発者へ戻す</text>
 <rect x="724" y="352" width="412" height="24" rx="12" fill="#93A4C4" fill-opacity="0.08" stroke="#93A4C4" stroke-opacity="0.28"/>
-<text x="930" y="369" text-anchor="middle" font-size="11" fill="#C7CFDC">引き継ぎ: Codex通知 → 人間承認 → タスク全体を新しいタスクへ</text>
+<text x="930" y="369" text-anchor="middle" font-size="11" fill="#C7CFDC">引き継ぎ: Codex通知 → 開発者承認 → タスク全体を新しいタスクへ</text>
 <line x1="800" y1="384" x2="800" y2="400" stroke="#34D399" stroke-width="1.8" marker-end="url(#a-g)"/>
 
 <rect x="48" y="408" width="340" height="482" rx="14" fill="#111A2B" stroke="#263247" filter="url(#shadow)"/>
@@ -68,7 +68,7 @@
 <rect x="480" y="452" width="28" height="22" rx="3" fill="none" stroke="#34D399" stroke-width="1.8"/><path d="M486 459l5 4-5 4M495 468h7" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="540" y="454" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#34D399">MAIN CONTEXT OWNER</text>
 <text x="540" y="488" font-size="34" font-weight="700">Codex</text>
-<text x="675" y="488" font-size="15" fill="#8E9AB0">リポジトリの文脈・実務・最終判断を集約</text>
+<text x="675" y="488" font-size="15" fill="#8E9AB0">リポジトリの文脈把握・実務遂行・統合判断を集約</text>
 <line x1="468" y1="513" x2="1132" y2="513" stroke="#34D399" stroke-opacity="0.25"/>
 <g transform="translate(474,532) scale(0.75)" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></g>
 <text x="520" y="548" font-size="17" font-weight="700">調査</text><text x="620" y="548" font-size="15.5" fill="#C7CFDC">リポジトリ・仕様・一次情報を精読</text>
@@ -78,8 +78,8 @@
 <text x="520" y="632" font-size="17" font-weight="700">検証</text><text x="620" y="632" font-size="15.5" fill="#C7CFDC">差分とテストで検証</text>
 
 <rect x="468" y="652" width="664" height="112" rx="12" fill="#111A2B" fill-opacity="0.72" stroke="#34D399" stroke-opacity="0.24"/>
-<text x="486" y="675" font-size="12.5" font-weight="700" fill="#34D399">失敗時の証拠照合</text>
-<text x="626" y="675" font-size="11.5" fill="#8E9AB0">原因や対処を採る前に、観測した事実と一致するか確認</text>
+<text x="486" y="675" font-size="12.5" font-weight="700" fill="#34D399">Jevの証拠照合（失敗時）</text>
+<text x="660" y="675" font-size="11.5" fill="#8E9AB0">原因や対処を採用する前に、観測した事実と整合するか検証</text>
 <rect x="486" y="694" width="112" height="42" rx="9" fill="#93A4C4" fill-opacity="0.08" stroke="#93A4C4" stroke-opacity="0.34"/>
 <text x="542" y="719" text-anchor="middle" font-size="12" fill="#C7CFDC">観測した事実</text>
 <text x="610" y="720" text-anchor="middle" font-size="17" fill="#5F6B82">＋</text>
@@ -97,13 +97,13 @@
 <text x="1010" y="744" text-anchor="middle" font-size="11.5" fill="#C7CFDC">不支持 → 追加観測へ戻る</text>
 
 <g transform="translate(474,778) scale(0.75)" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g>
-<text x="520" y="794" font-size="17" font-weight="700">統合・最終判断</text>
+<text x="520" y="794" font-size="17" font-weight="700">統合・実務判断</text>
 <text x="680" y="786" font-size="13.5" fill="#C7CFDC">補助出力を採否し、外部との入出力・既存機能への影響を判断</text>
 <text x="680" y="806" font-size="13.5" fill="#C7CFDC">失敗時の動きとGit操作を決める</text>
 <line x1="468" y1="822" x2="1132" y2="822" stroke="#34D399" stroke-opacity="0.25"/>
 <text x="468" y="846" font-size="12.5" font-weight="700" fill="#34D399">ANDON 発動条件</text>
-<text x="580" y="846" font-size="12" fill="#8E9AB0">仕様・省略可・null許容・必須・永続化・既存データ・外部挙動・権限</text>
-<text x="580" y="866" font-size="12" fill="#8E9AB0">失敗後の戻し方、既存機能への影響、データ移行を判断できない場合</text>
+<text x="580" y="846" font-size="12" fill="#8E9AB0">仕様・省略可否・null許容・必須性・永続化・既存データ・外部挙動・権限</text>
+<text x="580" y="866" font-size="12" fill="#8E9AB0">失敗後の復元手順、既存機能への影響、データ移行を判断できない場合</text>
 
 <rect x="1212" y="408" width="340" height="482" rx="14" fill="#111A2B" stroke="#263247" filter="url(#shadow)"/>
 <text x="1240" y="438" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#5F6B82">HARNESS MODULES</text>
@@ -115,13 +115,13 @@
 <g transform="translate(1226,526) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></g>
 <text x="1256" y="540" font-size="15" font-weight="700">codex-* skills</text><text x="1256" y="557" font-size="11" fill="#8E9AB0">context-engineering / debugging / review / writing</text>
 <g transform="translate(1226,578) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></g>
-<text x="1256" y="592" font-size="15" font-weight="700">bounded subagents</text><text x="1256" y="609" font-size="11" fill="#8E9AB0">Luna scout／調査を分担、最終判断とGit操作はCodex</text>
+<text x="1256" y="592" font-size="15" font-weight="700">bounded subagents</text><text x="1256" y="609" font-size="11" fill="#8E9AB0">Luna scout／調査を分担（採否判断とGit操作はCodex）</text>
 <g transform="translate(1226,630) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g>
-<text x="1256" y="644" font-size="15" font-weight="700">external research</text><text x="1256" y="661" font-size="11" fill="#8E9AB0">Web Search・Grok X／一次情報を再確認</text>
+<text x="1256" y="644" font-size="15" font-weight="700">external research</text><text x="1256" y="661" font-size="11" fill="#8E9AB0">Web Search・Grok X／一次情報の再確認</text>
 <g transform="translate(1226,682) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></g>
 <text x="1256" y="696" font-size="15" font-weight="700">strategic review</text><text x="1256" y="713" font-size="11" fill="#8E9AB0">claude-strategic-review / Fable review</text>
 <g transform="translate(1226,734) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></g>
-<text x="1256" y="748" font-size="15" font-weight="700">claude-html-report</text><text x="1256" y="765" font-size="11" fill="#8E9AB0">Claude・FableでHTML資料を生成し、人間が確認</text>
+<text x="1256" y="748" font-size="15" font-weight="700">claude-html-report</text><text x="1256" y="765" font-size="11" fill="#8E9AB0">HTML資料を生成し、開発者が確認</text>
 <g transform="translate(1226,786) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="m20 16 .8 2.2L23 19l-2.2.8L20 22l-.8-2.2L17 19l2.2-.8z"/></g>
 <text x="1256" y="800" font-size="15" font-weight="700">gemini-japanese-polish</text><text x="1256" y="817" font-size="11" fill="#8E9AB0">Antigravity経由で文書全体を推敲</text>
 <line x1="1168" y1="613" x2="1204" y2="613" stroke="#93A4C4" stroke-width="1.7" marker-end="url(#a-w)"/><text x="1186" y="599" text-anchor="middle" font-size="11.5" fill="#8E9AB0">依頼</text>
@@ -140,7 +140,7 @@
 <rect x="84" y="1008" width="32" height="32" rx="8" fill="#93A4C4" fill-opacity="0.10" stroke="#93A4C4" stroke-opacity="0.38"/>
 <g transform="translate(92,1016) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></g>
 <text x="132" y="1032" font-size="19" font-weight="700">GitHub・AWS・GCPの読み取り</text>
-<text x="84" y="1062" font-size="13" fill="#8E9AB0">読み取り専用のコマンドを使う</text>
+<text x="84" y="1062" font-size="13" fill="#8E9AB0">読み取り専用コマンドを使用</text>
 <text x="84" y="1084" font-size="13" fill="#8E9AB0">認証・権限エラー時は迂回せず中断して報告</text>
 <rect x="564" y="968" width="472" height="164" rx="14" fill="#1A1710" stroke="#5E4A1B" stroke-width="1.1" filter="url(#shadow)"/>
 <text x="588" y="998" font-size="11.5" font-weight="700" letter-spacing="1.8" fill="#FBBF24">APPROVAL BOUNDARY · JEV FIRST</text>
@@ -159,7 +159,7 @@
 <rect x="1092" y="1008" width="32" height="32" rx="8" fill="#F87171" fill-opacity="0.10" stroke="#F87171" stroke-opacity="0.38"/>
 <g transform="translate(1100,1016) scale(0.667)" fill="none" stroke="#F87171" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></g>
 <text x="1140" y="1032" font-size="19" font-weight="700">直接実行しない操作</text>
-<text x="1092" y="1058" font-size="13" fill="#8E9AB0">クラウド書込・デプロイ・IAM変更・機密情報の参照・本番DB操作</text>
+<text x="1092" y="1058" font-size="13" fill="#8E9AB0">クラウド書き込み・デプロイ・IAM変更・機密情報の参照・本番DB操作</text>
 <text x="1092" y="1080" font-size="13" fill="#8E9AB0">本番環境やデータの変更（ローカル開発は対象外）</text>
-<text x="1092" y="1102" font-size="13" fill="#8E9AB0">必要なコマンドと判断材料を人間へ提示</text>
+<text x="1092" y="1102" font-size="13" fill="#8E9AB0">必要なコマンドと判断材料を開発者へ提示</text>
 </svg>

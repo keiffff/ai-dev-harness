@@ -1,73 +1,73 @@
 # AI Dev Harness
 
-AI agent を実務開発の生産工程に組み込むための開発ハーネスです。
+このリポジトリは、AIエージェントを実務開発の工程に組み込むための開発ハーネスです。リポジトリの文脈把握と実務を担う中心のエージェントとしてCodexを据え、開発者が目的、制約、事業文脈、仕様、権限、検証、停止条件、対象外を定義して最終判断を持ちます。
 
-このリポジトリでは、AI agent に期待する振る舞いを、skill、hook、wrapper、review loop、test、OpenSpec などの実行系へ落とし込みます。目的は、AI に作業を丸投げすることではありません。人間が仕様、文脈、権限、検証、停止条件を定義し、agent が期待から外れたまま作業を進めにくい状態を作ることです。
+スキル、フック、専用コマンド、ラッパー、レビュー工程、テスト、OpenSpecなどの実行系へ、エージェントに期待する振る舞いを具体的に落とし込みます。その目的は、AIへ作業を丸投げすることではありません。開発者が主導権を持ち、エージェントが期待から外れたまま作業を進めにくい構造を作ります。
 
-各プロジェクトで得た失敗や改善は、顧客名、リポジトリ名、issue/PR 番号、固有パスを外し、再利用できる形に抽象化して残します。
+各プロジェクトで得られた失敗や改善点は、その場のログとして消費せず、顧客名、プロジェクト名、issue/PR番号、社内チャンネル名、秘密情報、生ログ、本番データ、固有パスなどを除外した上で、再利用可能な再発防止の仕組みへ反映します。
 
 ![AI Agent Development Harness](assets/agent-development-harness.svg)
 
 ## Concept
 
-AI agent は、既存コード、会話履歴、指示文、利用可能な tool、実行権限、テスト結果を入力として動きます。したがって、期待する出力を得るには、プロンプトだけでなく、agent が読む文脈、使える tool、通るべき review、止まるべき条件まで設計する必要があります。
+AIエージェントは、既存コード、会話履歴、指示文、利用可能なツール、実行権限、テスト結果を入力として動作します。そのため、期待どおりの成果物を得るには、プロンプトの調整にとどまらず、エージェントが参照する文脈、実行可能なツール、通過すべきレビュー工程、作業を停止すべき条件までを設計する必要があります。
 
-このリポジトリの考え方は次のとおりです。
+このリポジトリの基本的な考え方は、次のとおりです。
 
-- skill は、作業ごとの手順と判断基準を渡す
-- thread handoff は、長期化した会話を全履歴のforkではなくcompactなcontinuation packetでfresh taskへ移す
-- hook は、secret 表示、破壊的操作、raw CLI 実行などの逸脱を検知する
-- wrapper は、Git、GitHub、cloud CLI などの危険な入口を狭める
-- review loop は、実装結果を仕様、差分、テスト、残リスクに照らして見直す
-- review visualization は、関係、順序、状態、比較、階層を人間が確認しやすい表現へ変換する
-- test は、hook や wrapper の安全境界を継続的に確認する
-- OpenSpec は、大きめの変更で仕様、設計判断、実装タスク、検証条件を分ける
+- **スキル（skill）**: 作業ごとの具体的な手順と判断基準を提供します。
+- **会話の引き継ぎ（thread handoff）**: 長期化した会話は、全履歴のforkではなくcompactなcontinuation packetでfresh taskへ移します。
+- **フック（hook）**: 秘密情報の露出、破壊的な変更、raw CLI の直接実行といった逸脱を検知します。
+- **専用コマンド・ラッパー（wrapper）**: Git、GitHub CLI、クラウド CLI などの実行経路を、用途ごとの専用コマンドに絞ります。
+- **レビュー工程（review loop）**: 実装結果を仕様、差分、テスト結果、残存リスクに照らして検証します。失敗時にはJevの証拠照合を通じて観測事実と原因・対処候補を突き合わせ、根拠が支持された場合でもCodexが採否を決定し、不支持なら追加観測へ戻ります。
+- **レビュー可視化（review visualization）**: 依存関係、処理順序、状態遷移、比較軸、構造階層を、開発者が把握しやすい表現へ変換します。
+- **テスト（test）**: フックやラッパーが定義する境界を継続的に検証します。
+- **OpenSpec**: 規模の大きい変更では、仕様、設計判断、実装タスク、検証条件を明確に分けます。
 
 ## Architecture
 
 | 役割 | 位置づけ | 主な責務 |
 | --- | --- | --- |
-| Human | 文脈と判断の入力 | 目的、制約、事業文脈、仕様判断、停止判断、やらないことを決める |
-| Main agent | 実務担当の engineer | repo 読解、実装、差分確認、テスト確認、PR 説明作成、最終判断 |
-| Skills | 作業手順書 | context engineering、debug loop、review、writing、decision doc、CDK design review など |
-| Subagents | 範囲を限定した調査・独立レビュー | 影響範囲調査、既存パターン調査、契約に照らした差分レビュー。最終判断や Git 操作はmain agentが持つ |
-| Strategic advisors | sidecar reviewer | 設計方針、長期保守性、代替案、大局的レビューを返す。採否は main agent が判断する |
-| External research scouts | bounded evidence discovery | X など特定情報源の最新情報とURLを集める。事実確認と採否は main agent が行う |
-| Execution harness | 実行境界 | Git、cloud、GitHub CLI、secret、production 操作を wrapper/rules/hooks で制御する |
+| Developer | 文脈と判断の起点 | 目的、制約、事業文脈、仕様、権限、検証、停止条件、対象外を決め、最終判断を行う |
+| Codex（Main agent） | 実務を担う中心エージェント | リポジトリの文脈把握、実装、差分確認、テスト検証、PR説明文の作成、補助出力の採否と統合 |
+| Skills | 作業手順書 | コンテキスト設計、デバッグ手順、レビュー、ドキュメント作成、設計判断書、CDK設計レビューなど |
+| Subagents | 範囲を限定した調査・独立レビュー | 影響範囲の調査、既存コードパターンの調査、仕様に照らした差分レビュー。採否判断とGit操作はCodexが担う |
+| Strategic advisors | 設計の副査 | `claude-strategic-review` などを使い、設計方針、長期保守性、代替案を検討する。採否はCodexが判断する |
+| External research scouts | 範囲を限定した情報収集 | Web検索やXなどの外部情報源から最新情報と参照URLを収集する。事実確認と採否はCodexが担う |
+| Execution harness | 実行経路の制御 | ラッパー、ルール、フックによってGit、クラウド、GitHub CLI、秘密情報、本番環境の操作を制御する。外部操作はJevが先に判定し、許可なら実行、保留なら `OpenAI auto-review` へ渡す |
 
 ## Review Visualization
 
-文章だけでは、依存関係、状態遷移、処理順序、比較軸、階層を読み手が頭の中で組み立て直さなければならない場合があります。このハーネスでは、レビュー対象に合わせて表、Mermaid、timeline、tree などを併用します。複数の図表を一つの画面で確認したい場合や、情報量と配置がレビュー精度に影響する場合は、standalone HTML を使います。
+文章だけでは、依存関係、状態遷移、処理順序、比較軸、構造階層を読み手が頭の中で組み立て直さなければならない場合があります。このハーネスでは、レビュー対象に応じてMarkdown表、Mermaid図、タイムライン、ツリー構造などを使い分けます。複数の図表を一つの画面で確認したい場合や、情報量と配置がレビュー精度に影響する場合は、`claude-html-report` などを使ってstandalone HTMLを作成します。
 
-Markdown、OpenSpec、code、schema など、判断や契約を記録した元の artifact を正とします。生成 HTML はレビュー用の一時 artifact として扱い、指摘は agent との会話へ戻します。採用した変更を元の artifact へ反映してから、必要に応じて HTML を再生成します。
+設計判断や仕様を記録したMarkdown、OpenSpec、code、schemaなどの元資料を正とします。生成したHTMLはレビュー用の一時成果物として扱い、指摘や修正点はエージェントとの対話へ戻します。採用した変更を元資料へ反映してから、必要に応じてHTMLを再生成します。
 
-詳しい選択基準と生成物の扱いは、[`review-visualization.md`](codex/skills/codex-frontend-ui/references/review-visualization.md) にまとめています。
+可視化手法の選定基準と成果物の扱いは、[`review-visualization.md`](codex/skills/codex-frontend-ui/references/review-visualization.md) にまとめています。
 
 ## Repository Layout
 
-- `codex/`: Codex 向けの設定例、skills、AGENTS.md 断片
-- `hooks/`: Codex の誤操作を検知する local safety policy
-- `wrappers/`: Git、GitHub、AWS、Google Cloud などの narrow entrypoint
-- `tests/`: hook と wrapper の回帰テスト
-- `docs/`: 構成思想、失敗パターン、運用上の考え方
-- `assets/`: README や記事で使う図
+- `codex/`: Codex向けの設定例、`codex/skills/*`、`codex/AGENTS.md`の構成要素
+- `hooks/`: Codexの誤操作や逸脱を検知するローカルルール
+- `wrappers/`: Git、GitHub CLI、AWS、Google Cloudなどへの操作経路を絞る専用コマンド
+- `tests/`: フックとラッパーの境界を検証する回帰テスト
+- `docs/`: 構成の考え方、失敗パターン、運用方法
+- `assets/`: READMEや技術文書で使う図や画像
 
 ## What This Repository Does Not Store
 
-- 顧客名、プロジェクト名、issue/PR 番号、社内チャンネル名
-- token、credential、secret、private key、`.env`
-- 障害ログ、会話ログ、production データの生情報
-- 特定リポジトリの path、branch 名、一時的な識別子に依存するルール
-- その場限りの workaround
+- 顧客名、プロジェクト名、issue/PR番号、社内チャンネル名などの固有情報
+- トークン、認証情報、秘密情報（credential / secret / private key）、`.env`ファイル
+- 障害ログ、会話ログ、本番データ（production data）の生情報
+- 特定リポジトリのパス、ブランチ名、一時的な識別子に依存する個別ルール
+- その場限りの回避策
 
 ## Operating Principle
 
-AI agent の失敗は、作業ログとして保存するのではなく、再発を防ぐ実行系へ戻します。
+AIエージェントによる失敗や改善点は、単なる作業ログとして残すのではなく、再発を防ぐ実行系（スキル、フック、専用コマンド、レビュー工程、テスト、OpenSpec）へ反映します。
 
-- 仕様を勝手に補完した場合は、contract safety や review skill に戻す
-- 不要な fallback や後方互換を足した場合は、停止条件に戻す
-- Git や cloud 操作で迷った場合は、wrapper、hook、rules に戻す
-- 読みにくい文章を書いた場合は、writing skill の reference に戻す
-- 共有環境で壊れやすい変更は、専用 design review skill に戻す
+- **仕様を推測で補完した場合**: 仕様に関する安全基準やレビュー用スキルに反映する
+- **不要なフォールバックや過剰な後方互換性を追加した場合**: 停止条件に反映する
+- **Gitやクラウド環境の操作で迷走した場合**: ラッパー、フック、実行ルールに反映する
+- **読みにくい文章や不自然な記述を出力した場合**: `gemini-japanese-polish`などの推敲スキルや文体の参照資料に反映する
+- **共有環境で壊れやすい変更を試みた場合**: 専用の設計レビュースキルに反映する
 
-AI agent の利用を個人のプロンプト技術に閉じず、期待する振る舞いを保守できる開発資産として扱います。
+AIエージェントの運用を個人のプロンプト技術に依存させず、期待する振る舞いを継続的に保守できる開発資産として扱います。
