@@ -2,17 +2,27 @@ import json
 import os
 import subprocess
 import tempfile
-import threading
 import unittest
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 WRAPPER = ROOT / "wrappers" / "bin" / "jev-artifact-review.example"
+FAKE_EVALUATOR = """#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+Path(os.environ["JEV_TEST_CAPTURE"]).write_text(sys.stdin.read(), encoding="utf-8")
+print(os.environ["JEV_TEST_RESPONSE"])
+"""
 
 
 class JevArtifactReviewTests(unittest.TestCase):
+    def test_delegates_jev_execution_to_jev_kit(self):
+        source = WRAPPER.read_text(encoding="utf-8")
+        self.assertIn("jev-kit-semantic-diff", source)
+        self.assertNotIn("urllib.request", source)
+
     def run_review(
         self,
         response,
@@ -21,79 +31,63 @@ class JevArtifactReviewTests(unittest.TestCase):
         baseline=None,
         route_checks=False,
     ):
-        captured = {"calls": 0}
-
-        class Handler(BaseHTTPRequestHandler):
-            def do_POST(self):
-                captured["calls"] += 1
-                captured["authorization"] = self.headers.get("Authorization")
-                length = int(self.headers["Content-Length"])
-                captured["payload"] = json.loads(self.rfile.read(length))
-                body = json.dumps(response).encode()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
-
-            def log_message(self, format, *args):
-                pass
-
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        try:
-            with tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                requirements_file = root / "requirements.txt"
-                candidate_file = root / "candidate.html"
-                requirements_file.write_text(requirements, encoding="utf-8")
-                candidate_file.write_text(candidate, encoding="utf-8")
-                command = [
-                    "python3",
-                    str(WRAPPER),
-                    "--requirements-file",
-                    str(requirements_file),
-                    "--candidate-file",
-                    str(candidate_file),
-                ]
-                if baseline is not None:
-                    baseline_file = root / "baseline.html"
-                    baseline_file.write_text(baseline, encoding="utf-8")
-                    command.extend(["--baseline-file", str(baseline_file)])
-                if route_checks:
-                    command.append("--route-checks")
-                env = os.environ.copy()
-                env.update({
-                    "TYPESAFE_API_KEY": "test-key",
-                    "JEV_ARTIFACT_REVIEW_API_URL": f"http://127.0.0.1:{server.server_port}/v1/systemone",
-                })
-                result = subprocess.run(
-                    command,
-                    text=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    env=env,
-                    check=False,
-                )
-        finally:
-            server.shutdown()
-            server.server_close()
-            thread.join()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            requirements_file = root / "requirements.txt"
+            candidate_file = root / "candidate.html"
+            evaluator = root / "fake-evaluator"
+            capture_file = root / "capture.json"
+            requirements_file.write_text(requirements, encoding="utf-8")
+            candidate_file.write_text(candidate, encoding="utf-8")
+            evaluator.write_text(FAKE_EVALUATOR, encoding="utf-8")
+            evaluator.chmod(0o755)
+            command = [
+                "python3",
+                str(WRAPPER),
+                "--requirements-file",
+                str(requirements_file),
+                "--candidate-file",
+                str(candidate_file),
+            ]
+            if baseline is not None:
+                baseline_file = root / "baseline.html"
+                baseline_file.write_text(baseline, encoding="utf-8")
+                command.extend(["--baseline-file", str(baseline_file)])
+            if route_checks:
+                command.append("--route-checks")
+            env = os.environ.copy()
+            env.update({
+                "TYPESAFE_API_KEY": "test-key",
+                "JEV_KIT_SEMANTIC_DIFF_CLI": str(evaluator),
+                "JEV_TEST_CAPTURE": str(capture_file),
+                "JEV_TEST_RESPONSE": json.dumps(response),
+            })
+            result = subprocess.run(
+                command,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                check=False,
+            )
+            captured = {
+                "calls": int(capture_file.exists()),
+                "payload": json.loads(capture_file.read_text(encoding="utf-8")) if capture_file.exists() else None,
+            }
         return result, captured
 
     @staticmethod
     def response(score):
-        return {"answers": {"material_violation": {"type": "noul", "noul": score}}}
+        return {"schemaVersion": 1, "status": "evaluated", "scores": {"material_violation": score}}
 
     @staticmethod
     def routed_response(material, meaning, layout, interaction, whole):
-        return {"answers": {
-            "material_violation": {"type": "noul", "noul": material},
-            "meaning_changed": {"type": "noul", "noul": meaning},
-            "layout_changed": {"type": "noul", "noul": layout},
-            "interaction_changed": {"type": "noul", "noul": interaction},
-            "whole_artifact_changed": {"type": "noul", "noul": whole},
+        return {"schemaVersion": 1, "status": "evaluated", "scores": {
+            "material_violation": material,
+            "meaning_changed": meaning,
+            "layout_changed": layout,
+            "interaction_changed": interaction,
+            "whole_artifact_changed": whole,
         }}
 
     def test_passes_candidate_below_observed_violation_boundary(self):
@@ -105,11 +99,10 @@ class JevArtifactReviewTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {"decision": "pass", "material_violation": 0.22})
-        self.assertEqual(captured["authorization"], "Bearer test-key")
-        state = captured["payload"]["state"]
-        self.assertEqual(state["baseline"], "Original wording with the same theme.")
-        self.assertIn("candidate", state)
-        self.assertIn("requirements", state)
+        payload = captured["payload"]
+        self.assertEqual(payload["before"], "Original wording with the same theme.")
+        self.assertIn("candidate", payload["after"])
+        self.assertIn("requirements", payload["after"])
 
     def test_routes_high_confidence_violation_to_review(self):
         result, captured = self.run_review(
@@ -119,12 +112,12 @@ class JevArtifactReviewTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertEqual(json.loads(result.stdout), {"decision": "review", "material_violation": 0.97})
-        instructions = captured["payload"]["questions"]["material_violation"]["instructions"]
+        instructions = captured["payload"]["contract"]["dimensions"][0]["instructions"]
         self.assertIn("misleading parallel presentation", instructions)
         self.assertIn("excuse copy", instructions)
 
     def test_api_failure_is_visible_but_does_not_block_candidate(self):
-        result, _ = self.run_review({"unexpected": True})
+        result, _ = self.run_review({"schemaVersion": 1, "status": "unavailable", "errorKind": "api"})
         self.assertEqual(result.returncode, 0)
         self.assertEqual(json.loads(result.stdout), {"decision": "unavailable"})
         self.assertIn("Jev artifact review unavailable", result.stderr)
@@ -141,7 +134,8 @@ class JevArtifactReviewTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output["decision"], "pass")
         self.assertFalse(any(output["required_checks"].values()))
-        self.assertIn("interaction_changed", captured["payload"]["questions"])
+        dimension_ids = [item["id"] for item in captured["payload"]["contract"]["dimensions"]]
+        self.assertIn("interaction_changed", dimension_ids)
 
     def test_inherits_runtime_checks_and_jev_adds_visual_scope(self):
         baseline = """<!doctype html><html><iframe src='demo.html'></iframe><script>start()</script></html>"""
@@ -164,7 +158,7 @@ class JevArtifactReviewTests(unittest.TestCase):
 
     def test_unavailable_route_keeps_inherited_runtime_checks(self):
         result, _ = self.run_review(
-            {"unexpected": True},
+            {"schemaVersion": 1, "status": "unavailable", "errorKind": "api"},
             baseline="<html><iframe src='demo.html'></iframe></html>",
             candidate="<html><iframe src='demo.html'></iframe></html>",
             route_checks=True,
@@ -177,7 +171,7 @@ class JevArtifactReviewTests(unittest.TestCase):
 
     def test_unavailable_route_detects_runtime_contract_change_without_jev(self):
         result, _ = self.run_review(
-            {"unexpected": True},
+            {"schemaVersion": 1, "status": "unavailable", "errorKind": "api"},
             baseline="<html><iframe src='demo.html'></iframe><script>start()</script></html>",
             candidate="<html><iframe src='demo.html'></iframe></html>",
             route_checks=True,

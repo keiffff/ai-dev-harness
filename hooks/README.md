@@ -25,13 +25,13 @@ AIエージェントに期待する振る舞いは、プロンプトの指定だ
 
 ## Jev Permission Review
 
-`jev-permission-review.py` は、承認要求が発生した Bash、`apply_patch`、MCP などの tool 呼び出しを Jev に渡して判定します。プロンプトへ注入された policy message を除外した直近のユーザー依頼、承認理由、tool 名および入力を 1 回の API 呼び出しで評価し、policy 整合度と指示一致度がそれぞれ 0.70 以上、かつ高リスク度が 0.15 以下の場合にのみ `allow` を返します。指示一致度の評価では、対象プロジェクトや操作の取り違え、単なる質問を操作許可と取り違える誤認、部分的な修正依頼を全体再生成へ拡大させていないかも検査します。この判定基準は、通常の閲覧・編集・テスト、明示された commit/push、外部モデル向け資料生成と、secret の読み取り、クラウド環境の変更、意図しない外部操作とを切り分けた実測例に基づいています。なお、Jev 自身が `deny` を返すことはありません。
+`jev-agent-review` は、承認要求が発生した Bash、`apply_patch`、MCP などの tool 呼び出しを `@jev-kit/hook-adapters` で共通形式へ変換し、`@jev-kit/agent-review` の版管理された契約で Jev に渡して判定します。プロンプトへ注入された policy message を除外した直近のユーザー依頼、承認理由、tool 名および入力を 1 回の API 呼び出しで評価し、policy 整合度と指示一致度がそれぞれ 0.70 以上、かつ高リスク度が 0.15 以下の場合にのみ `allow` を返します。指示一致度の評価では、対象プロジェクトや操作の取り違え、単なる質問を操作許可と取り違える誤認、部分的な修正依頼を全体再生成へ拡大させていないかも検査します。この判定基準は `hooks/codex/jev-permission-review-policy.json` に置き、通常の閲覧・編集・テスト、明示された commit/push、外部モデル向け資料生成と、secret の読み取り、クラウド環境の変更、意図しない外部操作とを切り分けた実測例に基づいています。Jev 自身が `deny` を返すことはありません。
 
-secret の候補となる文字列は Jev へ送信しません。API key が設定されていない場合や、通信失敗、2 秒の timeout、不正な応答、あるいは score が基準に満たない場合は何も返さず、既存の OpenAI auto-review またはユーザー自身による承認へと差し戻します。tool の入力に対して独自に長さの上限を設けたり、途中で切り詰めたりすることはありません。また、PreToolUse の各 policy や sandbox も引き続き有効であり、Jev の判定がこれらを迂回することはありません。
+secret の候補となる文字列は Jev へ送信しません。API key が設定されていない場合、実ユーザー文脈を取得できない場合、通信失敗、不正な応答、あるいは score が基準に満たない場合は何も返さず、既存の OpenAI auto-review またはユーザー自身による承認へと差し戻します。SDKの自動再試行は無効で、1回のhookにつきJevの試行も1回です。tool の入力に対して独自に長さの上限を設けたり、途中で切り詰めたりすることはありません。また、PreToolUse の各 policy や sandbox も引き続き有効であり、Jev の判定がこれらを迂回することはありません。
 
-Jev による実際の許可状況を確認できるよう、生（raw）の入力内容は残さず、判定結果ごとの件数および直近の tool 名と score のみを `~/.codex/hook-state/jev-permission-review/status.json` に記録します。
+Jev による実際の許可状況を確認できるよう、生（raw）の入力内容は残さず、判定理由ごとの件数および直近の tool 名、契約、score のみを `~/.codex/hook-state/jev-permission-review/status.json` に記録します。状態記録の失敗は、算出済みの承認判定を変更しません。
 
-Jev hook 自体は環境変数 `TYPESAFE_API_KEY` のみを読み取り、Keychain に直接アクセスすることはありません。PermissionRequest の実行コマンドは汎用の `keychain-env-exec` を経由し、macOS Keychain の service `JEV_PERMISSION_REVIEW_API_KEY` から取得した値を子プロセスの `TYPESAFE_API_KEY` へ注入します。key の値がコマンド引数、stdout、stderr、あるいは Jev の状態記録に出力されることはありません。実行環境には `keychain-env-exec`、`jev-permission-review.py`、および依存関係である `hook_utils.py` を配置します。
+Jev CLI 自体は環境変数 `TYPESAFE_API_KEY` のみを読み取り、Keychain に直接アクセスしません。PermissionRequest の実行コマンドは汎用の `keychain-env-exec` を経由し、macOS Keychain の service `JEV_PERMISSION_REVIEW_API_KEY` から取得した値を子プロセスの `TYPESAFE_API_KEY` へ注入します。key の値がコマンド引数、stdout、stderr、あるいは Jev の状態記録に出力されることはありません。実行環境には `keychain-env-exec`、`jev-agent-review`、および `jev-permission-review-policy.json` を配置します。
 
 `jev-keychain-store.example`を`jev-keychain-store`として配置すれば、コマンド名を実行したあとにAPI keyを非表示で貼り付けられます。クリップボード上でkeyと保存用コマンドを切り替える必要はありません。
 

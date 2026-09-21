@@ -66,7 +66,7 @@ matcher = ".*"
 
 [[hooks.PermissionRequest.hooks]]
 type = "command"
-command = "/absolute/path/to/keychain-env-exec TYPESAFE_API_KEY JEV_PERMISSION_REVIEW_API_KEY -- /usr/bin/python3 /absolute/path/to/hooks/codex/jev-permission-review.py"
+command = "/absolute/path/to/keychain-env-exec TYPESAFE_API_KEY JEV_PERMISSION_REVIEW_API_KEY -- /absolute/path/to/jev-agent-review --adapter codex-permission --config /absolute/path/to/hooks/codex/jev-permission-review-policy.json --status-file /absolute/path/to/hook-state/jev-permission-review/status.json"
 timeout = 4
 statusMessage = "Checking approval with Jev"
 

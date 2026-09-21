@@ -2,18 +2,13 @@
 
 import argparse
 import json
-import math
 import os
 import re
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
-from urllib.parse import urlsplit
 
 
-DEFAULT_API_URL = "https://api.typesafe.ai/v1/systemone"
 VIOLATION_REVIEW_THRESHOLD = 0.70
 CHECK_ROUTE_THRESHOLD = 0.70
 SECRET_RE = re.compile(
@@ -66,10 +61,10 @@ def read_utf8(path, option):
     return value
 
 
-def load_api_key(fallback=None):
+def ensure_api_key(fallback=None):
     key = os.environ.get("TYPESAFE_API_KEY", "").strip()
     if key:
-        return key
+        return True
     launcher = os.environ.get("KEYCHAIN_ENV_EXEC", "/Users/kei/.local/bin/keychain-env-exec")
     try:
         completed = subprocess.run(
@@ -104,28 +99,6 @@ def load_api_key(fallback=None):
     sys.stdout.write(completed.stdout)
     sys.stderr.write(completed.stderr)
     raise SystemExit(completed.returncode)
-
-
-def api_url():
-    configured = os.environ.get("JEV_ARTIFACT_REVIEW_API_URL", "").strip()
-    if not configured:
-        return DEFAULT_API_URL
-    parsed = urlsplit(configured)
-    if parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "::1", "localhost"}:
-        return configured
-    return DEFAULT_API_URL
-
-
-def probability(payload, name):
-    answers = payload.get("answers") if isinstance(payload, dict) else None
-    answer = answers.get(name) if isinstance(answers, dict) else None
-    value = answer.get("noul") if isinstance(answer, dict) else None
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(name)
-    result = float(value)
-    if not math.isfinite(result) or not 0.0 <= result <= 1.0:
-        raise ValueError(name)
-    return result
 
 
 def unavailable(reason, extra=None):
@@ -195,17 +168,15 @@ def routed_checks(base, scores):
     }
 
 
-def request_review(key, requirements, candidate, baseline, candidate_name, route_checks):
-    state = {
+def request_review(requirements, candidate, baseline, candidate_name, route_checks):
+    after = {
         "requirements": requirements,
         "candidate_name": candidate_name,
         "candidate": candidate,
     }
-    if baseline is not None:
-        state["baseline"] = baseline
-    questions = {
-        "material_violation": {
-            "type": "noul",
+    dimensions = [
+        {
+            "id": "material_violation",
             "instructions": (
                 "Does the candidate artifact materially violate the explicit requirements or preservation "
                 "constraints? When a baseline is present, judge the described change from baseline to "
@@ -217,59 +188,74 @@ def request_review(key, requirements, candidate, baseline, candidate_name, route
                 "from the text. Judge only the supplied artifact and requirements; do not invent unseen defects."
             ),
         }
-    }
+    ]
     if route_checks:
-        questions.update({
-            "meaning_changed": {
-                "type": "noul",
+        dimensions.extend([
+            {
+                "id": "meaning_changed",
                 "instructions": (
                     "Does the candidate change factual claims, metric definitions, comparison conditions, roles, "
                     "flows or conclusions beyond a local wording-only edit?"
                 ),
             },
-            "layout_changed": {
-                "type": "noul",
+            {
+                "id": "layout_changed",
                 "instructions": (
                     "Does the candidate change layout, SVG geometry, CSS, visual grouping or information placement "
                     "so that the changed region should be rendered and inspected?"
                 ),
             },
-            "interaction_changed": {
-                "type": "noul",
+            {
+                "id": "interaction_changed",
                 "instructions": (
                     "Does the candidate change scripts, embeds, media, links, controls, file versus HTTP loading, "
                     "or another runtime interaction path that should be exercised in a browser?"
                 ),
             },
-            "whole_artifact_changed": {
-                "type": "noul",
+            {
+                "id": "whole_artifact_changed",
                 "instructions": (
                     "Does the candidate change cross-section structure, hierarchy, theme or composition broadly "
                     "enough that the complete artifact should be rendered instead of only the changed region?"
                 ),
             },
-        })
-    body = json.dumps(
-        {
-            "model": "jev-latest",
-            "state": state,
-            "questions": questions,
+        ])
+    payload = {
+        "schemaVersion": 1,
+        "before": baseline,
+        "after": after,
+        "contract": {
+            "id": "ai-dev-harness.artifact-review",
+            "version": "1",
+            "dimensions": dimensions,
         },
-        ensure_ascii=False,
-    ).encode("utf-8")
-    request = urllib.request.Request(
-        api_url(),
-        data=body,
-        headers={
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
+        "model": "jev-latest",
+    }
+    evaluator = os.environ.get(
+        "JEV_KIT_SEMANTIC_DIFF_CLI",
+        "/Users/kei/.local/bin/jev-kit-semantic-diff",
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            payload = json.load(response)
-        material = probability(payload, "material_violation")
+        completed = subprocess.run(
+            [evaluator],
+            input=json.dumps(payload, ensure_ascii=False),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        output = json.loads(completed.stdout)
+        scores_output = output.get("scores") if isinstance(output, dict) else None
+        if (
+            completed.returncode != 0
+            or not isinstance(output, dict)
+            or output.get("status") != "evaluated"
+            or not isinstance(scores_output, dict)
+        ):
+            raise ValueError("evaluator unavailable")
+        material = scores_output.get("material_violation")
+        if isinstance(material, bool) or not isinstance(material, (int, float)):
+            raise ValueError("invalid material_violation score")
         scores = {}
         if route_checks:
             for name in (
@@ -278,18 +264,12 @@ def request_review(key, requirements, candidate, baseline, candidate_name, route
                 "interaction_changed",
                 "whole_artifact_changed",
             ):
-                try:
-                    scores[name] = probability(payload, name)
-                except (TypeError, ValueError):
-                    continue
-        return material, scores, None
-    except (
-        OSError,
-        TypeError,
-        ValueError,
-        urllib.error.HTTPError,
-        urllib.error.URLError,
-    ) as error:
+                value = scores_output.get(name)
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ValueError(f"invalid {name} score")
+                scores[name] = float(value)
+        return float(material), scores, None
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as error:
         return None, {}, type(error).__name__
 
 
@@ -312,11 +292,9 @@ def main():
         stop("Artifact review input contains a credential or secret candidate; nothing was sent.")
 
     base_route = inherited_route(candidate, baseline) if args.route_checks else None
-    key = load_api_key(base_route)
-    if key is None:
+    if ensure_api_key(base_route) is None:
         return
     score, route_scores, unavailable_reason = request_review(
-        key,
         requirements,
         candidate,
         baseline,
