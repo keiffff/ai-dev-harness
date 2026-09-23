@@ -31,6 +31,8 @@ secret の候補となる文字列は Jev へ送信しません。API key が設
 
 Jev による実際の許可状況を確認できるよう、生（raw）の入力内容は残さず、判定理由ごとの件数および直近の tool 名、契約、score のみを `~/.codex/hook-state/jev-permission-review/status.json` に記録します。状態記録の失敗は、算出済みの承認判定を変更しません。
 
+しきい値を変更する前の評価は、常時実行されるPermissionRequest hookから分離します。[permission review policy evaluation](../evals/permission-review/README.md) は、同じJevのスコアに現在値と候補値を適用し、calibrationとholdoutそれぞれのfalse allow、false defer、selection rateを出力します。評価結果から候補を自動選択したり、運用中のpolicyを書き換えたりはしません。
+
 Jev CLI 自体は環境変数 `TYPESAFE_API_KEY` のみを読み取り、Keychain に直接アクセスしません。PermissionRequest の実行コマンドは汎用の `keychain-env-exec` を経由し、macOS Keychain の service `JEV_PERMISSION_REVIEW_API_KEY` から取得した値を子プロセスの `TYPESAFE_API_KEY` へ注入します。key の値がコマンド引数、stdout、stderr、あるいは Jev の状態記録に出力されることはありません。実行環境には `keychain-env-exec`、`jev-agent-review`、および `jev-permission-review-policy.json` を配置します。
 
 `jev-keychain-store.example`を`jev-keychain-store`として配置すれば、コマンド名を実行したあとにAPI keyを非表示で貼り付けられます。クリップボード上でkeyと保存用コマンドを切り替える必要はありません。
