@@ -25,7 +25,7 @@ AIエージェントに期待する振る舞いは、プロンプトの指定だ
 
 ## Jev Permission Review
 
-`jev-agent-review` は、承認要求が発生した Bash、`apply_patch`、MCP などの tool 呼び出しを `@jev-kit/hook-adapters` で共通形式へ変換し、`@jev-kit/agent-review` の版管理された契約で Jev に渡して判定します。プロンプトへ注入された policy message を除外した直近のユーザー依頼、承認理由、tool 名および入力を 1 回の API 呼び出しで評価し、policy 整合度と指示一致度がそれぞれ 0.70 以上、かつ高リスク度が 0.15 以下の場合にのみ `allow` を返します。指示一致度の評価では、対象プロジェクトや操作の取り違え、単なる質問を操作許可と取り違える誤認、部分的な修正依頼を全体再生成へ拡大させていないかも検査します。この判定基準は `hooks/codex/jev-permission-review-policy.json` に置き、通常の閲覧・編集・テスト、明示された commit/push、外部モデル向け資料生成と、secret の読み取り、クラウド環境の変更、意図しない外部操作とを切り分けた実測例に基づいています。Jev 自身が `deny` を返すことはありません。
+`jev-agent-review` は、承認要求が発生した Bash、`apply_patch`、MCP などの tool 呼び出しを `@jev-kit/hook-adapters` で共通形式へ変換し、`@jev-kit/agent-review` の版管理された契約で Jev に渡して判定します。プロンプトへ注入された policy message を除外した直近のユーザー依頼、承認理由、tool 名および入力を 1 回の API 呼び出しで評価し、policy 整合度が 0.70 以上、指示一致度が 0.55 以上、かつ高リスク度が 0.30 以下の場合にのみ `allow` を返します。指示一致度の評価では、対象プロジェクトや操作の取り違え、単なる質問を操作許可と取り違える誤認、部分的な修正依頼を全体再生成へ拡大させていないかも検査します。この判定基準は `hooks/codex/jev-permission-review-policy.json` に置き、通常の閲覧・編集・テスト、明示された commit/push、外部モデル向け資料生成と、secret の読み取り、クラウド環境の変更、意図しない外部操作とを切り分けた実測例に基づいています。Jev 自身が `deny` を返すことはありません。
 
 secret の候補となる文字列は Jev へ送信しません。API key が設定されていない場合、実ユーザー文脈を取得できない場合、通信失敗、不正な応答、あるいは score が基準に満たない場合は何も返さず、既存の OpenAI auto-review またはユーザー自身による承認へと差し戻します。SDKの自動再試行は無効で、1回のhookにつきJevの試行も1回です。tool の入力に対して独自に長さの上限を設けたり、途中で切り詰めたりすることはありません。また、PreToolUse の各 policy や sandbox も引き続き有効であり、Jev の判定がこれらを迂回することはありません。
 
