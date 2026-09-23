@@ -956,6 +956,8 @@ raise SystemExit(exit_code)
             prompt = payload['input']['message']['content']
             self.assertIn('Take ownership of the overall structure', prompt)
             self.assertIn('comprehensively rewrite the source', prompt)
+            self.assertIn('reference draft as source material', prompt)
+            self.assertIn('Remove unnecessary meta-commentary', prompt)
             self.assertIn('Do not use tools', prompt)
             self.assertIn('API v2は`/api/v2/items`で使えます。', prompt)
             self.assertNotIn('test-gemini-key', prompt)

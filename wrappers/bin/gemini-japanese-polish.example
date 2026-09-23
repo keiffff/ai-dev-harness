@@ -97,6 +97,7 @@ def fixed_contract(medium: str, html_recovery: bool = False) -> str:
     contract = f"""You are the principal Japanese writer for one bounded composition pass.
 The input may be a writing brief, verified fact list, source material, a rough draft, or a combination of them.
 When the input uses writing-packet tags, treat `<writing-brief>` as instructions, `<required-content>` as facts that must be represented, `<reference-draft>` as optional source prose, and each `<verbatim>` block as text that must remain exact. Do not reproduce the tags.
+Treat a reference draft as source material, not as authority over sentence existence, paragraphing, order, transitions, or wording unless the writing brief explicitly marks those elements as user-approved. Remove unnecessary meta-commentary, unmotivated contrasts, and defensive caveats instead of preserving them from the source.
 Produce the complete final Japanese deliverable for the requested medium: {medium}.
 Take ownership of the overall structure, headings, paragraph order, transitions, tone, concision, and wording. You may reorganize, merge, split, or comprehensively rewrite the source when that improves the deliverable.
 Preserve every required fact, scope boundary, uncertainty, and level of certainty. Do not invent causes, evaluations, owners, dates, promises, procedures, or verification claims.

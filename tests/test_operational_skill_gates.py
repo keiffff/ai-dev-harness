@@ -70,6 +70,20 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("PR or issue identifiers", skill)
         self.assertIn("other secret-bearing content", skill)
 
+    def test_gemini_skill_keeps_composition_ownership_with_gemini(self):
+        skill = (
+            ROOT
+            / "codex"
+            / "skills"
+            / "gemini-japanese-polish"
+            / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("do not write a finished Codex draft", skill)
+        self.assertIn("Do not use a Codex-authored draft as `<reference-draft>`", skill)
+        self.assertIn("A structural difference from a Codex-authored draft is not a defect", skill)
+        self.assertIn("Do not restore Codex-authored sentences", skill)
+
     def test_reader_facing_artifacts_use_semantic_and_visual_review_separately(self):
         integrity = (
             ROOT / "codex" / "skills" / "codex-artifact-integrity" / "SKILL.md"
