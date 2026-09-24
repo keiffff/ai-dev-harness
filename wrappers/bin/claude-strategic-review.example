@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = "claude-opus-5-5"
 DEFAULT_CLAUDE_CLI = "claude"
 DEFAULT_TIMEOUT_SECONDS = 600
 HEARTBEAT_SECONDS = 30

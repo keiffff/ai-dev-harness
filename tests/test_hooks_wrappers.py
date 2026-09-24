@@ -556,6 +556,7 @@ class WrapperTests(unittest.TestCase):
         self.assertIn('--no-session-persistence', args)
         self.assertEqual(args[args.index('--tools') + 1], '')
         self.assertEqual(args[args.index('--max-turns') + 1], '1')
+        self.assertEqual(args[args.index('--model') + 1], 'claude-opus-5-5')
 
     def test_claude_strategic_review_default_timeout_allows_deep_review(self):
         wrapper = ROOT / 'wrappers' / 'bin' / 'claude-strategic-review.example'
@@ -652,7 +653,7 @@ class WrapperTests(unittest.TestCase):
             self.assertIn('--no-chrome', args)
             self.assertEqual(args[args.index('--tools') + 1], '')
             self.assertEqual(args[args.index('--max-turns') + 1], '1')
-            self.assertEqual(args[args.index('--model') + 1], 'claude-opus-5')
+            self.assertEqual(args[args.index('--model') + 1], 'claude-opus-5-5')
             self.assertTrue(output.is_file())
             self.assertIn('data-fact="F1"', output.read_text())
             self.assertIn('data-weight="load-bearing"', output.read_text())

@@ -19,4 +19,4 @@ ${CLAUDE_STRATEGIC_REVIEW_WRAPPER:-$HOME/.local/bin/claude-strategic-review} --p
 
 Use escalated sandbox permissions for the configured wrapper. When the token is absent from its environment, the wrapper re-enters through the shared Keychain credential launcher. Configure an absolute `CLAUDE_STRATEGIC_CLI` path. If that CLI lacks `--safe-mode`, stop this advisor route; do not substitute another installation.
 
-The wrapper uses `claude-opus-5`, safe mode, no tools, one turn and no session persistence. Those controls, not prompt wording, enforce execution scope. Its default timeout is 600 seconds; poll while heartbeat diagnostics arrive. On timeout or non-zero exit, report advisor unavailability and continue the Codex task without automatic retries or fabricated feedback.
+The wrapper uses `claude-opus-5-5`, safe mode, no tools, one turn and no session persistence. Those controls, not prompt wording, enforce execution scope. Its default timeout is 600 seconds; poll while heartbeat diagnostics arrive. On timeout or non-zero exit, report advisor unavailability and continue the Codex task without automatic retries or fabricated feedback.

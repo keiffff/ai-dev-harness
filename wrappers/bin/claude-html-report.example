@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 MODELS = {
-    "opus": "claude-opus-5",
+    "opus": "claude-opus-5-5",
     "fable": "claude-fable-5-1",
 }
 DEFAULT_CLAUDE_CLI = "claude"
