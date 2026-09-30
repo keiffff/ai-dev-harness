@@ -162,7 +162,7 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         content = handoff_instructions()
 
         self.assertIn("Create exactly one destination", content)
-        self.assertIn('`model: "gpt-5.6-sol"`', content)
+        self.assertIn('`model: "gpt-6.1-sol"`', content)
         self.assertIn('`thinking: "high"`', content)
         self.assertIn("do not rely on task or global defaults", content)
         self.assertIn(

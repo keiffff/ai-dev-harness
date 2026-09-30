@@ -1,6 +1,9 @@
 # Codex config example for this harness.
 # Copy the relevant fragments into your local Codex config and adapt paths.
 
+model = "gpt-6.1-sol"
+model_reasoning_effort = "medium"
+
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
 
@@ -18,8 +21,9 @@ approvals_reviewer = "auto_review"
 #   skill_approval = true
 # }}
 
-# The main and advisor models remain local choices. Native Codex subagents are
-# bounded scouts by default; consequential review overrides this routing.
+# GPT-6.1 Sol is the main-agent default. Advisor models remain local choices.
+# Native Codex subagents are bounded scouts by default; consequential review
+# overrides this routing.
 [agents]
 enabled = true
 default_subagent_model = "gpt-5.6-luna"
