@@ -163,7 +163,7 @@ class ThreadHandoffSkillTests(unittest.TestCase):
 
         self.assertIn("Create exactly one destination", content)
         self.assertIn('`model: "gpt-6.1-sol"`', content)
-        self.assertIn('`thinking: "high"`', content)
+        self.assertIn('`thinking: "medium"`', content)
         self.assertIn("do not rely on task or global defaults", content)
         self.assertIn(
             "put the complete continuation packet, its `Post-verification mode`, "
