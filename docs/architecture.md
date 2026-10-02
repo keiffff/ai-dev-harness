@@ -4,7 +4,7 @@
 
 ## 中心
 
-Astraのmain agentであるCodexが、リポジトリの文脈把握、実装、差分確認、テスト確認を担う。
+Codexのmain agentが、リポジトリの文脈把握、実装、差分確認、テスト確認を担う。
 
 subagent や advisor は補助であり、最終判断、インターフェース、互換性、fallback、Git操作は main agent に残す。
 

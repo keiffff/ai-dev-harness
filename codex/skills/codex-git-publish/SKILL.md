@@ -67,7 +67,7 @@ Use `git-user-approved submodule update --remote <path>` only when the latest us
 
 ## GitHub Boundary
 
-Use the GitHub connector or `gh-readonly` for PR metadata and diffs. Do not use raw `gh`, `gh api`, or GitHub blob/tree/commit APIs as a Git mutation fallback.
+Use `gh-readonly` for PR metadata and diffs. Do not use a GitHub connector or another route to bypass the readonly wrapper. Do not use raw `gh`, `gh api`, or GitHub blob/tree/commit APIs as a Git mutation fallback.
 
 ## Completion
 

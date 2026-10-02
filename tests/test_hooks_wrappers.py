@@ -558,6 +558,38 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(args[args.index('--max-turns') + 1], '1')
         self.assertEqual(args[args.index('--model') + 1], 'claude-opus-5-5')
 
+    def test_claude_fable_review_disables_agentic_execution_for_both_input_routes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_claude = Path(tmp) / 'claude'
+            fake_claude.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+            fake_claude.chmod(0o755)
+            prompt = Path(tmp) / 'prompt.md'
+            prompt.write_text('Review this bounded plan.')
+            env = os.environ.copy()
+            env.update({
+                'PATH': tmp + os.pathsep + env.get('PATH', ''),
+                'CLAUDE_CODE_OAUTH_TOKEN': 'test-token',
+            })
+            wrapper = ROOT / 'wrappers' / 'bin' / 'claude-fable-strategic-review.example'
+            for extra_args in ([], ['--prompt-file', str(prompt)]):
+                with self.subTest(extra_args=extra_args):
+                    result = subprocess.run(
+                        [str(wrapper), *extra_args],
+                        input='Review this bounded plan.',
+                        text=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        env=env,
+                        check=False,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    args = result.stdout.splitlines()
+                    self.assertIn('--safe-mode', args)
+                    self.assertIn('--no-session-persistence', args)
+                    self.assertEqual(args[args.index('--tools') + 1], '')
+                    self.assertEqual(args[args.index('--max-turns') + 1], '1')
+                    self.assertEqual(args[args.index('--model') + 1], 'claude-fable-5')
+
     def test_claude_strategic_review_default_timeout_allows_deep_review(self):
         wrapper = ROOT / 'wrappers' / 'bin' / 'claude-strategic-review.example'
         namespace = runpy.run_path(str(wrapper))

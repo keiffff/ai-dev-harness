@@ -23,6 +23,8 @@ if [[ "$#" -gt 0 ]]; then
 fi
 
 if [[ -n "$prompt_file" ]]; then
-  exec claude -p --model claude-fable-5 --output-format text < "$prompt_file"
+  exec claude -p --model claude-fable-5 --output-format text \
+    --safe-mode --tools "" --max-turns 1 --no-session-persistence < "$prompt_file"
 fi
-exec claude -p --model claude-fable-5 --output-format text
+exec claude -p --model claude-fable-5 --output-format text \
+  --safe-mode --tools "" --max-turns 1 --no-session-persistence
