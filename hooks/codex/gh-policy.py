@@ -6,6 +6,7 @@ import sys
 from hook_utils import extract_command, first_command_name, is_approved_wrapper_segment, is_invalid_payload, load_payload, split_segments, unsafe_shell_reason
 
 APPROVED_WRAPPER = os.environ.get("GH_READONLY_WRAPPER", os.path.expanduser("~/.local/bin/gh-readonly"))
+USER_APPROVED_WRAPPER = os.environ.get("GH_USER_APPROVED_WRAPPER", os.path.expanduser("~/.local/bin/gh-user-approved"))
 RAW_COMMANDS = {"gh"}
 
 
@@ -25,7 +26,7 @@ def is_raw_command(command: str) -> bool:
     if segments is None:
         return has_raw_fallback(command)
     for segment in segments:
-        if is_approved_wrapper_segment(segment, APPROVED_WRAPPER):
+        if any(is_approved_wrapper_segment(segment, wrapper) for wrapper in (APPROVED_WRAPPER, USER_APPROVED_WRAPPER)):
             continue
         if first_command_name(segment) in RAW_COMMANDS:
             return True
@@ -43,7 +44,7 @@ def main() -> None:
     if reason:
         deny(reason)
     if is_raw_command(command):
-        deny("Blocked raw GitHub CLI usage. Use " + APPROVED_WRAPPER + " for allowed read-only commands. For mutation or secret/token commands, present the command to the user instead of executing it.")
+        deny("Blocked raw GitHub CLI usage. Use " + APPROVED_WRAPPER + " for read-only commands or " + USER_APPROVED_WRAPPER + " for explicitly requested PR operations. Other mutations and secret/token commands remain prohibited.")
 
 
 if __name__ == "__main__":

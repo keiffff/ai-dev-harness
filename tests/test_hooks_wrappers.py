@@ -27,6 +27,7 @@ def run_hook(script_name: str, command: str | None = None, payload: str | None =
         'PYTHONPATH': str(HOOK_DIR),
         'AWS_READONLY_WRAPPER': '/approved/aws-readonly',
         'GH_READONLY_WRAPPER': '/approved/gh-readonly',
+        'GH_USER_APPROVED_WRAPPER': '/approved/gh-user-approved',
         'GCLOUD_READONLY_WRAPPER': '/approved/gcloud-readonly',
         'GIT_USER_APPROVED_WRAPPER': '/approved/git-user-approved',
     })
@@ -139,6 +140,14 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(run_hook('gcloud-policy.py', f'/approved/gcloud-readonly projects list | {BQ} ls'))
         self.assertBlocked(run_hook('gcloud-policy.py', f'{GSUTIL} ls gs://example'))
         self.assertAllowed(run_hook('gcloud-policy.py', '/approved/gcloud-readonly projects list'))
+
+    def test_github_pr_wrapper_route_does_not_allow_raw_cli_bypass(self):
+        command = '/approved/gh-user-approved --confirm-user-requested pr edit 12 --body-file body.md'
+        self.assertAllowed(run_hook('gh-policy.py', command))
+        self.assertAllowed(run_hook('shell-policy.py', command))
+        self.assertBlocked(run_hook('gh-policy.py', command + f' && {GH} repo delete example'))
+        self.assertBlocked(run_hook('shell-policy.py', command + f' && {GH} pr merge 12'))
+        self.assertBlocked(run_hook('gh-policy.py', f'{GH} pr edit 12 --body text'))
 
     def test_git_hook_blocks_raw_commit_push_and_shell_bypass(self):
         self.assertBlocked(run_hook('git-policy.py', 'command git push origin main'))
@@ -369,6 +378,42 @@ class WrapperTests(unittest.TestCase):
                 self.assertNotEqual(run(args).returncode, 0)
 
         self.assertNotEqual(run(['pr', 'merge', '12']).returncode, 0)
+
+    def test_github_pr_operations_pass_through_without_a_subcommand_allowlist(self):
+        script = ROOT / 'wrappers' / 'bin' / 'gh-user-approved.example'
+        operations = (
+            ['pr', 'create', '--repo', 'acme/example', '--head', 'feature', '--draft'],
+            ['pr', 'edit', '12', '--body-file', 'body with spaces.md', '--add-label', 'needs review'],
+            ['pr', 'comment', '12', '--body-file', 'comment.md'],
+            ['pr', 'review', '12', '--request-changes', '--body-file', 'review.md'],
+            ['pr', 'merge', '12', '--squash'],
+            ['pr', 'ready', '12', '--undo'],
+            ['pr', 'checkout', '12'],
+            ['pr', 'future-operation', '--future-option', 'unchanged value'],
+        )
+        for args in operations:
+            with self.subTest(args=args):
+                result = self.run_with_fake_bin(script, GH, ['--confirm-user-requested', *args])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), args)
+
+    def test_github_pr_operations_require_confirmation_and_reject_other_command_families(self):
+        script = ROOT / 'wrappers' / 'bin' / 'gh-user-approved.example'
+        for args in (
+            [],
+            ['pr', 'edit', '12', '--body', 'text'],
+            ['--confirm-user-requested'],
+            ['--confirm-user-requested', 'pr'],
+            ['--confirm-user-requested', 'api', 'repos/acme/example/pulls/12', '-XPATCH'],
+            ['--confirm-user-requested', 'repo', 'delete', 'acme/example'],
+            ['--confirm-user-requested', 'issue', 'edit', '12'],
+            ['--confirm-user-requested', 'workflow', 'run', 'deploy.yml'],
+            ['--confirm-user-requested', 'auth', 'token'],
+        ):
+            with self.subTest(args=args):
+                result = self.run_with_fake_bin(script, GH, args)
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stdout, '')
 
     def test_github_readonly_keeps_global_options_before_rest_reads(self):
         script = ROOT / 'wrappers' / 'bin' / 'gh-readonly.example'

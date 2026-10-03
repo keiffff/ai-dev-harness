@@ -33,6 +33,7 @@ default_subagent_reasoning_effort = "medium"
 # Wrapper paths are configurable through environment variables used by hooks:
 # GIT_USER_APPROVED_WRAPPER=$HOME/.local/bin/git-user-approved
 # GH_READONLY_WRAPPER=$HOME/.local/bin/gh-readonly
+# GH_USER_APPROVED_WRAPPER=$HOME/.local/bin/gh-user-approved
 # AWS_READONLY_WRAPPER=$HOME/.local/bin/aws-readonly
 # GCLOUD_READONLY_WRAPPER=$HOME/.local/bin/gcloud-readonly
 

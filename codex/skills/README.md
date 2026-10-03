@@ -9,7 +9,7 @@ AIエージェントへ作業ごとの期待を伝えるCodexのスキルを管�
 | Skill | 使う場面 | 主な役割 | しないこと |
 | --- | --- | --- | --- |
 | `codex-openspec-workflow` | OpenSpec の作成、適用、照合、archive | current CLI、artifact、互換性ゲート、spec 照合を管理する | 通常の実装や、未承認 proposal の実装には使用しない |
-| `codex-git-publish` | 明示的に依頼されたブランチの作成・切り替え、commit、push、PR ブランチの更新、submodule sync | wrapper を経由した Git mutation 手順を管理する | skill 自体に Git の mutation 権限があると勝手に判断しない |
+| `codex-git-publish` | 明示的に依頼されたGit公開・PR操作 | Git操作は`git-user-approved`、PR操作は`gh-user-approved`を経由し、依頼された対象と操作だけを実行する | 読み取りや本文案の作成をPR書き込みの許可と扱わず、過去の許可を持ち越さない |
 | `codex-context-engineering` | リポジトリの既存パターン、関連テスト、仕様、PR の状況を把握する必要があるとき | 問いに対応する証拠の探索先と、既存のコード所有者や実行経路を確認する | 課題と無関係なファイルをむやみに広く読み込まない |
 | `codex-incremental-implementation` | 複数ファイルにまたがる実装、OpenSpec tasks、リファクタリング、機能開発 | 既存の実行経路、観測可能な契約、適切なテスト範囲を維持して進める | 根拠のない大規模な変更（speculative edit）を一気に入れない |
 | `codex-debugging-loop` | test、build、CI、API、browser、runtime log で失敗が発生したとき | 直接観測した事実と原因の仮説を切り分け、再現、原因特定、修正、再確認の流れに戻す | エラー表示の文面だけから原因や対処を決めつけない |
