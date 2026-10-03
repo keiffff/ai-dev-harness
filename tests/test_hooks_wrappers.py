@@ -507,7 +507,7 @@ class WrapperTests(unittest.TestCase):
             fake_security.chmod(0o755)
 
             fake_claude = Path(tmp) / 'claude'
-            safe_mode_help = '--safe-mode' if supports_safe_mode else '--permission-mode'
+            safe_mode_help = '--safe-mode --bare' if supports_safe_mode else '--permission-mode'
             fake_claude.write_text(
                 '#!/bin/sh\n'
                 'if [ "$1" = "--help" ]; then\n'
@@ -553,6 +553,7 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         args = result.stdout.splitlines()
         self.assertIn('--safe-mode', args)
+        self.assertIn('--bare', args)
         self.assertIn('--no-session-persistence', args)
         self.assertEqual(args[args.index('--tools') + 1], '')
         self.assertEqual(args[args.index('--max-turns') + 1], '1')
@@ -585,6 +586,7 @@ class WrapperTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stderr)
                     args = result.stdout.splitlines()
                     self.assertIn('--safe-mode', args)
+                    self.assertIn('--bare', args)
                     self.assertIn('--no-session-persistence', args)
                     self.assertEqual(args[args.index('--tools') + 1], '')
                     self.assertEqual(args[args.index('--max-turns') + 1], '1')
@@ -624,7 +626,7 @@ class WrapperTests(unittest.TestCase):
         fake_security.chmod(0o755)
 
         fake_claude = tmp / 'claude'
-        safe_mode_help = '--safe-mode' if supports_safe_mode else '--permission-mode'
+        safe_mode_help = '--safe-mode --bare' if supports_safe_mode else '--permission-mode'
         fake_claude.write_text(
             '#!/bin/sh\n'
             'if [ "$1" = "--help" ]; then\n'
@@ -680,6 +682,7 @@ class WrapperTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             args = (Path(tmp_context.name) / 'claude-args.txt').read_text().splitlines()
             self.assertIn('--safe-mode', args)
+            self.assertIn('--bare', args)
             self.assertIn('--no-session-persistence', args)
             self.assertIn('--disable-slash-commands', args)
             self.assertIn('--no-chrome', args)

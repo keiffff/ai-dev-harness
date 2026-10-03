@@ -28,9 +28,10 @@ Treat repository-local `openspec/AGENTS.md` and current OpenSpec prompts as the 
 1. Run `openspec status --change <id> --json` and inspect the schema, artifact paths, progress, and apply conditions.
 2. Run `openspec instructions apply --change <id> --json` and read the returned context and dependency files.
 3. If either command is unavailable, inspect the selected CLI version and repository workflow. Report the missing capability; update the global CLI only when the user authorizes that environment change. Do not silently substitute a legacy workflow.
-4. Read proposal, design, tasks, or spec files directly only when the CLI output lacks required detail.
-5. Use `codex-incremental-implementation` and follow the accepted tasks autonomously.
-6. Stop for an unapproved change to I/F names, spec meaning, persistence format, external behavior or scope. Continue changes already authorized by the accepted artifacts.
+4. When apply JSON includes task `sourcePath` and `line`, use that exact file and 1-based line as the task location. Before marking it complete, reread the file and verify that the line still contains the same task checkbox and text. Do not match a checkbox by description alone: different files or lines can contain duplicate task text. If the file or line has changed, refresh apply instructions and check again; do not edit the stale location.
+5. If task locations are absent (older CLI), read the task source and identify the exact checkbox in context before editing; do not synthesize `sourcePath` or `line`. Read proposal, design, or spec files directly only when the CLI output lacks required detail.
+6. Use `codex-incremental-implementation` and follow the accepted tasks autonomously.
+7. Stop for an unapproved change to I/F names, spec meaning, persistence format, external behavior or scope. Continue changes already authorized by the accepted artifacts.
 
 ## Compatibility Gate
 

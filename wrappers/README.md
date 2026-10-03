@@ -28,6 +28,14 @@
 - `bin/jev-evidence-check.example`: `@jev-kit/cli`のevidence checkを使い、観測された障害の証拠が特定の原因または対処法の主張を直接裏付けているかを評価する。ハーネス側は採用基準を持ち、Jevへの送信、応答検証、単一試行は`jev-kit-evidence-check`へ委ねる。
 - `bin/keychain-env-exec.example`: macOS Keychain を用いた汎用的な認証情報注入スクリプト。コマンド引数や標準出力・標準エラー出力にシークレットを露出させることなく、単一のシークレットを子プロセスの環境変数に設定。
 
+## CLIの互換性
+
+Claudeの単発wrapperは`--safe-mode --bare --tools "" --max-turns 1 --no-session-persistence`を併用します。`--bare`は自動探索と背景処理を抑えますが、ツール無効化やsandboxの代替ではありません。Python wrapperは呼び出し前にsafe modeとbareの対応を確認し、未対応なら停止します。既存の外側のtimeoutとプロセスグループ終了処理は維持します。
+
+Antigravityの一時的なrate limitの再試行はCLIに任せます。wrapperは失敗したCLI呼び出しを再実行せず、既存の構造化出力検証と秘匿化した診断を維持します。成功応答のHTMLが未完了の場合に限る1回の再生成は、API失敗の再試行とは別です。
+
+公開更新の採用理由と検証範囲は[release compatibility](../docs/release-compatibility.md)を参照してください。
+
 ## ローカル環境への適応（Local Adaptation）
 
 サンプルファイルをローカルの `bin` ディレクトリにコピーし、以下の項目を環境に合わせて調整してください。

@@ -154,6 +154,8 @@ def require_safe_mode(claude_cli: str) -> None:
 
     help_text = f"{help_result.stdout}\n{help_result.stderr}"
     if help_result.returncode == 0 and "--safe-mode" in help_text:
+        if "--bare" not in help_text:
+            stop("Claude CLI does not support required --bare; use a CLI supporting both --safe-mode and --bare.", 1)
         return
 
     try:
@@ -231,6 +233,7 @@ def run_claude(
         "--output-format",
         "text",
         "--safe-mode",
+        "--bare",
         "--tools",
         "",
         "--max-turns",
