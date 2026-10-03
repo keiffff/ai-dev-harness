@@ -54,11 +54,11 @@
 
 ## Authority And Execution Safety
 
-- commit、push、PR branch更新、submodule sync、PR操作は、最新のユーザー依頼に明示された場合だけ行う。PRの作成・編集・レビュー投稿・mergeなどは、依頼された対象と操作だけを実行し、別のPR操作やcommit/pushの許可へ広げない。質問、レビュー依頼、本文案の作成だけではPRへの書き込みを許可されたと扱わない。rebaseは明示依頼時、または依頼済みpush/branch更新に必要な安全な統合時だけ行う。過去ターンの許可を持ち越さない。
-- Git mutationには`git-user-approved`、依頼されたPR操作には`gh-user-approved --confirm-user-requested pr ...`、GitHub・AWS・GCPのreadにはreadonly wrapperを使う。`gh-user-approved`は`gh pr`全体を扱い、サブコマンドやオプションの細かい許可リストは設けない。PR CLIに内蔵されたGit操作も、ユーザーがその操作を依頼した場合だけこの経路で実行する。raw CLIや別経路へ迂回しない。
+- commit、push、PR branch更新、submodule sync、PR・issue操作は、最新のユーザー依頼に明示された場合だけ行う。PR・issueの作成・編集・コメント投稿・close、PRへのレビュー投稿・mergeなどは、依頼された対象と操作だけを実行し、別のPR・issue操作やcommit/pushの許可へ広げない。質問、レビュー依頼、本文案の作成だけではPR・issueへの書き込みを許可されたと扱わない。rebaseは明示依頼時、または依頼済みpush/branch更新に必要な安全な統合時だけ行う。過去ターンの許可を持ち越さない。
+- Git mutationには`git-user-approved`、依頼されたPR・issue操作には`gh-user-approved --confirm-user-requested pr|issue ...`、GitHub・AWS・GCPのreadにはreadonly wrapperを使う。`gh-user-approved`は`gh pr`・`gh issue`全体を扱い、サブコマンドやオプションの細かい許可リストは設けない。PR CLIに内蔵されたGit操作も、ユーザーがその操作を依頼した場合だけこの経路で実行する。raw CLIや別経路へ迂回しない。
 - readonly wrapperや明示されたCLI・APIが認証または権限エラーで失敗しても、browser、connector、別account、別credentialへ迂回しない。必要な認証手順またはblockerを返し、ユーザーの明示指示を待つ。
 - AI用のin-app browserは追加承認なしで使ってよく、`browser-control: allow`を求めない。Browser/CUAでは接続先を`iab`と明示する。ユーザーのChrome、Safari、Edgeなどのブラウザや既存タブは使わず、全ブラウザ・全タブの一覧も取得しない。外部ブラウザを使うのは、その対象をユーザーが明示的に依頼し、最新メッセージに独立した行として`browser-control: allow`がある場合だけとする。許可を得るためにin-appでできる作業を止めない。
-- 明示依頼されたPR操作を除き、cloud write、deploy、IAM変更、secret参照、リモートDBへの操作は実行しない。必要ならユーザーが実行できるコマンドを提示する。
+- 明示依頼されたPR・issue操作を除き、cloud write、deploy、IAM変更、secret参照、リモートDBへの操作は実行しない。必要ならユーザーが実行できるコマンドを提示する。
 - ローカルDB（ローカルのcontainerを含む）のCLI操作、起動・停止、作成・初期化、migration、seed、DBを使うテストは追加承認なしで実行してよい。実際の接続先がローカルであることを確認する。ローカルport経由でも接続先がリモートDBなら、この許可の対象外とする。
 - package manager scriptは用途と接続先を確認する。DBを使う場合は、呼び出し先の内部処理とテストの準備・後片付けまで追い、設定や環境変数によって決まる実際のDB接続先がすべてローカルであると確認できた場合だけ実行する。script名や入口の接続設定だけでは判断せず、確認できない接続先があれば実行しない。検証系と確認済みのローカルDB用scriptは追加承認なしで実行してよい。deploy、release、publish、リモートDB、IaC、prod系は勝手に実行しない。
 - secret、token、credential、private key、`.env`、raw environment dumpを表示・送信しない。存在確認は値を出さない方法で行う。

@@ -1,4 +1,4 @@
 interface:
   display_name: "Codex Git Publish"
-  short_description: "Publish Git changes and PR operations on explicit request"
-  default_prompt: "Use $codex-git-publish to perform the explicitly requested Git publication or PR operation."
+  short_description: "Publish Git changes and PR/issue operations on explicit request"
+  default_prompt: "Use $codex-git-publish to perform the explicitly requested Git publication or PR/issue operation."

@@ -1,6 +1,6 @@
 # Runtime Contract
 
-- Git and PR mutations require an explicit latest user request for the affected operation and target. Use git-user-approved for Git publication, gh-user-approved --confirm-user-requested pr ... for requested PR operations, and gh-readonly for GitHub reads. PR subcommands and options are not individually allowlisted. Review or drafting alone does not authorize PR writes, and PR requests do not authorize unrelated commit/push or cloud changes.
+- Git and PR/issue mutations require an explicit latest user request for the affected operation and target. Use git-user-approved for Git publication, gh-user-approved --confirm-user-requested pr|issue ... for requested PR/issue operations, and gh-readonly for GitHub reads. PR/issue subcommands and options are not individually allowlisted. Review or drafting alone does not authorize PR/issue writes, and PR/issue requests do not authorize unrelated commit/push or cloud changes.
 - Do not add approvals, validation gates, retries, fallbacks, limits or scope restrictions unless an existing contract, an observed failure or the user's explicit request requires them.
 - Do not use canned agreement, apology, self-criticism, reflection or future promises after a correction. Return the correction, verified cause and remaining state directly.
 - Do not send optional progress commentary. Send updates only for irreversible actions, approvals, blockers, ANDON conditions or real milestones in long-running work.

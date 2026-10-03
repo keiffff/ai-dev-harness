@@ -149,6 +149,13 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(run_hook('shell-policy.py', command + f' && {GH} pr merge 12'))
         self.assertBlocked(run_hook('gh-policy.py', f'{GH} pr edit 12 --body text'))
 
+    def test_github_issue_wrapper_route_does_not_allow_raw_cli_bypass(self):
+        command = '/approved/gh-user-approved --confirm-user-requested issue create --repo acme/example --title test --body-file issue.md'
+        self.assertAllowed(run_hook('gh-policy.py', command))
+        self.assertAllowed(run_hook('shell-policy.py', command))
+        self.assertBlocked(run_hook('shell-policy.py', command + f' && {GH} issue close 12'))
+        self.assertBlocked(run_hook('gh-policy.py', f'{GH} issue create --title test --body text'))
+
     def test_git_hook_blocks_raw_commit_push_and_shell_bypass(self):
         self.assertBlocked(run_hook('git-policy.py', 'command git push origin main'))
         self.assertBlocked(run_hook('git-policy.py', 'command sh -c "git push"'))
@@ -378,8 +385,9 @@ class WrapperTests(unittest.TestCase):
                 self.assertNotEqual(run(args).returncode, 0)
 
         self.assertNotEqual(run(['pr', 'merge', '12']).returncode, 0)
+        self.assertNotEqual(run(['issue', 'create', '--title', 'test', '--body', 'text']).returncode, 0)
 
-    def test_github_pr_operations_pass_through_without_a_subcommand_allowlist(self):
+    def test_github_pr_and_issue_operations_pass_through_without_a_subcommand_allowlist(self):
         script = ROOT / 'wrappers' / 'bin' / 'gh-user-approved.example'
         operations = (
             ['pr', 'create', '--repo', 'acme/example', '--head', 'feature', '--draft'],
@@ -390,6 +398,12 @@ class WrapperTests(unittest.TestCase):
             ['pr', 'ready', '12', '--undo'],
             ['pr', 'checkout', '12'],
             ['pr', 'future-operation', '--future-option', 'unchanged value'],
+            ['issue', 'create', '--repo', 'acme/example', '--title', 'test', '--body-file', 'issue with spaces.md'],
+            ['issue', 'edit', '12', '--add-label', 'needs review'],
+            ['issue', 'comment', '12', '--body-file', 'comment.md'],
+            ['issue', 'close', '12', '--reason', 'completed'],
+            ['issue', 'reopen', '12'],
+            ['issue', 'future-operation', '--future-option', 'unchanged value'],
         )
         for args in operations:
             with self.subTest(args=args):
@@ -397,16 +411,17 @@ class WrapperTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.splitlines(), args)
 
-    def test_github_pr_operations_require_confirmation_and_reject_other_command_families(self):
+    def test_github_pr_and_issue_operations_require_confirmation_and_reject_other_command_families(self):
         script = ROOT / 'wrappers' / 'bin' / 'gh-user-approved.example'
         for args in (
             [],
             ['pr', 'edit', '12', '--body', 'text'],
+            ['issue', 'create', '--title', 'test', '--body', 'text'],
             ['--confirm-user-requested'],
             ['--confirm-user-requested', 'pr'],
+            ['--confirm-user-requested', 'issue'],
             ['--confirm-user-requested', 'api', 'repos/acme/example/pulls/12', '-XPATCH'],
             ['--confirm-user-requested', 'repo', 'delete', 'acme/example'],
-            ['--confirm-user-requested', 'issue', 'edit', '12'],
             ['--confirm-user-requested', 'workflow', 'run', 'deploy.yml'],
             ['--confirm-user-requested', 'auth', 'token'],
         ):

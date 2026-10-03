@@ -2,16 +2,16 @@
 set -euo pipefail
 
 if [[ "${1:-}" != "--confirm-user-requested" ]]; then
-  print -u2 "PR operations require an explicit latest user request and --confirm-user-requested."
+  print -u2 "PR/issue operations require an explicit latest user request and --confirm-user-requested."
   exit 2
 fi
 shift
 
-if [[ "${1:-}" != "pr" || $# -lt 2 ]]; then
-  print -u2 "Usage: gh-user-approved --confirm-user-requested pr <command> [args...]"
+if [[ ("${1:-}" != "pr" && "${1:-}" != "issue") || $# -lt 2 ]]; then
+  print -u2 "Usage: gh-user-approved --confirm-user-requested pr|issue <command> [args...]"
   exit 2
 fi
 
-# The boundary is the PR command family, not a list of individual operations or flags.
+# The boundary is the PR/issue command families, not individual operations or flags.
 # Codex owns matching the requested operation and target to the latest user request.
 exec gh "$@"

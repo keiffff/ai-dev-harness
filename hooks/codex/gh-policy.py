@@ -44,7 +44,7 @@ def main() -> None:
     if reason:
         deny(reason)
     if is_raw_command(command):
-        deny("Blocked raw GitHub CLI usage. Use " + APPROVED_WRAPPER + " for read-only commands or " + USER_APPROVED_WRAPPER + " for explicitly requested PR operations. Other mutations and secret/token commands remain prohibited.")
+        deny("Blocked raw GitHub CLI usage. Use " + APPROVED_WRAPPER + " for read-only commands or " + USER_APPROVED_WRAPPER + " for explicitly requested PR/issue operations. Other mutations and secret/token commands remain prohibited.")
 
 
 if __name__ == "__main__":

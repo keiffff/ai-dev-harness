@@ -15,7 +15,7 @@ hook は sandbox を置き換えるものではありません。PreToolUse hook
 AIエージェントに期待する振る舞いは、プロンプトの指定だけでは固定できません。hookは、その期待を実行前に検査するための層です。
 
 - Git の commit/push は approved wrapper に集約する
-- AWS / GCP / GitHubの参照はread-only wrapper、明示依頼されたPR操作は`gh-user-approved`に集約し、raw CLIを使わせない
+- AWS / GCP / GitHubの参照はread-only wrapper、明示依頼されたPR・issue操作は`gh-user-approved`に集約し、raw CLIを使わせない
 - `.env` や credential file を直接出力・表示する代表的な shell command を阻止する
 - `rm -rf`、`git clean`、recursive chmod/chown などの破壊的操作を阻止する
 - shell interpreter、command substitution、process substitution、multiline shell、shell grouping、xargs、sudo を保守的に拒否する
