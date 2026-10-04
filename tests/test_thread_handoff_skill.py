@@ -13,6 +13,14 @@ def handoff_instructions() -> str:
 
 
 class ThreadHandoffSkillTests(unittest.TestCase):
+    def test_openspec_continuity_does_not_depend_on_startup_setup(self):
+        content = handoff_instructions()
+        self.assertIn("OpenSpec continuity is owned by this handoff", content)
+        self.assertIn("preserve its existing files in place", content)
+        self.assertIn("even when there is no active change directory", content)
+        self.assertIn("without overwriting conflicts", content)
+        self.assertIn("do not regenerate it", content)
+
     def test_handoff_resumes_only_when_latest_request_explicitly_asks(self):
         content = handoff_instructions()
 

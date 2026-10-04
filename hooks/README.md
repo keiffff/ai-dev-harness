@@ -4,6 +4,8 @@ Codexによる誤操作を早い段階で止めるためのlocal safety policy�
 
 hook は sandbox を置き換えるものではありません。PreToolUse hook は、agent が raw CLI の直接実行、secret の表示、破壊的な操作、あるいは危険な shell 構文の実行へ進もうとした際、会話と実行の境界でそれを阻止します。PermissionRequest hook は、Codex が承認を要求する操作を Jev で事前に判定し、確信を持って判断できない場合に限って通常の approval に差し戻します。
 
+起動時にGitのpull、環境ファイルのコピー、依存関係のセットアップ、OpenSpecの初期化・更新を行うhookは登録しません。OpenSpecを使うtaskの引き継ぎは`codex-thread-handoff`が担います。同じチェックアウトなら既存ファイルをそのまま使い、別のチェックアウトなら必要な変更一式、設定、参照仕様を引き継いで確認します。
+
 ## Runtime Contract
 
 `runtime-contract-context.py` は、既に開いているtaskにも現在の短い運用規則を届けます。`SessionStart` の startup、resume、clear、compact では必ず注入し、`UserPromptSubmit` では同じtaskへ最後に届けた内容から `runtime-contract.md` が変わった場合だけ再注入します。これにより、AGENTS.mdを更新した後に既存taskが古い要約や開始時の文脈だけで動き続ける状態を避けます。
@@ -29,7 +31,9 @@ AIエージェントに期待する振る舞いは、プロンプトの指定だ
 
 secret の候補となる文字列は Jev へ送信しません。API key が設定されていない場合、実ユーザー文脈を取得できない場合、通信失敗、不正な応答、あるいは score が基準に満たない場合は何も返さず、既存の OpenAI auto-review またはユーザー自身による承認へと差し戻します。SDKの自動再試行は無効で、1回のhookにつきJevの試行も1回です。tool の入力に対して独自に長さの上限を設けたり、途中で切り詰めたりすることはありません。また、PreToolUse の各 policy や sandbox も引き続き有効であり、Jev の判定がこれらを迂回することはありません。
 
-Jev による実際の許可状況を確認できるよう、生（raw）の入力内容は残さず、判定理由ごとの件数および直近の tool 名、契約、score のみを `~/.codex/hook-state/jev-permission-review/status.json` に記録します。状態記録の失敗は、算出済みの承認判定を変更しません。
+Jev による実際の許可状況を確認できるよう、生（raw）の入力内容は残さず、判定理由ごとの件数および直近のtool名、契約、score、処理時間、モデル名、APIが返した入出力トークン数を `~/.codex/hook-state/jev-permission-review/status.json` に記録します。CLIの開始と終了は同じパスに`.jsonl`を付けた履歴へ記録し、設定・入力変換の失敗も段階とエラー種別だけを残します。履歴は期間別集計と同時実行時の件数確認に使えます。状態記録の失敗は、承認判定やCLIの終了状態を変更しません。
+
+使用量が返らない場合は未取得として扱い、トークン数や料金をゼロで補いません。料金額はAPIから返らないため、記録したモデルと使用量に対し、対象期間の単価を確認して計算します。CLIの処理時間にはKeychainからの注入や通常の承認の待ち時間は含みません。開始だけの履歴は終了未確認を意味し、それだけでtimeoutと断定しません。CLI起動前の失敗や記録先への書き込み失敗は、この履歴だけでは捕捉できません。
 
 しきい値を変更する前の評価は、常時実行されるPermissionRequest hookから分離します。[permission review policy evaluation](../evals/permission-review/README.md) は、同じJevのスコアに現在値と候補値を適用し、calibrationとholdoutそれぞれのfalse allow、false defer、selection rateを出力します。評価結果から候補を自動選択したり、運用中のpolicyを書き換えたりはしません。
 

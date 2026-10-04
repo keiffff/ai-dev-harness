@@ -32,6 +32,8 @@ Build the manifest only for task-required state outside that commit, such as sta
 
 When OpenSpec is active, include the whole change tree, relevant config and instructions, directly referenced specs, current task status, and latest apply or validation result.
 
+Include task-required `openspec/project.md`, `openspec/specs/`, and `openspec/schemas/` even when there is no active change directory. Transfer source-checkout files rather than reconstructing them from a shared cache. Files already present in the exact destination checkout stay in place; for another checkout, preserve the manifested files without overwriting conflicts. Do not include unrelated OpenSpec trees merely because they exist.
+
 A worktree is isolation, not a checkpoint. Do not assume `startingState: working-tree`, a source path, or task creation transferred dirty state. A temporary worktree is not durable.
 
 If required state is not committed and the destination will not share the exact checkout, establish one recoverable transfer before creation:

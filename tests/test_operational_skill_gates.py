@@ -270,7 +270,11 @@ class OperationalSkillGateTests(unittest.TestCase):
         content = (ROOT / "docs" / "failure-patterns.md").read_text()
 
         self.assertIn("間接的な観測を確定事実として扱う", content)
-        self.assertIn("補完実装へ進まずANDON", content)
+        # Keep the behavioral contract without pinning punctuation or one
+        # particular Japanese sentence. Read the actual section, not other
+        # unrelated ANDON mentions elsewhere in the document.
+        section = content.split("## 間接的な観測を確定事実として扱う\n", 1)[1].split("\n## ", 1)[0]
+        self.assertRegex(section, r"推測.*補完実装.*(?:進めず|進まず).*ANDON")
 
     def test_writing_revision_is_limited_to_the_requested_delta(self):
         content = (ROOT / "codex" / "skills" / "codex-writing" / "SKILL.md").read_text()

@@ -49,6 +49,8 @@ The destination must verify transferred state before substantive work. On a same
 
 Verification gates only task-bearing state: semantic scope, the exact recovery commit, task-required state outside that commit, and active contract artifacts such as OpenSpec. A known environment-generated file that is unrelated to the task and intentionally excluded from the required-artifact manifest does not become a blocker merely because it is present in only one checkout. Do not surface such excluded state in the user-facing verification result unless it affects the proposed resume point.
 
+OpenSpec continuity is owned by this handoff, not by a SessionStart setup hook or a shared cache. When the destination shares the exact checkout, preserve its existing files in place. Otherwise transfer the task-required OpenSpec state under the required-artifact manifest; do not regenerate it with `openspec init` or `openspec update` as a substitute for transfer.
+
 ## Load Execution Detail Progressively
 
 - For explaining handoff behavior, use only this file.

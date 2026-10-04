@@ -112,6 +112,8 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(run_hook('shell-policy.py', f'{GH} pr view 1'))
         self.assertBlocked(run_hook('shell-policy.py', f'{GCLOUD} projects list'))
         self.assertBlocked(run_hook('shell-policy.py', f'{RM} {RF} /tmp/example'))
+        self.assertBlocked(run_hook('shell-policy.py', '/usr/bin/psql --host=db.example.invalid --dbname=example'))
+        self.assertBlocked(run_hook('shell-policy.py', '/usr/bin/printenv'))
         self.assertAllowed(run_hook('shell-policy.py', 'pnpm test'))
 
     def test_aws_hook_blocks_shell_bypasses_and_raw_cli_variants(self):
