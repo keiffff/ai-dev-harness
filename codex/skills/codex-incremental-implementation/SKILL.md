@@ -7,6 +7,8 @@ description: Implement multi-file changes while preserving existing owners, obse
 
 Implement complete, reviewable behavior increments. AGENTS.md owns authority and contract-change gates; OpenSpec owns accepted artifacts when applicable.
 
+Identify the faulty behavior, intended observable outcome, and what must remain unchanged from the request and existing contracts. Keep each change tied to that outcome; omit changes whose necessity cannot be explained. These are implementation decision criteria, not a requirement for a separate document, checklist, or approval step.
+
 ## Preserve Existing Owners
 
 Before adding a parallel CLI, parser, mapper, data path, output convention or abstraction, trace the existing entrypoint through data access, transformation, output and tests. Reuse its owner unless the requested behavior requires a distinct responsibility, invariant or external boundary.
@@ -16,6 +18,8 @@ Keep adjacent cleanup and hypothetical compatibility out of the change. Prefer e
 ## Verification And Test Scope
 
 Tests should protect an accepted observable contract or a known regression, at the boundary that owns it. Use response shapes, persisted state, UI behavior, messages, artifacts or operator-visible results as evidence.
+
+A concrete incident is reproduction evidence, not automatically a general contract. Do not promote incidental log formatting or example-specific steps into assumed interfaces. Tests built on the same unverified assumption as the implementation do not establish that assumption's correctness; ground expected behavior in the requested outcome and independently established contracts or observations.
 
 - Add coverage where a distinct transformation or failure mode needs it; avoid duplicating a contract already covered above that layer.
 - Mock interactions and negative assertions are appropriate when the interaction or absence is itself the contract: idempotency, authorization, chargeable calls, queue publish, metrics or a known regression.
@@ -30,4 +34,4 @@ Identify the existing emission owner before adding logging, exception capture or
 
 ## Completion
 
-Report the implemented behavior, checks that passed or remain blocked, review result and material residual risk. For consequential unresolved assumptions, use `codex-doubt-review`; ordinary implementation choices stay with main.
+Report the implemented behavior, checks that passed or remain blocked, review result and material residual risk. Distinguish which parts of the original problem are verified as resolved from those still unresolved or unverified. Passing tests or removing an unsound implementation alone does not establish that the original problem is resolved. For consequential unresolved assumptions, use `codex-doubt-review`; ordinary implementation choices stay with main.

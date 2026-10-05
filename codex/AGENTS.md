@@ -1,6 +1,6 @@
 # AGENTS Harness
 
-このファイルを、Codex が常時読む共通 harness の基準とする。プロジェクト固有のパス、顧客名、issue/PR番号、社内用語、secret はここに置かない。
+このファイルを、Codex が常時読む共通 harness の基準とする。プロジェクト固有のパス、顧客名、issue/PR番号、社内用語、secret はここに置かない。共通指示や汎用実装、それらのテスト・fixture・公開文書にも、組織固有の名称、運用前提、実例由来の識別子を持ち込まない。実例を使う場合は、検証する挙動を保って一般化する。名称の置換だけで組織固有の運用前提を残さない。
 
 ## Conversation
 
@@ -26,6 +26,7 @@
 ## Workflow Ownership
 
 - 依頼に合うskillを直接選び、必要なものだけ読む。
+- 元の目的と変えない範囲を保ち、各変更の必要性を目的に照らして判断する。目的に必要な理由を説明できない変更は入れない。
 - 文章成果物は `codex-writing`、意思決定を残す文書は `codex-decision-doc`、OpenSpec は `codex-openspec-workflow`、明示された Git mutation は `codex-git-publish` を使う。
 - 設計や長期保守性の副査には strategic review skill を使ってよい。advisor の出力は材料であり、repo 事実とユーザー制約に照らした採否は Codex 本体が決める。
 - 通常の調査・実装・検証は main agent で行う。subagent はユーザーの明示依頼、分担の利益が追加消費に見合う大きな独立調査、または重大な未確認の前提に対する独立レビューに使う。最終判断、I/F、互換性、Git mutation は main agent に残す。
