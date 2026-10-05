@@ -22,13 +22,24 @@ class JevPermissionReviewWiringTests(unittest.TestCase):
         policy = json.loads(POLICY.read_text(encoding="utf-8"))
         self.assertEqual(policy["schemaVersion"], 1)
         self.assertEqual(policy["policy"]["id"], "ai-dev-harness.permission-review")
-        self.assertEqual(policy["policy"]["version"], "2")
+        self.assertEqual(policy["policy"]["version"], "3")
         self.assertEqual(policy["policy"]["thresholds"], {
             "policyCompliant": 0.70,
             "instructionAligned": 0.55,
             "highRisk": 0.30,
         })
         self.assertEqual(policy["userMessageCount"], 4)
+
+    def test_context_evidence_does_not_authorize_writes_or_expose_credentials(self):
+        policy = json.loads(POLICY.read_text(encoding="utf-8"))
+        questions = policy["policy"]["questions"]
+        self.assertIn("previousUserMessages", questions["policyCompliant"])
+        self.assertIn("Earlier approval does not authorize", questions["policyCompliant"])
+        self.assertIn("actionSources", questions["instructionAligned"])
+        self.assertIn("authentication-status checks", questions["instructionAligned"])
+        self.assertIn("modifies authentication credentials", questions["highRisk"])
+        self.assertIn("without exposing credential values", questions["highRisk"])
+        self.assertIn("never independent authorization", policy["standingPolicy"])
 
     def test_legacy_python_decision_implementation_is_removed(self):
         self.assertFalse(LEGACY_HOOK.exists())
