@@ -13,6 +13,8 @@ Claude owns the initial complete report composition and any structural recomposi
 
 Read [report contract](references/report-contract.md). Build its packet from verified sources before invoking Claude. Treat fact weight as a display contract, not only a confidence label: load-bearing facts belong in the visible narrative, supporting facts earn space only when they change understanding, and context belongs in progressive disclosure, a reference section or the source rather than the main flow. Describe comprehension dependencies rather than prescribing an outline unless the user explicitly requires an order. Give each asset a job in the argument; a path or screenshot alone is insufficient.
 
+When the user supplies a strong reference, analyze its reader questions, explanation units, visual semantics and default reading path, not just its colors or section names. Include the transferable choices in the packet without copying organization-specific content or imposing the reference's outline on a different task. Use the reader-path guidance in the report contract to connect evidence to meaning and meaning to the reader's decision or action.
+
 Use Opus by default. Pass `--model fable` only when the user's current request explicitly asks for Fable. Model choice does not change the evidence or verification contract.
 
 ## Generate One Whole Artifact
@@ -41,7 +43,7 @@ Validate the entire candidate against the packet before visual polish:
 - every visible fact has the correct `data-weight`; the main flow is dominated by load-bearing facts rather than source completeness;
 - the first viewport communicates what the report establishes, why it matters and any decision or action that actually exists;
 - any visually parallel metrics are intended for comparison and share the relevant definition, unit or denominator, population, time window and aggregation; unrelated numbers remain with the claims they support rather than forming a headline KPI strip;
-- rejected claims, omitted material, missing evidence and verification process have not leaked into reader-facing sections or defensive copy;
+- unsupported rejected claims, intentionally omitted material and verification bookkeeping have not leaked into defensive copy; actual evaluated alternatives and unresolved requirements appear only where the reader's task needs them;
 - visible qualifications are necessary to keep a specific claim true or to change the reader's decision, appear once beside that claim, and use a concrete basis rather than generic labels;
 - no follow-up test, open issue, option, risk or next step was invented beyond the packet and reader's task;
 - supporting and context detail is compressed, deferred or omitted with a recorded reason, without hiding a prerequisite;
@@ -51,6 +53,8 @@ Validate the entire candidate against the packet before visual polish:
 - prerequisites precede dependent claims;
 - asset placeholders are complete, intentional and attached to the promised explanation;
 - the result is one self-contained document without remote executable assets.
+
+Walk through the actual candidate using the reader questions in the packet: locate each answer, its prerequisite, the evidence or example that supports it, and the resulting decision or action when one exists. Check the visible explanation rather than accepting `REPORT-META` as proof. For a comparison, verify that the same criteria and scenario are used across alternatives; for a workflow, that order, responsibility and handoffs are understandable; for a results report, that the meaning of the observations is stated. Check default visibility and any view switches against that reading path, not merely that the controls exist.
 
 Run desktop and mobile visual QA under `codex-frontend-ui`. Inspect hierarchy, density, wrapping, overflow, contrast, whether the reader can distinguish the decision from reference material, and whether diagrams or comparisons explain the consequence rather than merely label components. A factually complete page that requires the reader to extract the hierarchy from long prose is not accepted.
 
