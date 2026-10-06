@@ -69,7 +69,6 @@ case "$ACTION" in
   on)
     rewrite on
     status
-    print "note: restart the Codex thread/app if the MCP tools are not available yet."
     ;;
   off)
     rewrite off

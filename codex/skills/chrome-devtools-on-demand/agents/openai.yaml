@@ -1,6 +1,6 @@
 interface:
   display_name: "Chrome DevTools On Demand"
-  short_description: "必要時だけDevTools MCPを切替"
-  default_prompt: "Use $chrome-devtools-on-demand when a task needs Chrome DevTools network, console, performance, or page debugging without leaving Chrome automation enabled."
+  short_description: "MCP登録を維持し、必要な調査だけ分離したChromeで行う"
+  default_prompt: "Use $chrome-devtools-on-demand for isolated Chrome network, console, performance, or page debugging without toggling MCP registration for each investigation."
 policy:
   allow_implicit_invocation: true

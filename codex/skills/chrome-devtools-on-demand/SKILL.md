@@ -1,6 +1,6 @@
 ---
 name: chrome-devtools-on-demand
-description: Enable isolated Chrome DevTools MCP only for network, console, performance, or page debugging, then disable it when finished.
+description: Use isolated Chrome DevTools MCP for network, console, performance, or page debugging while keeping its registration enabled across investigations.
 ---
 
 # Chrome DevTools On Demand
@@ -13,16 +13,15 @@ Use this skill when DevTools-level browser data is needed, especially Network, C
 - Keep `chrome@openai-bundled` disabled unless the user explicitly asks to control their logged-in main Chrome.
 - Prefer `chrome-devtools-mcp` with `--isolated=true` so debugging uses a separate browser/profile.
 - Do not use `--autoConnect` for the user's main Chrome unless explicitly requested.
-- Treat DevTools MCP as a temporary capability: enable before DevTools work, disable after DevTools work.
+- Keep the DevTools MCP registration enabled across investigations. Registration does not grant browser-control permission; actual browser use remains task-scoped.
 
 ## Workflow
 
-1. Run `scripts/codex-devtools status` to inspect the current config state.
-2. If the current task needs DevTools and its browser permission is present, run `scripts/codex-devtools on` when disabled.
-3. Tell the user that Codex may need a thread/app restart before the MCP tools are available in this session.
-4. Perform the DevTools investigation after the MCP tools are available.
-5. When done, run `scripts/codex-devtools off` unless the user explicitly asks to keep it enabled.
-6. Run `scripts/codex-devtools status` again and report the final state.
+1. Use the available DevTools MCP tools when the task needs them and browser permission is present. Do not rewrite config or request a restart for routine use.
+2. If tools are missing, run `scripts/codex-devtools status`. Run `on` only if registration is disabled and enabling it is in scope. An enabled config does not prove that the current thread has loaded the tools.
+3. For missing tools, inspect the available MCP connection/startup status and use the host's supported configuration reload if exposed. Do not launch a separate app-server to refresh the current app. Request a restart only when a concrete configuration or connection problem requires it and no supported in-session recovery is available; do not issue a speculative restart instruction.
+4. Perform the DevTools investigation in the isolated browser/profile.
+5. When done, close only the investigation's own tabs or isolated browser through the available browser tools. Leave MCP registration enabled; do not run `off` as routine cleanup or close the user's other browsers or tabs.
 
 ## Decision Rules
 
@@ -32,11 +31,11 @@ Use DevTools MCP for:
 - Console logs, performance traces, or page target inspection.
 - Browser behavior that must be verified in Chrome DevTools.
 
-Do not enable DevTools MCP for:
+Do not use DevTools MCP for:
 
 - Normal page navigation, screenshots, or simple UI checks where the in-app browser is enough.
 - Tasks that require the user's logged-in main Chrome unless the user explicitly asks for main Chrome control.
-- Background convenience; enabling must be tied to a current debugging need.
+- Background browsing unrelated to the current debugging task.
 
 ## Script
 
@@ -48,15 +47,15 @@ Use the bundled script from the skill directory:
 ./scripts/codex-devtools off
 ```
 
-The script edits `~/.codex/config.toml` and creates a timestamped backup before changes. It only manages:
+Use `status` for diagnosis, `on` for setup when disabled, and `off` only when the user requests disabling the registration. The script edits `~/.codex/config.toml` and creates a timestamped backup before changes. It only manages:
 
 - `[mcp_servers.chrome-devtools] enabled`
 - `BROWSER_USE_AVAILABLE_BACKENDS`
 - `[plugins."chrome@openai-bundled"] enabled`
 
-Expected steady state after `off` (configuration state, not permission to use a browser):
+Expected steady state (configuration state, not permission to use a browser):
 
-- `chrome-devtools` MCP disabled
-- browser backends set to `iab`
+- `chrome-devtools` MCP enabled
+- browser backends set to `chrome,iab`; ordinary browser work still selects `iab`
 - `chrome@openai-bundled` disabled
 - `browser@openai-bundled` left unchanged
