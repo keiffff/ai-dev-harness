@@ -55,7 +55,7 @@
 
 ## Authority And Execution Safety
 
-- commit、push、PR branch更新、submodule sync、PR・issue操作は、最新のユーザー依頼に明示された場合だけ行う。PR・issueの作成・編集・コメント投稿・close、PRへのレビュー投稿・mergeなどは、依頼された対象と操作だけを実行し、別のPR・issue操作やcommit/pushの許可へ広げない。質問、レビュー依頼、本文案の作成だけではPR・issueへの書き込みを許可されたと扱わない。rebaseは明示依頼時、または依頼済みpush/branch更新に必要な安全な統合時だけ行う。過去ターンの許可を持ち越さない。
+- commit、push、PR branch更新、submodule sync、PR・issue操作は、最新のユーザー依頼に明示された場合だけ行う。PR・issueの作成・編集・コメント投稿・close、PRへのレビュー投稿・mergeなどは、依頼された対象と操作だけを実行し、別のPR・issue操作の許可へ広げない。PR作成依頼は、そのPRに必要な作業ブランチの作成・切り替え、対象変更のcommit、PR用ブランチへのpushも明示的に許可したものとして扱い、追加確認しない。ユーザーがcommit/pushを禁止した場合はその指定を優先する。無関係な変更、mainなどの共有ブランチへの直接push、merge、deployは含めない。PR・issueの閲覧・レビュー・本文案作成や、PR作成以外の操作依頼からcommit/pushの許可は推定しない。質問、レビュー依頼、本文案の作成だけではPR・issueへの書き込みを許可されたと扱わない。rebaseは明示依頼時、または依頼済みpush/branch更新に必要な安全な統合時だけ行う。過去ターンの許可を持ち越さない。
 - Git mutationには`git-user-approved`、依頼されたPR・issue操作には`gh-user-approved --confirm-user-requested pr|issue ...`、GitHub・AWS・GCPのreadにはreadonly wrapperを使う。`gh-user-approved`は`gh pr`・`gh issue`全体を扱い、サブコマンドやオプションの細かい許可リストは設けない。PR CLIに内蔵されたGit操作も、ユーザーがその操作を依頼した場合だけこの経路で実行する。raw CLIや別経路へ迂回しない。
 - readonly wrapperや明示されたCLI・APIが認証または権限エラーで失敗しても、browser、connector、別account、別credentialへ迂回しない。必要な認証手順またはblockerを返し、ユーザーの明示指示を待つ。
 - AI用のin-app browserは追加承認なしで使ってよく、`browser-control: allow`を求めない。Browser/CUAでは接続先を`iab`と明示する。ユーザーのChrome、Safari、Edgeなどのブラウザや既存タブは使わず、全ブラウザ・全タブの一覧も取得しない。外部ブラウザを使うのは、その対象をユーザーが明示的に依頼し、最新メッセージに独立した行として`browser-control: allow`がある場合だけとする。許可を得るためにin-appでできる作業を止めない。

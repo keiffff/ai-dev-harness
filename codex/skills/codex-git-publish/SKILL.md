@@ -9,10 +9,10 @@ Use the current user-visible worktree. This skill defines the publication proced
 
 ## Authorization
 
-- Perform branch creation or switching, commit, merge, push, PR branch update, or submodule sync only when the latest user request explicitly asks for that operation. A request to incorporate the latest base/default branch authorizes merging that named branch into the current branch.
+- Perform branch creation or switching, commit, merge, push, PR branch update, or submodule sync only when the latest user request explicitly asks for that operation. An explicit PR creation request also authorizes the working-branch creation or switching, commit of the requested changes, and push to the PR head branch needed to create that PR, without separate confirmation. Honor an explicit no-commit or no-push instruction. This does not authorize unrelated changes, direct pushes to shared branches such as main, merge, or deployment. A request to incorporate the latest base/default branch authorizes merging that named branch into the current branch.
 - Rebase only when the user explicitly requests it or when it is the necessary, safe integration step within an explicitly requested push or PR branch update.
 - Read-only Git commands are allowed when relevant.
-- Perform PR/issue operations only when the latest user request explicitly asks for the affected operation and target. Review, advice and drafting alone do not authorize posting or editing a PR or issue. Do not infer PR/issue creation from a commit/push request or commit/push from a PR/issue request. A PR request does not authorize an issue write, or vice versa.
+- Perform PR/issue operations only when the latest user request explicitly asks for the affected operation and target. Review, advice and drafting alone do not authorize posting or editing a PR or issue. Do not infer PR/issue creation from a commit/push request. Only an explicit PR creation request includes its necessary branch preparation, commit and push; other PR/issue requests, review and drafting do not. A PR request does not authorize an issue write, or vice versa.
 - Do not carry Git or PR/issue mutation authorization into a later user turn.
 - Use English commit messages.
 
@@ -28,7 +28,7 @@ When the Git directory is already known to sit outside the writable sandbox, use
 
 ## Branch Creation And Switching
 
-1. Confirm the latest user message explicitly names or authorizes the target branch.
+1. Confirm the latest user message explicitly names or authorizes the target branch, or requests PR creation that requires a working branch. For PR creation, use the user-specified base and head when supplied; otherwise choose a task-appropriate working branch using the repository's existing conventions.
 2. Inspect the current branch, HEAD, and worktree state.
 3. Create a branch from the current HEAD with `git-user-approved switch --confirm-user-requested --create <branch>`. When the user names a fetched base ref or commit as the starting point, use `git-user-approved switch --confirm-user-requested --create <branch> <start-point>`.
 4. Switch to an existing branch with `git-user-approved switch --confirm-user-requested <branch>`.
@@ -72,7 +72,7 @@ Use `git-user-approved submodule update --remote <path>` only when the latest us
 
 Use `gh-readonly` for PR/issue reads and PR diffs. Use the GitHub wrapper for requested writes, including creation, metadata edits, comments, review submission, state changes and merge; these are examples, not an operation whitelist. Use the installed CLI help for the requested command rather than treating an unfamiliar option as prohibited. Specify the confirmed repository with `--repo` and an existing PR or issue by its confirmed number or URL.
 
-For PR creation, use `--head` with the confirmed head branch to skip the CLI's implicit push/fork behavior. If commit or push is needed but not requested, report that prerequisite; do not infer authority. A requested PR checkout or merge authorizes the CLI's Git effects inherent to that operation, not unrelated commits, pushes, branch deletion or automatic future merge. Use those options only when the request includes them.
+For explicitly requested PR creation, complete its necessary working-branch preparation, commit and push through `git-user-approved` without asking for separate approval. Keep the commit limited to the requested changes and push only to the PR head branch; honor explicit user exclusions. Then use `--head` with the confirmed head branch to skip the CLI's implicit push/fork behavior. A requested PR checkout or merge authorizes the CLI's Git effects inherent to that operation, not unrelated commits, pushes, branch deletion or automatic future merge. Use those options only when the request includes them.
 
 For a body update, preserve unrequested content and use `--body-file` for the complete revised body. PR/issue publication does not authorize deployment, workflow dispatch, secret access or unrelated GitHub writes. Do not use a connector, raw `gh`, generic API writes or GitHub blob/tree/commit APIs to bypass the approved wrappers. Authentication failures follow AGENTS.md; do not change accounts or credentials.
 
