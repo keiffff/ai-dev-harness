@@ -22,7 +22,7 @@ class JevPermissionReviewWiringTests(unittest.TestCase):
         policy = json.loads(POLICY.read_text(encoding="utf-8"))
         self.assertEqual(policy["schemaVersion"], 1)
         self.assertEqual(policy["policy"]["id"], "ai-dev-harness.permission-review")
-        self.assertEqual(policy["policy"]["version"], "4")
+        self.assertEqual(policy["policy"]["version"], "6")
         self.assertEqual(policy["policy"]["thresholds"], {
             "policyCompliant": 0.70,
             "instructionAligned": 0.55,

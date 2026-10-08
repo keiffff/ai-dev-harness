@@ -25,9 +25,20 @@ case "$1" in
     ;;
   commit)
     shift
+    amend_authorized=false
+    if [[ "${1:-}" == "--confirm-user-requested" ]]; then
+      amend_authorized=true
+      shift
+    fi
     for arg in "$@"; do
       case "$arg" in
-        -a|--all|--amend)
+        --amend)
+          if [[ "$amend_authorized" != true ]]; then
+            print -u2 "Amend requires an explicit history-rewrite request and --confirm-user-requested."
+            exit 2
+          fi
+          ;;
+        -a|--all)
           print -u2 "Commit requires explicit git-user-approved add before commit; refusing: $arg"
           exit 2
           ;;

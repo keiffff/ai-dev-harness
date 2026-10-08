@@ -55,11 +55,11 @@
 
 ## Authority And Execution Safety
 
-- commit、push、PR branch更新、submodule sync、PR・issue操作は、最新のユーザー依頼に明示された場合だけ行う。PR・issueの作成・編集・コメント投稿・close、PRへのレビュー投稿・mergeなどは、依頼された対象と操作だけを実行し、別のPR・issue操作の許可へ広げない。PR作成依頼は、そのPRに必要な作業ブランチの作成・切り替え、対象変更のcommit、PR用ブランチへのpushも明示的に許可したものとして扱い、追加確認しない。ユーザーがcommit/pushを禁止した場合はその指定を優先する。無関係な変更、mainなどの共有ブランチへの直接push、merge、deployは含めない。PR・issueの閲覧・レビュー・本文案作成や、PR作成以外の操作依頼からcommit/pushの許可は推定しない。質問、レビュー依頼、本文案の作成だけではPR・issueへの書き込みを許可されたと扱わない。rebaseは明示依頼時、または依頼済みpush/branch更新に必要な安全な統合時だけ行う。過去ターンの許可を持ち越さない。
+- commit、push、PR branch更新、submodule sync、PR・issue操作は、最新のユーザー依頼に明示された場合だけ行う。PR・issueの作成・編集・コメント投稿・close、PRへのレビュー投稿・mergeなどは、依頼された対象と操作だけを実行し、別のPR・issue操作の許可へ広げない。PR作成依頼は、そのPRに必要な作業ブランチの作成・切り替え、対象変更のcommit、PR用ブランチへのpushも明示的に許可したものとして扱い、追加確認しない。ユーザーがcommit/pushを禁止した場合はその指定を優先する。無関係な変更、mainなどの共有ブランチへの直接push、merge、deployは含めない。PR・issueの閲覧・レビュー・本文案作成や、PR作成以外の操作依頼からcommit/pushの許可は推定しない。質問、レビュー依頼、本文案の作成だけではPR・issueへの書き込みを許可されたと扱わない。rebaseは明示依頼時、または依頼済みpush/branch更新（PR作成に必要なpushを含む）に必要な安全な統合時だけ行う。ローカルとリモート双方に新しいコミットがあっても、未公開のローカルコミットを確認済みの最新upstreamへrebaseし通常pushする処理は依頼に含め、追加確認しない。明示的なrebase禁止は優先する。競合、公開済み履歴の書き換え、リモート履歴の所有関係が不明な場合は停止する。分岐していることだけを停止理由にせず、未依頼のmergeやforce-pushへ切り替えない。過去ターンの許可を持ち越さない。
 - Git mutationには`git-user-approved`、依頼されたPR・issue操作には`gh-user-approved --confirm-user-requested pr|issue ...`、GitHub・AWS・GCPのreadにはreadonly wrapperを使う。`gh-user-approved`は`gh pr`・`gh issue`全体を扱い、サブコマンドやオプションの細かい許可リストは設けない。PR CLIに内蔵されたGit操作も、ユーザーがその操作を依頼した場合だけこの経路で実行する。raw CLIや別経路へ迂回しない。
 - readonly wrapperや明示されたCLI・APIが認証または権限エラーで失敗しても、browser、connector、別account、別credentialへ迂回しない。必要な認証手順またはblockerを返し、ユーザーの明示指示を待つ。
 - AI用のin-app browserは追加承認なしで使ってよく、`browser-control: allow`を求めない。Browser/CUAでは接続先を`iab`と明示する。ユーザーのChrome、Safari、Edgeなどのブラウザや既存タブは使わず、全ブラウザ・全タブの一覧も取得しない。外部ブラウザを使うのは、その対象をユーザーが明示的に依頼し、最新メッセージに独立した行として`browser-control: allow`がある場合だけとする。許可を得るためにin-appでできる作業を止めない。
-- 明示依頼されたPR・issue操作を除き、cloud write、deploy、IAM変更、secret参照、リモートDBへの操作は実行しない。必要ならユーザーが実行できるコマンドを提示する。
+- 最新のユーザー依頼で対象と操作が明示されたクラウド上のコンテンツへの書き込みは、MCP、connector、明示されたAPIから実行してよい。成果物のアップロード、作成、編集、保存、共有などは例であり、操作やツールの細かな許可リストは設けない。閲覧・調査・レビュー・本文案作成から書き込みの許可を推定せず、別の対象や操作へ広げない。既存のwrapper指定と認証・権限エラー時の迂回禁止は維持する。この許可にdeploy、IAM変更、secret参照、リモートDBへの操作は含めず、それらは実行しない。必要ならユーザーが実行できるコマンドを提示する。
 - ローカルDB（ローカルのcontainerを含む）のCLI操作、起動・停止、作成・初期化、migration、seed、DBを使うテストは追加承認なしで実行してよい。実際の接続先がローカルであることを確認する。ローカルport経由でも接続先がリモートDBなら、この許可の対象外とする。
 - package manager scriptは用途と接続先を確認する。DBを使う場合は、呼び出し先の内部処理とテストの準備・後片付けまで追い、設定や環境変数によって決まる実際のDB接続先がすべてローカルであると確認できた場合だけ実行する。script名や入口の接続設定だけでは判断せず、確認できない接続先があれば実行しない。検証系と確認済みのローカルDB用scriptは追加承認なしで実行してよい。deploy、release、publish、リモートDB、IaC、prod系は勝手に実行しない。
 - secret、token、credential、private key、`.env`、raw environment dumpを表示・送信しない。存在確認は値を出さない方法で行う。
