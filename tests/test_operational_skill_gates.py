@@ -45,6 +45,7 @@ class OperationalSkillGateTests(unittest.TestCase):
         ).read_text()
 
         self.assertIn("Claude owns the initial complete report composition", report)
+        self.assertIn("every editorial revision", report)
         self.assertIn("Codex owns evidence collection", report)
         self.assertIn("data-fact", contract)
         self.assertIn("data-weight", contract)
@@ -115,6 +116,22 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("codex-artifact-integrity", frontend)
         self.assertIn("codex-artifact-integrity", gemini)
 
+    def test_artifact_integrity_verifies_without_granting_editing_authority(self):
+        integrity = (
+            ROOT / "codex" / "skills" / "codex-artifact-integrity" / "SKILL.md"
+        ).read_text()
+
+        self.assertIn("it grants no editing authority", integrity)
+        self.assertIn("The producing skill determines who may make corrections", integrity)
+        self.assertIn("Codex validates findings against the original user request", integrity)
+        self.assertIn("do not automatically forward reviewer suggestions", integrity)
+        self.assertIn("Reject unsupported findings with a reason", integrity)
+        self.assertIn("does not require an edit or another model call", integrity)
+        self.assertIn("return confirmed defects to Claude", integrity)
+        self.assertIn("Codex does not patch the report", integrity)
+        self.assertIn("repairs authorized by that skill", integrity)
+        self.assertIn("do not override either production workflow", integrity)
+
     def test_static_visuals_require_rendered_grid_overlay_qa(self):
         frontend = (
             ROOT / "codex" / "skills" / "codex-frontend-ui" / "SKILL.md"
@@ -147,14 +164,14 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("overlay component bounds", visualization)
         self.assertIn("repeated row or column tracks", visualization)
         self.assertIn("never publish or adopt the QA overlay", visualization)
-        self.assertIn("Codex, not Claude", report)
+        self.assertIn("Claude owns the final spacing and alignment corrections", report)
         self.assertIn("temporary QA copy or screenshot overlay", report)
         self.assertIn("Do not ask Claude to produce the QA overlay", report)
-        self.assertIn("grid alignment", report)
+        self.assertIn("grid alignment", report_contract)
         self.assertIn("temporary rendered QA overlay", report_contract)
         self.assertIn("never published", report_contract)
 
-    def test_html_report_keeps_bounded_revisions_in_codex(self):
+    def test_html_report_keeps_all_editorial_revisions_in_claude(self):
         report = (
             ROOT / "codex" / "skills" / "claude-html-report" / "SKILL.md"
         ).read_text()
@@ -167,17 +184,18 @@ class OperationalSkillGateTests(unittest.TestCase):
             / "report-contract.md"
         ).read_text()
 
-        self.assertIn("Bounded Codex edit", report)
-        self.assertIn("color themes, CSS tokens", report)
-        self.assertIn("isolated factual-literal or metadata corrections", report)
-        self.assertIn("Structural Claude recomposition", report)
-        self.assertIn("alters the ranked takeaway or reader decision", report)
-        self.assertIn(
-            "Do not send a revision to Claude solely because Claude produced the original HTML",
-            report,
-        )
-        self.assertIn("Local Codex revision", contract)
-        self.assertIn("Structural Claude revision", contract)
+        self.assertIn("Codex must not draft the report for Claude", report)
+        self.assertIn("even for a typo, factual literal or responsive fix", report)
+        self.assertIn("All editorial revisions return to Claude", report)
+        self.assertIn("does not authorize redesigning unaffected sections", report)
+        self.assertIn("Claude-only editorial revision", contract)
+        self.assertIn("Codex must not edit the production report", contract)
+        self.assertIn("mechanically substitute validated asset placeholders", contract)
+        self.assertIn("its changes are never merged into the report", contract)
+        self.assertIn("do not reuse a rejected or superseded report", contract)
+        self.assertIn("Do not supply a Codex-authored ranked takeaway", contract)
+        self.assertNotIn("Bounded Codex edit", report)
+        self.assertNotIn("Local Codex revision", contract)
 
     def test_expensive_advisors_require_explicit_invocation(self):
         for skill_name in (
