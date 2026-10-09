@@ -44,8 +44,8 @@ Treat repository-local `openspec/AGENTS.md` and current OpenSpec prompts as the 
 1. Compare the implementation with design and spec contracts.
 2. Classify implementation as complete, missing, spec-external, insufficiently tested, or unverified.
 3. Fix accepted implementation gaps without broadening the spec.
-4. When required by repository guidance, use `claude-strategic-review` for bounded sidecar review of I/F, state transitions, boundaries, spec-external behavior, and missing tests.
-5. Classify each sidecar finding as implemented, added to artifacts, or rejected with a reason. Codex owns the final decision.
+4. When required by repository guidance, use `claude-strategic-review` to challenge the problem framing and overall direction against the original user objective and evidence, not only implementation conformance. Supply accepted decisions as constraints; the review does not authorize changing the spec.
+5. Classify each sidecar finding as implemented, added to artifacts, unresolved, or rejected with a reason. Codex owns the final decision and reports Claude's assessment separately, following the strategic review's reporting contract.
 
 ## Final Report
 

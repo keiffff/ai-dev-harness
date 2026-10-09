@@ -1,13 +1,13 @@
 ---
 name: claude-strategic-review
-description: Get a bounded Claude architecture or maintainability second opinion through the configured wrapper; Codex retains repo work and decisions.
+description: Challenge problem framing and strategic direction with Claude against user goals and evidence; Codex owns execution and judgment.
 ---
 
 # Claude Strategic Review
 
-Use for a broader architecture, migration or maintainability opinion when requested or useful. Codex owns implementation, debugging, prose and final judgment.
+Use when the problem framing or overall direction needs an external challenge, not merely an implementation-conformance review. Claude examines whether the proposed work addresses the user's actual objective before evaluating how to implement it. Codex owns implementation, debugging, prose and final judgment.
 
-Read [reviewer contract](references/reviewer-contract.md) for prompt scope, standing authorization and adoption rules. Use this default Claude route unless Fable is explicitly requested.
+Read [reviewer contract](references/reviewer-contract.md) for independent framing, prompt scope, standing authorization, adoption and user-visible reporting. Use this default Claude route unless Fable is explicitly requested.
 
 ## Execution
 
