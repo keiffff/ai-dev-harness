@@ -1,11 +1,11 @@
 ---
 name: codex-writing
-description: Draft or revise prose with the requested facts, Japanese style and medium-specific format; preserve unrequested wording and structure.
+description: Create or substantially revise prose deliverables. Excludes brief proofreading and wording-only edits unless explicitly invoked.
 ---
 
 # Codex Writing
 
-Codex writes prose deliverables directly. Ordinary Q&A needs no writing workflow; decision records use `codex-decision-doc`. A standalone HTML report routed through `claude-html-report` is the bounded exception for composition: Claude composes the whole artifact from Codex's verified fact packet, while Codex retains factual and final-output verification. When the user explicitly invokes `gemini-japanese-polish`, Codex supplies a verified writing packet and Gemini owns the complete Japanese composition, including structure and wording. Codex retains factual constraints and final verification in both workflows.
+Codex writes prose deliverables directly. Use this skill for new deliverables or substantial revisions, not ordinary Q&A, brief message proofreading or wording-only edits unless explicitly invoked. Handle those local edits with the common Japanese output instructions; decision records use `codex-decision-doc`. A standalone HTML report routed through `claude-html-report` is the bounded exception for composition: Claude composes the whole artifact from Codex's verified fact packet, while Codex retains factual and final-output verification. When the user explicitly invokes `gemini-japanese-polish`, Codex supplies a verified writing packet and Gemini owns the complete Japanese composition, including structure and wording. Codex retains factual constraints and final verification in both workflows.
 
 ## Editing Contract
 

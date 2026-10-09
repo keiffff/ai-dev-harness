@@ -18,7 +18,7 @@ Ask for at most three contract-breaking conditions, hidden assumptions or non-re
 ## Reviewer
 
 - For repo-local review, use a native subagent with the main agent's configured model and reasoning effort. Honor an explicit reviewer model request; Astra review uses the native subagent rather than a separate advisor wrapper.
-- Apply `codex-code-review` and, where relevant, `codex-interface-review` within that one independent pass.
+- The independent reviewer applies `codex-code-review` and, where relevant, `codex-interface-review` within that one pass. Main does not reread those skills merely to invoke this workflow; use instructions already in its current context. The reviewer still needs its own relevant instructions. This pass does not invoke `codex-doubt-review` again.
 - For a broad external architecture/maintainability opinion, use `claude-strategic-review` when requested or useful; Fable remains explicit-only.
 - Give reviewers read-only scope. Main retains I/F, compatibility, permissions, Git and final decisions.
 - If independent review is unavailable, report that gap. Main review or a regression test can provide evidence, but must not be reported as an independent pass.

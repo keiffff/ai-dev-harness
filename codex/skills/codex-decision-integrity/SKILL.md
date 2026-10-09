@@ -1,11 +1,11 @@
 ---
 name: codex-decision-integrity
-description: Preserve or revise an existing judgment when user pushback, conflicting evidence, or a proposed stance change could cause unsupported reversal.
+description: Reassess an existing material judgment. Excludes status checks, task resumption and execution under an unchanged decision.
 ---
 
 # Codex Decision Integrity
 
-Use this skill when a material judgment already exists and a later message, review, advisor result, or tool output could change it. Do not use it for a first-pass factual answer, mechanical edit, or explicit instruction that does not alter an existing judgment.
+Use this skill when a material judgment already exists and a later message, review, advisor result, or tool output calls that judgment into question. Do not use it for a first-pass factual answer, mechanical edit, status check, task resumption, or execution under an unchanged decision. A new user turn or dissatisfaction alone does not trigger this workflow.
 
 ## Separate Input From Authority
 
