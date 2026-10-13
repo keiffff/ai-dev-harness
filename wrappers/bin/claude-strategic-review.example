@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -95,8 +96,6 @@ def require_safe_mode(claude_cli: str) -> None:
 
     help_text = f"{help_result.stdout}\n{help_result.stderr}"
     if help_result.returncode == 0 and "--safe-mode" in help_text:
-        if "--bare" not in help_text:
-            stop("Claude CLI does not support required --bare; use a CLI supporting both --safe-mode and --bare.", 1)
         return
 
     try:
@@ -130,7 +129,6 @@ def run_review(prompt: str, token: str, timeout: int, claude_cli: str) -> str:
         "--output-format",
         "text",
         "--safe-mode",
-        "--bare",
         "--tools",
         "",
         "--max-turns",
@@ -192,8 +190,17 @@ def run_review(prompt: str, token: str, timeout: int, claude_cli: str) -> str:
             )
 
     if process.returncode != 0:
-        if stderr:
-            print(stderr.rstrip(), file=sys.stderr)
+        for label, output in (("stdout", stdout), ("stderr", stderr)):
+            if output.strip():
+                cleaned = output.replace(token, "[REDACTED]") if token else output
+                cleaned = re.sub(
+                    r"(?i)(authorization\s*[:=]\s*bearer\s+)\S+",
+                    r"\1[REDACTED]",
+                    cleaned,
+                )
+                print(f"Claude CLI {label}:\n{cleaned.rstrip()}", file=sys.stderr)
+        if not stdout.strip() and not stderr.strip():
+            print("Claude CLI produced no stdout or stderr diagnostics.", file=sys.stderr)
         stop(f"Claude strategic review failed with exit code {process.returncode}.", 1)
     if not stdout.strip():
         stop("Claude strategic review returned an empty response.", 1)

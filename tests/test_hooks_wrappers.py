@@ -615,7 +615,7 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         args = result.stdout.splitlines()
         self.assertIn('--safe-mode', args)
-        self.assertIn('--bare', args)
+        self.assertNotIn('--bare', args)
         self.assertIn('--no-session-persistence', args)
         self.assertEqual(args[args.index('--tools') + 1], '')
         self.assertEqual(args[args.index('--max-turns') + 1], '1')
@@ -737,6 +737,7 @@ class WrapperTests(unittest.TestCase):
     def test_claude_html_report_disables_agentic_execution_and_writes_new_html(self):
         result, output, tmp_context = self.run_claude_html_wrapper(
             '#!/bin/sh\n'
+            'test -n "$CLAUDE_CODE_OAUTH_TOKEN" || exit 9\n'
             'printf "%s\\n" "$@" > "$CLAUDE_HTML_ARGS_FILE"\n'
             'printf "<!doctype html><html><body data-fact=\\"F1\\" data-weight=\\"load-bearing\\">ok<!-- REPORT-META structure: - one information_weighting: main: - F1 deferred: [] omitted: [] inferences: [] --></body></html>\\n"\n'
         )
@@ -744,7 +745,7 @@ class WrapperTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             args = (Path(tmp_context.name) / 'claude-args.txt').read_text().splitlines()
             self.assertIn('--safe-mode', args)
-            self.assertIn('--bare', args)
+            self.assertNotIn('--bare', args)
             self.assertIn('--no-session-persistence', args)
             self.assertIn('--disable-slash-commands', args)
             self.assertIn('--no-chrome', args)

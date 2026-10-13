@@ -4,7 +4,7 @@
 
 | 対象 | 公式の変更 | このハーネスでの対応 |
 | --- | --- | --- |
-| Claude Code 2.1.286 / 2.1.288 | bareの背景処理・MCP接続の制限、非対話応答のAPI timeout回復 | 単発wrapperにbareを追加し、safe mode、no-tools、1 turn、保存禁止を維持。外側のtimeoutとTERM/KILLによる終了をテストする。内部のAPI回復をwrapper側で重複実装しない |
+| Claude Code 2.1.286 / 2.1.288 | bareの背景処理・MCP接続の制限、非対話応答のAPI timeout回復 | OAuth認証の単発wrapperではbareを使わず、safe mode、no-tools、1 turn、保存禁止を維持。外側のtimeoutとTERM/KILLによる終了をテストする。内部のAPI回復をwrapper側で重複実装しない |
 | Codex 0.159 / 0.160 | 承認後もfilesystemの明示的denyを保持、writable root内の`.aws`を保護、開始中subagent環境と準備失敗を保持 | sandbox・approval・既存hookを維持する。許可オプションの追加やhookによるsandbox再実装は行わない。既存permission境界テストを実施し、実ランタイムのdenyとsubagent挙動は別途実環境の確認事項とする |
 | OpenSpec 1.14.0 | apply JSONの各taskにsourcePathとlineを提供し、正確なcheckboxを確認 | skillでファイルと1-based lineを使用し、編集直前にcheckboxとtask textを再照合する。重複した説明文だけで選ばず、古い位置はinstructionsを取り直す。位置情報のないCLIでは実際のtask sourceを確認する |
 | Antigravity CLI 1.2.12 | 日次quota・spend cap・prepaid credits枯渇を即時終了し、短期rate limitは再試行 | CLIが再試行を所有する。wrapperでquota分類や再試行を追加しない。失敗・timeoutで成果物を採用しないこと、成功したstructured outputを検証することを合成応答で確認する |

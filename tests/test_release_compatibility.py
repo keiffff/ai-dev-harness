@@ -16,20 +16,23 @@ class ReleaseCompatibilityTests(unittest.TestCase):
     def wrapper(self, name):
         return runpy.run_path(str(ROOT / 'wrappers' / 'bin' / f'{name}.example'))
 
-    def test_claude_rejects_bare_unavailable_without_running_a_model(self):
-        for name in ('claude-strategic-review', 'claude-html-report'):
-            with self.subTest(name=name):
-                wrapper = self.wrapper(name)
-                check = wrapper['require_safe_mode']
-                result = subprocess.CompletedProcess([], 0, '--safe-mode', '')
-                with mock.patch.object(check.__globals__['subprocess'], 'run', return_value=result) as run:
-                    with contextlib.redirect_stderr(io.StringIO()) as diagnostic:
-                        with self.assertRaises(SystemExit) as exit_result:
-                            check('/synthetic/claude')
-                self.assertEqual(exit_result.exception.code, 1)
-                self.assertIn('required --bare', diagnostic.getvalue())
-                self.assertEqual(run.call_count, 1)
-                self.assertEqual(run.call_args.args[0], ['/synthetic/claude', '--help'])
+    def test_claude_strategic_accepts_safe_mode_without_bare_for_oauth(self):
+        wrapper = self.wrapper('claude-strategic-review')
+        check = wrapper['require_safe_mode']
+        result = subprocess.CompletedProcess([], 0, '--safe-mode', '')
+        with mock.patch.object(check.__globals__['subprocess'], 'run', return_value=result) as run:
+            check('/synthetic/claude')
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(run.call_args.args[0], ['/synthetic/claude', '--help'])
+
+    def test_claude_html_report_accepts_safe_mode_without_bare_for_oauth(self):
+        wrapper = self.wrapper('claude-html-report')
+        check = wrapper['require_safe_mode']
+        result = subprocess.CompletedProcess([], 0, '--safe-mode', '')
+        with mock.patch.object(check.__globals__['subprocess'], 'run', return_value=result) as run:
+            check('/synthetic/claude')
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(run.call_args.args[0], ['/synthetic/claude', '--help'])
 
     def test_claude_timeout_kills_process_group_after_term_does_not_close_pipes(self):
         for name, function_name, extra in (
@@ -58,12 +61,43 @@ class ReleaseCompatibilityTests(unittest.TestCase):
                 ])
                 self.assertTrue(popen.call_args.kwargs['start_new_session'])
                 command = popen.call_args.args[0]
-                self.assertIn('--bare', command)
+                self.assertNotIn('--bare', command)
                 self.assertIn('--safe-mode', command)
                 self.assertEqual(command[command.index('--tools') + 1], '')
                 self.assertEqual(command[command.index('--max-turns') + 1], '1')
                 self.assertIn('--no-session-persistence', command)
                 self.assertNotIn('--permission-mode', command)
+
+    def test_claude_strategic_failure_reports_both_streams_without_credentials(self):
+        wrapper = self.wrapper('claude-strategic-review')
+        function = wrapper['run_review']
+        process = mock.Mock(returncode=1)
+        process.communicate.return_value = (
+            'Authentication failed: synthetic-token',
+            'Authorization: Bearer synthetic-other-token',
+        )
+        with mock.patch.object(function.__globals__['subprocess'], 'Popen', return_value=process) as popen:
+            with contextlib.redirect_stderr(io.StringIO()) as diagnostic:
+                with self.assertRaises(SystemExit) as exit_result:
+                    function('synthetic prompt', 'synthetic-token', 5, '/synthetic/claude')
+        self.assertEqual(exit_result.exception.code, 1)
+        self.assertEqual(popen.call_count, 1)
+        self.assertIn('Claude CLI stdout:', diagnostic.getvalue())
+        self.assertIn('Authentication failed: [REDACTED]', diagnostic.getvalue())
+        self.assertIn('Claude CLI stderr:', diagnostic.getvalue())
+        self.assertNotIn('synthetic-token', diagnostic.getvalue())
+        self.assertNotIn('synthetic-other-token', diagnostic.getvalue())
+
+    def test_claude_strategic_empty_failure_identifies_missing_diagnostics(self):
+        wrapper = self.wrapper('claude-strategic-review')
+        function = wrapper['run_review']
+        process = mock.Mock(returncode=1)
+        process.communicate.return_value = ('', '')
+        with mock.patch.object(function.__globals__['subprocess'], 'Popen', return_value=process):
+            with contextlib.redirect_stderr(io.StringIO()) as diagnostic:
+                with self.assertRaises(SystemExit):
+                    function('synthetic prompt', 'synthetic-token', 5, '/synthetic/claude')
+        self.assertIn('no stdout or stderr diagnostics', diagnostic.getvalue())
 
     def test_gemini_quota_errors_are_not_retried_by_wrapper(self):
         wrapper = self.wrapper('gemini-japanese-polish')
