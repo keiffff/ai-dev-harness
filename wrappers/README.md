@@ -25,7 +25,7 @@
 - `bin/claude-fable-strategic-review.example`: 共有 Keychain 認証情報ランチャーを使用する Fable レビュー実行用エントリポイント。
 - `bin/claude-html-report.example`: デフォルトのタイムアウトを 600 秒に設定した、Claude Opus または明示的に要求された Fable による 1 回限りの HTML 全体生成。セーフモードを適用し、ツール、セッション永続化は無効化。完全なドキュメント検証、範囲を限定した秘匿化済み失敗診断、新規ファイル限定（new-file-only）の出力境界を適用。
 - `bin/gemini-japanese-polish.example`: 隔離された Antigravity CLI ワークスペース経由で実行される、ステートレスな Gemini 3.8 Flash Medium による 1 回限りのドキュメント全体の日本語推敲。構造化出力、厳格なツール権限、サンドボックス環境、保護対象事実スパンの差分報告、最大 1 回の再生成を含む完全 HTML 検証、トークン使用量報告、Keychain 参照、新規ファイル限定の出力境界を適用。
-- `bin/jev-artifact-review.example`: `@jev-kit/cli`のsemantic diffを使い、完全な候補成果物および任意のベースライン成果物を明示的な要件に照らして確認する。`--route-checks`を指定すると、意味、レイアウト、全体構成、操作経路の変更から、必要な事実確認、部分・全体の目視確認、ブラウザ確認だけを返す。HTMLのscript、iframe、media、controlはローカルでも検出するため、Jevが不通でも既存の実行時確認は失われない。ハーネス側は判定基準と検証の振り分けを担い、Jevへの送信、応答検証、単一試行は`jev-kit-semantic-diff`へ委ねる。
+- `bin/jev-artifact-review.example`: `@jev-kit/cli`のsemantic diffで成果物を検査する。`--request-file`の元依頼を`--requirements-file`の作成者メモと分けて扱い、作成者の解釈を許可へ昇格させない。`review`時だけ既存のtool-free Claude wrapperを1回呼び、元依頼・baselineと候補の引用を含む`concrete_review.findings`を返す。引用は入力と照合するが、その意味の妥当性と採否は呼出し元が判断する。Claude実行失敗は`concrete_review.status=unavailable`とし、再試行・別経路への切替や自動passは行わない。`--request-file`なしの既存呼出しは従来のscore出力を保つ。`--route-checks`は事実・目視・ブラウザ・操作確認を振り分け、HTMLのscript/iframe/media/control由来の実行時確認はJev不通でも保持する。点数や引用は画像比較・実操作の成功証拠ではない。
 - `bin/jev-evidence-check.example`: `@jev-kit/cli`のevidence checkを使い、観測された障害の証拠が特定の原因または対処法の主張を直接裏付けているかを評価する。ハーネス側は採用基準を持ち、Jevへの送信、応答検証、単一試行は`jev-kit-evidence-check`へ委ねる。
 - `bin/keychain-env-exec.example`: macOS Keychain を用いた汎用的な認証情報注入スクリプト。コマンド引数や標準出力・標準エラー出力にシークレットを露出させることなく、単一のシークレットを子プロセスの環境変数に設定。
 

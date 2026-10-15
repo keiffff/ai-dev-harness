@@ -5,7 +5,7 @@ description: Build or review UI using existing design constraints, concrete visu
 
 # Codex Frontend UI
 
-For an existing product, follow its components, tokens, density, icons and interaction patterns. For a standalone artifact, choose a visual direction suited to the primary user task. When a standalone HTML report depends on cross-section narrative, coordinated comparisons, annotated assets or dense information architecture, use `claude-html-report` for whole-artifact composition and keep factual verification here. A strategy-only request returns a proposal; an implementation request authorizes routine UI choices within its scope.
+For an existing product, including a standalone mockup of it, establish the affected control's position and behavior from the actual UI source or screen before designing its change. Preserve surrounding usable behavior; a mockup is not authority to invent a new interaction. Choose a new visual direction only for genuinely freeform work. When a standalone HTML report depends on cross-section narrative, coordinated comparisons, annotated assets or dense information architecture, use `claude-html-report` for whole-artifact composition and keep factual verification here. A strategy-only request returns a proposal; an implementation request authorizes routine UI choices within its scope.
 
 ## Design And Review Criteria
 
@@ -21,7 +21,7 @@ For a visual representation of a plan/spec/schema, read [review visualization](r
 
 ## Verification Boundary
 
-For a new or substantially revised HTML report, SVG, diagram or other reader-facing artifact with explicit preservation or comparison constraints, run `codex-artifact-integrity` before adoption. Supply the user requirements, the complete candidate and, for an existing artifact, its pre-edit baseline. Keep this semantic check separate from rendered inspection.
+For a new or substantially revised HTML report, SVG, diagram or other reader-facing artifact with explicit preservation or comparison constraints, run `codex-artifact-integrity` before adoption. Supply the original user request separately from producer notes, the complete candidate and the actual pre-change baseline. Keep semantic checking separate from rendered comparison; a test of invented mock controls does not establish preservation of existing product behavior.
 
 Start with isolated component, static artifact or screenshot checks when sufficient. Inspect overflow, long labels, mobile layout, keyboard focus, labels, contrast and relevant interaction states.
 

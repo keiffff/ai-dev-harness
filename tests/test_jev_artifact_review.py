@@ -15,6 +15,14 @@ from pathlib import Path
 Path(os.environ["JEV_TEST_CAPTURE"]).write_text(sys.stdin.read(), encoding="utf-8")
 print(os.environ["JEV_TEST_RESPONSE"])
 """
+FAKE_REVIEWER = """#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+Path(os.environ["REVIEW_TEST_CAPTURE"]).write_text(Path(sys.argv[2]).read_text(), encoding="utf-8")
+print(os.environ["REVIEW_TEST_RESPONSE"])
+sys.exit(int(os.environ["REVIEW_TEST_EXIT"]))
+"""
 
 
 class JevArtifactReviewTests(unittest.TestCase):
@@ -30,6 +38,9 @@ class JevArtifactReviewTests(unittest.TestCase):
         candidate="Same theme.",
         baseline=None,
         route_checks=False,
+        original_request=None,
+        review_response=None,
+        review_exit=0,
     ):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -37,6 +48,10 @@ class JevArtifactReviewTests(unittest.TestCase):
             candidate_file = root / "candidate.html"
             evaluator = root / "fake-evaluator"
             capture_file = root / "capture.json"
+            reviewer = root / "fake-reviewer"
+            review_capture = root / "review.txt"
+            reviewer.write_text(FAKE_REVIEWER, encoding="utf-8")
+            reviewer.chmod(0o755)
             requirements_file.write_text(requirements, encoding="utf-8")
             candidate_file.write_text(candidate, encoding="utf-8")
             evaluator.write_text(FAKE_EVALUATOR, encoding="utf-8")
@@ -55,12 +70,20 @@ class JevArtifactReviewTests(unittest.TestCase):
                 command.extend(["--baseline-file", str(baseline_file)])
             if route_checks:
                 command.append("--route-checks")
+            if original_request is not None:
+                request_file = root / "request.txt"
+                request_file.write_text(original_request, encoding="utf-8")
+                command.extend(["--request-file", str(request_file)])
             env = os.environ.copy()
             env.update({
                 "TYPESAFE_API_KEY": "test-key",
                 "JEV_KIT_SEMANTIC_DIFF_CLI": str(evaluator),
                 "JEV_TEST_CAPTURE": str(capture_file),
                 "JEV_TEST_RESPONSE": json.dumps(response),
+                "ARTIFACT_REVIEW_CLAUDE": str(reviewer),
+                "REVIEW_TEST_CAPTURE": str(review_capture),
+                "REVIEW_TEST_RESPONSE": json.dumps(review_response or {"findings": []}),
+                "REVIEW_TEST_EXIT": str(review_exit),
             })
             result = subprocess.run(
                 command,
@@ -73,6 +96,8 @@ class JevArtifactReviewTests(unittest.TestCase):
             captured = {
                 "calls": int(capture_file.exists()),
                 "payload": json.loads(capture_file.read_text(encoding="utf-8")) if capture_file.exists() else None,
+                "review_calls": int(review_capture.exists()),
+                "review_prompt": review_capture.read_text() if review_capture.exists() else None,
             }
         return result, captured
 
@@ -218,6 +243,72 @@ class JevArtifactReviewTests(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0)
         self.assertEqual(json.loads(result.stdout), {"decision": "unavailable"})
+
+    def test_original_request_is_separate_from_producer_notes(self):
+        result, captured = self.run_review(
+            self.response(0.95), original_request="Keep the form usable.",
+            requirements="Show a blocking dialog.", candidate="blocking dialog",
+        )
+        self.assertEqual(result.returncode, 1)
+        after = captured["payload"]["after"]
+        self.assertEqual(after["original_request"], "Keep the form usable.")
+        self.assertEqual(after["requirements"], "Show a blocking dialog.")
+        contract = captured["payload"]["contract"]
+        self.assertEqual(contract["version"], "2")
+        self.assertIn("not authorization", contract["dimensions"][0]["instructions"])
+        self.assertIn("Keep the form usable.", captured["review_prompt"])
+
+    def test_returns_grounded_findings_not_only_a_score(self):
+        finding = {"source": "request", "requirement": "Keep the form usable.",
+                   "evidence": "blocking dialog", "reason": "The dialog prevents form interaction."}
+        result, captured = self.run_review(
+            self.response(0.95), original_request="Keep the form usable.",
+            candidate="blocking dialog", review_response={"findings": [finding]},
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(json.loads(result.stdout)["concrete_review"],
+                         {"status": "completed", "findings": [finding]})
+        self.assertEqual(captured["review_calls"], 1)
+
+    def test_pass_does_not_add_a_claude_call(self):
+        result, captured = self.run_review(
+            self.response(0.05), original_request="Keep the form usable.",
+        )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(captured["review_calls"], 0)
+
+    def test_ungrounded_findings_do_not_become_verified_defects(self):
+        result, captured = self.run_review(
+            self.response(0.95), original_request="Keep the form usable.",
+            candidate="blocking dialog", review_response={"findings": [{
+                "source": "request", "requirement": "Invented requirement",
+                "evidence": "blocking dialog", "reason": "Invented mismatch",
+            }]},
+        )
+        output = json.loads(result.stdout)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(output["decision"], "review")
+        self.assertEqual(output["concrete_review"]["status"], "unavailable")
+        self.assertNotIn("findings", output["concrete_review"])
+        self.assertEqual(captured["review_calls"], 1)
+
+    def test_reviewer_failure_keeps_signal_without_retry_or_pass(self):
+        result, captured = self.run_review(
+            self.response(0.95), original_request="Keep the form usable.", review_exit=1,
+        )
+        self.assertEqual(result.returncode, 1)
+        output = json.loads(result.stdout)
+        self.assertEqual(output["decision"], "review")
+        self.assertEqual(output["concrete_review"]["status"], "unavailable")
+        self.assertEqual(captured["review_calls"], 1)
+
+    def test_secret_in_original_request_is_not_sent(self):
+        result, captured = self.run_review(
+            self.response(0.95), original_request="Authorization: Bearer abcdefghijklmnop",
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(captured["calls"], 0)
+        self.assertEqual(captured["review_calls"], 0)
 
 
 if __name__ == "__main__":
