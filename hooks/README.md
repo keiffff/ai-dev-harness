@@ -8,9 +8,9 @@ hook は sandbox を置き換えるものではありません。PreToolUse hook
 
 ## Runtime Contract
 
-`runtime-contract-context.py` は、既に開いているtaskにも現在の短い運用規則を届けます。`SessionStart` の startup、resume、clear、compact では必ず注入し、`UserPromptSubmit` では同じtaskへ最後に届けた内容から `runtime-contract.md` が変わった場合だけ再注入します。これにより、AGENTS.mdを更新した後に既存taskが古い要約や開始時の文脈だけで動き続ける状態を避けます。
+`runtime-contract-context.py` は、既に開いているtaskにも現在の短い運用規則を届けます。`SessionStart` の startup、resume、clear、compact では必ず注入し、`UserPromptSubmit` では同じtaskへ最後に届けた内容から `runtime-contract.md` または登録済みの作業メモが変わった場合だけ再注入します。これにより、AGENTS.mdを更新した後に既存taskが古い要約や開始時の文脈だけで動き続ける状態を避けます。
 
-`runtime-contract.md` はAGENTS.mdの代替ではありません。全体の規則はAGENTS.mdに置き、そのうち既存taskへ即時に反映する必要がある短い規則だけをこのファイルにも記載します。hookは契約本文のSHA-256だけをtaskごとに `~/.codex/hook-state/runtime-contract/` へ保存し、会話や入力文は保存しません。ファイルの欠落、入力形式の不一致、状態ファイルへの書き込み失敗は実行を止めません。
+`runtime-contract.md` はAGENTS.mdの代替ではありません。全体の規則はAGENTS.mdに置き、そのうち既存taskへ即時に反映する必要がある短い規則だけをこのファイルにも記載します。hookは注入した文脈のSHA-256をtaskごとに `~/.codex/hook-state/runtime-contract/` へ保存し、会話や入力文を自動保存しません。複数工程の作業ではagentが元の目的・未達の結果・証拠・操作範囲を短い作業メモに保ち、`python3 ~/.codex/hooks/runtime-contract-context.py --task-note <作業メモの実パス>` で現在の `CODEX_THREAD_ID` に結び付けます。通常のsandbox内から共通state directoryへ書けないため、登録コマンドはユーザーの一時領域の `codex-runtime-task-notes/` へsession hash別に保存します。同じhookの出力なしのPostToolUse処理が登録コマンド直後に共通state directoryへ永続化し、新規・再開・圧縮後と変更時の注入に含めます。明示的に `CODEX_RUNTIME_CONTRACT_STATE_DIR` を指定した検証では、その指定先を保存・読込先に使います。他のtaskのメモは読みません。新しいメモの永続保存に失敗した場合は古い保存内容の削除を試み、診断をstderrへ残します。保存先の書込みと古い内容の削除がどちらもできない場合、以後の永続復元は保証せず、維持している元メモを確認します。メモは既存の依頼を保つ文脈であり、操作許可や完了判定を自動生成せず、Stop hookも追加しません。ファイルの欠落、入力形式の不一致、状態ファイルへの書き込み失敗は実行を止めません。
 
 ## Role In The Harness
 
@@ -68,3 +68,5 @@ Codex hooks are a policy reminder and local guardrail, not a complete security b
 Execution policy hooks fail open only for empty input. Non-empty malformed JSON is rejected so hook API drift does not silently disable the policy.
 
 These hooks are intentionally conservative because they are not full shell parsers. Keep sandbox and approval settings as the real execution boundary.
+
+新規のPostToolUse定義は、Codex標準の /hooks でこの定義を個別に確認して信頼します。設定ファイルへ追加しただけでは未信頼のhookは実行されません。全hookの一括信頼や信頼チェックの迂回は不要です。イベントと信頼確認の仕様は [公式Hooks文書](https://learn.chatgpt.com/docs/hooks) を参照してください。

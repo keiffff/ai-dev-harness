@@ -28,10 +28,16 @@ A concrete incident is reproduction evidence, not automatically a general contra
 
 Run checks that can reveal new information after the current increment. Broaden or repeat successful checks only after changes, failures or an unresolved risk justify it. Report environment blockers without borrowing another worktree to fake verification. A production outcome needs production evidence.
 
+For requested fresh-task behavioral verification, identify the currently installed agent runtime and reuse its supported entrypoint and existing configuration. A broken PATH launcher does not establish that the runtime is unavailable: inspect existing installation sources, including the running desktop app's bundled executable, before introducing another CLI. Do not substitute a new installation or an unauthenticated isolated configuration for the working environment. A missing prerequisite created by the verification setup is a setup fault to diagnose, not evidence that the original work is blocked. Preserve the prohibition on bypassing actual authentication or permission failures.
+
 ## Telemetry Ownership
 
 Identify the existing emission owner before adding logging, exception capture or metrics. Lower layers may attach unique context and rethrow; avoid capturing the same exception twice. Local telemetry needs an operator-visible event or information unavailable to the owner.
 
 ## Completion
+
+Keep a short current-task note of the original requested outcomes, required unfinished work, observed evidence and authority boundaries, rather than only the completed implementation steps. Bind it to the current task with `python3 ~/.codex/hooks/runtime-contract-context.py --task-note <actual-note-path>` and update and rebind it when those facts change, including completion, stop, cancellation or replacement. Do not carry closed-task unfinished work into a later request. The existing runtime hook restores this task's own note after resume or compaction and when it changes; it is context, not a permission grant or a Stop gate. Return to the maintained outcomes after an intervening question and before finalizing. Contract-delivery checks do not satisfy a requested fresh-task behavioral check.
+
+Before the final response, reconcile the original requested outcomes with actual results, including unfinished work from before an intervening question or correction. Answer that question without treating it as cancellation. If relevant authorized work remains executable, perform it in the same turn; listing it as unverified or future work does not complete the request. A failed improvement check is evidence for the next diagnosis and change, not a reason to end at the comparison report. Respect an explicit user stop or scope replacement, and do not infer new Git, cloud or messaging authority from task continuity.
 
 Report the implemented behavior, checks that passed or remain blocked, review result and material residual risk. Distinguish which parts of the original problem are verified as resolved from those still unresolved or unverified. Passing tests or removing an unsound implementation alone does not establish that the original problem is resolved. For consequential unresolved assumptions, use `codex-doubt-review`; ordinary implementation choices stay with main.

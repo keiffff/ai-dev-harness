@@ -39,7 +39,7 @@ default_subagent_reasoning_effort = "medium"
 
 # Reinject the small, current runtime contract when a session starts, resumes,
 # compacts, or observes a changed contract on a later user turn. The hook stores
-# only the last delivered contract digest for each session.
+# the last delivered context digest and this task's maintained outcome note.
 [[hooks.SessionStart]]
 matcher = "^(startup|resume|clear|compact)$"
 
@@ -50,6 +50,16 @@ command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-conte
 [[hooks.UserPromptSubmit]]
 
 [[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-context.py"
+
+# Persist a sandbox-staged task note immediately after its registering command.
+# This handler emits no model context and does not decide whether work may stop.
+# Review and trust this new definition individually in Codex /hooks.
+[[hooks.PostToolUse]]
+matcher = "^Bash$"
+
+[[hooks.PostToolUse.hooks]]
 type = "command"
 command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-context.py"
 
