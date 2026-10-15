@@ -1,6 +1,6 @@
 ---
 name: codex-context-engineering
-description: Find evidence for repository and operational questions, including existing owners, execution paths, direct measurements, and bounded log investigation.
+description: Find repository evidence, existing owners and relevant local work history.
 ---
 
 # Codex Context Engineering

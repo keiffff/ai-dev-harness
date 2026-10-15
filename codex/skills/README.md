@@ -10,6 +10,8 @@ AIエージェントへ作業ごとの期待を伝えるCodexのスキルを管�
 | --- | --- | --- | --- |
 | `codex-openspec-workflow` | OpenSpec の作成、適用、照合、archive | current CLI、artifact、互換性ゲート、spec 照合を管理する | 通常の実装や、未承認 proposal の実装には使用しない |
 | `codex-git-publish` | 明示的に依頼されたGit公開・PR・issue操作 | Git操作は`git-user-approved`、PR・issue操作は`gh-user-approved`を経由し、依頼された対象と操作だけを実行する | 読み取りや本文案の作成をPR・issue書き込みの許可と扱わず、過去の許可を持ち越さない |
+| `codex-recall-work` | 過去の調査・採否・訂正を確認して作業を始める、または再開するとき | ローカル知識から関連記録と実行資産を探し、現状照合して元の作業へ使う | 全履歴を常時読み込まず、過去記録を現行仕様や操作許可と扱わない |
+| `codex-learn-from-work` | 過去の知識が役立たなかった、訂正が繰り返された、検証で改善点が出たとき | 失敗した接続箇所を調べ、既存の記録・code・skillを直して次のタスクで確かめる | 比較報告だけで改善依頼を終えず、良い試行だけを採用しない |
 | `codex-context-engineering` | リポジトリの既存パターン、関連テスト、仕様、PR の状況を把握する必要があるとき | 問いに対応する証拠の探索先と、既存のコード所有者や実行経路を確認する | 課題と無関係なファイルをむやみに広く読み込まない |
 | `codex-incremental-implementation` | 複数ファイルにまたがる実装、OpenSpec tasks、リファクタリング、機能開発 | 既存の実行経路、観測可能な契約、適切なテスト範囲を維持して進める | 根拠のない大規模な変更（speculative edit）を一気に入れない |
 | `codex-debugging-loop` | test、build、CI、API、browser、runtime log で失敗が発生したとき | 直接観測した事実と原因の仮説を切り分け、再現、原因特定、修正、再確認の流れに戻す | エラー表示の文面だけから原因や対処を決めつけない |
@@ -52,3 +54,7 @@ AIエージェントへ作業ごとの期待を伝えるCodexのスキルを管�
 すべての規則をAGENTS.mdに記述すると、常時読み込む文脈が増え、エージェントが各指示の重要度を判断しにくくなります。そのため、常時必要な基本ルールだけをAGENTS.mdに残し、作業ごとの詳しい指示はスキルと参照資料へ分けます。
 
 実際の `~/.codex/skills` への同期手順は、それぞれの利用環境に合わせて決定します。
+
+## Local Work Memory
+
+`codex-recall-work` と `codex-learn-from-work` は標準のAgent Skillsとして配置します。私的な記録は共有リポジトリへ含めず、ローカルに配置したskillの `references/library` を知識置き場へ接続します。ユーザーのskill探索先からローカルskillへリンクし、本文の読み込みは通常のskill選択に任せます。具体的な記録・検証assetは用途ごとの索引から参照し、全件を起動時に読み込ませません。
