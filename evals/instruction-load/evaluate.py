@@ -4,6 +4,7 @@ import datetime
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -110,6 +111,19 @@ def verdict(case, artifact_checks_pass, native_exit, answer):
     return None if case in MANUAL else True
 
 
+def answer_links(task, answer):
+    """Inspect real workspace file references in these tasks' final answers."""
+    relative_files = []
+    for target in re.findall(r'\[[^\]]*\]\(([^)]+)\)', answer):
+        target = target.strip('<>')
+        if re.match(r'[a-zA-Z][a-zA-Z0-9+.-]*://', target) or target.startswith(('#', 'mailto:')):
+            continue
+        path = re.sub(r':\d+$', '', target)
+        if not Path(path).is_absolute() and (task / path).is_file():
+            relative_files.append(target)
+    return {'pass': not relative_files, 'relative_workspace_file_links': relative_files}
+
+
 def trace_metrics(path):
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     items = [r['item'] for r in rows if r.get('type') == 'item.completed' and 'item' in r]
@@ -143,8 +157,10 @@ def main():
         actor = subprocess.run([args.codex_bin, 'exec', '--approve-for-me', '--skip-git-repo-check', '-C', str(task), '--json', '-o', str(run / 'answer.txt'), '-'], input=prompt, text=True, stdout=out, stderr=err)
     answer = (run / 'answer.txt').read_text() if (run / 'answer.txt').exists() else ''
     checks = check(args.case, task, answer, start, original)
+    links = answer_links(task, answer)
     result = {'case': args.case, 'label': args.label, 'process_exit': actor.returncode,
               **checks, **trace_metrics(run / 'trace.jsonl'),
+              'answer_link_checks': links,
               'pass': verdict(args.case, checks['artifact_checks_pass'], actor.returncode, answer),
               'manual_review': MANUAL.get(args.case), 'path': str(run)}
     (run / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2))

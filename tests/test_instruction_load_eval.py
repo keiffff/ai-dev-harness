@@ -14,6 +14,15 @@ spec.loader.exec_module(study)
 
 
 class InstructionLoadAcceptanceTests(unittest.TestCase):
+    def test_real_file_link_defect_is_reported_separately_from_artifact_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory)
+            (task / 'caller.py').write_text('pass\n')
+            self.assertFalse(study.answer_links(task, '[原因](caller.py:4)')['pass'])
+            self.assertTrue(study.answer_links(task, f'[原因]({task}/caller.py:4)')['pass'])
+            self.assertTrue(study.answer_links(task, '[文書](https://example.com/page) [節](#section)')['pass'])
+            self.assertTrue(study.answer_links(task, '[文書](unrelated.md)')['pass'])
+
     def test_real_artifacts_accept_and_known_faults_fail(self):
         with tempfile.TemporaryDirectory() as directory:
             for case in study.CASES:

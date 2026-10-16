@@ -31,6 +31,21 @@ python3 evals/instruction-load/evaluate.py --output-dir tmp/instruction-load --l
 
 `artifact_checks_pass`は実ファイル・別プロセスの実行・原文照合の結果。`pass`はnativeの終了コード0と実回答の存在も必要とする。起動前の失敗、回答なし、未修正、ハードコードした正解を成功にしない。
 
+`answer_link_checks`は、この6題材の最終回答が実在するworkspaceファイルへ相対リンクを張っていないかを別に記録する。外部URLや章アンカーは対象外。コード中の行参照や原文のコピーを、ファイルリンクと取り違えない。成果物の機能判定を上書きせず、出力上の不備を隠さないための観測である。
+
 continuationの原因説明、investigationの原因説明、stopの未達説明は、成果物検査だけでは正しさを確定できない。自動検査が通っても`pass: null`として、元コード・引継ぎ・実回答の照合事項を`manual_review`に返す。説明を読まずに合格へ変えない。終了コードは完全な自動合格で0、それ以外は1で、手動確認待ちと失敗はJSONで区別する。手動判定は結果JSONを上書きせず別記録へ残す。
 
 両条件が合格しても品質向上とは言わない。短い合成例の成功を長い実会話や実製品の保証にしない。判定器自体の故障注入は`tests/test_instruction_load_eval.py`、再利用するCSV判定は`tests/test_daily_totals_eval.py`。
+
+## 共通指示から分けた責務
+
+| 確かめる挙動 | 所有するコード・検証 |
+| --- | --- |
+| taskメモの保存・復元・更新・他taskとの分離 | 既存runtime hook、`tests/test_runtime_task_note.py`、`tests/test_runtime_task_note_storage.py` |
+| helperの成功を通常入口の成功と取り違えない | CSVの通常CLIと別入力による実生成、`tests/test_daily_totals_eval.py` |
+| 型・省略・null・空文字や文章の指定外部分を維持 | serialization・wording・labelの成果物検査 |
+| 停止・調査中に勝手に編集しない | 全階層のファイルhash比較。cacheも含める |
+| 実ファイルへのリンク形式 | `answer_link_checks`と既知の相対リンク不備の回帰テスト |
+| 生CLI・秘密情報の表示・破壊的操作の代表例を止める | 既存policy hookと`tests/test_hooks_wrappers.py`のHookPolicyTests |
+
+コードが担保する範囲と、agentの判断を分ける。hookは目的の達成やユーザーの操作許可を自動判定しない。元の成果、継続、明示停止、操作範囲、既存契約の短い共通指示は残す。Git公開の細かい手順は既存のcodex-git-publishが所有する。ここにある検証を毎回すべて実行させる指示や、新しいStop gateは追加しない。
