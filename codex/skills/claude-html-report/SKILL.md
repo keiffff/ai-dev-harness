@@ -15,6 +15,10 @@ Read [report contract](references/report-contract.md). Supply the user's relevan
 
 Use primary documents, source code, raw measurements, logs and actual artifacts as evidence. Preserve their contents rather than rewriting them into a fact ledger or substituting Codex deductions. Source IDs and hashes are mechanical provenance, not editorial instructions. Do not disguise a Codex-authored brief as an evidence file. Keep the packet relevant to the user's task without selecting excerpts merely to steer Claude toward a preferred answer.
 
+Pass a previously requested research or decision document unchanged through `--analysis-file`, not as primary evidence. Its Markdown format or assistant authorship does not disqualify it as prior analysis; neither makes its outline, recommendations or full contents mandatory. Include the original requests establishing any accepted decision. Do not create a new analysis document merely to prescribe this report's content.
+
+When Japanese proofreading with Gemini is explicitly requested alongside this skill, Claude still owns composition. First let Claude create the report, then use `gemini-japanese-polish --mode review` on that exact HTML and pass the resulting JSON through `--language-review-file` with `--edit-file`. Gemini returns quoted language defects only; Claude judges and applies them. Do not run Gemini's composition workflow for this report or feed its rewritten prose back as evidence. No findings means no editorial call is needed.
+
 For a design reference, pass the original HTML and relevant CSS themselves through `--evidence-file`; a path alone is not the content, and a verbal description is not the design system. Claude analyzes the reference directly. For a structural restart, retain the original request and sources rather than treating a rejected artifact as the required template. Keep reference documents distinct from current-product specifications.
 
 Use Opus by default. Pass `--model fable` only when the user's current request explicitly asks for Fable. Model choice does not change the evidence or verification contract.
@@ -52,7 +56,7 @@ Repeat `--evidence-file` for additional sources; omit it when the request needs 
 
 ## Accept And Revise
 
-Before adopting Claude's candidate, run `codex-artifact-integrity` with the original request and evidence as requirements and the complete HTML as the candidate. A `review` result keeps the candidate unadopted while Codex verifies the finding. An `unavailable` result does not discard the candidate or trigger another Claude call; continue the checks below.
+Before adopting Claude's candidate, run `codex-artifact-integrity` with the original request separately supplied through `--request-file`, primary evidence as requirements and the complete HTML as the candidate. Prior analysis and language findings are not a replacement requirements file. A `review` result keeps the candidate unadopted while Codex verifies the finding. An `unavailable` result does not discard the candidate or trigger another Claude call; continue the checks below.
 
 Validate the entire candidate against the original user request and feedback as well as the factual packet before visual polish. Correct a packet that changes the assignment; agreement between Codex's packet and Claude's HTML is not evidence of fidelity to the user:
 
