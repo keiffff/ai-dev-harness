@@ -37,7 +37,7 @@ Start with a visual representation when the reviewer would otherwise need to rec
    - labels and directionality preserve the source meaning;
    - values shown in one row, card group or shared scale are genuinely comparable; otherwise each value stays with its own claim and context;
    - a limitation or open decision is visible only when the source makes it actionable for this review; missing evidence and excluded scope are not promoted into explanatory UI.
-6. Run visual QA for hierarchy, readability, wrapping, overflow, density, and responsive layout. For SVGs, diagrams and card- or grid-based static artifacts:
+6. Run visual QA for hierarchy, readability, wrapping, overflow and density at the intended viewing size; include responsive layout only for viewports already in scope. For SVGs, diagrams and card- or grid-based static artifacts:
    - keep the clean candidate unchanged while creating a temporary QA copy;
    - overlay component bounds, intended content insets, repeated row or column tracks, and any baseline guides needed for multi-line labels;
    - render the QA copy and inspect the complete canvas and enlarged crops of every dense region;
