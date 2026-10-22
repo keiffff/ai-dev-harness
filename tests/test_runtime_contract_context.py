@@ -92,6 +92,28 @@ class RuntimeContractContextTests(unittest.TestCase):
         self.assertEqual(unsupported.returncode, 0)
         self.assertEqual(unsupported.stdout, "")
 
+    def test_dynamodb_read_exception_is_aligned_and_reaches_existing_session(self):
+        agents = (ROOT / 'codex' / 'AGENTS.md').read_text(encoding='utf-8')
+        contract = (HOOK_DIR / 'runtime-contract.md').read_text(encoding='utf-8')
+        self.assertIn('DynamoDBの読み取りはAWS readonly wrapper経由で許可', agents)
+        self.assertIn('リモートDBへの書き込み・削除・構成変更', agents)
+        self.assertIn('それ以外のリモートDB操作', agents)
+        self.assertIn('DynamoDB reads are allowed through the AWS readonly wrapper', contract)
+        self.assertIn('remote DB writes, deletes or configuration changes', contract)
+        self.assertIn('Other remote DB operations remain prohibited', contract)
+        self.assertNotIn('secret access or remote DB operations.', contract)
+        with tempfile.TemporaryDirectory() as directory:
+            state_dir = Path(directory) / 'state'
+            payload = {'session_id': 'existing-session', 'hook_event_name': 'UserPromptSubmit', 'prompt': 'continue'}
+            old = self.run_hook('No remote DB operations.', state_dir, payload)
+            changed = self.run_hook(contract, state_dir, payload)
+            repeated = self.run_hook(contract, state_dir, payload)
+        self.assertEqual(old.returncode, 0, old.stderr)
+        self.assertEqual(changed.returncode, 0, changed.stderr)
+        injected = json.loads(changed.stdout)['hookSpecificOutput']['additionalContext']
+        self.assertIn(contract.strip(), injected)
+        self.assertEqual(repeated.stdout, '')
+
 
 if __name__ == "__main__":
     unittest.main()

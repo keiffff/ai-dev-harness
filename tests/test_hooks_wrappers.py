@@ -348,7 +348,7 @@ class WrapperTests(unittest.TestCase):
             env['PATH'] = tmp + os.pathsep + env.get('PATH', '')
             return subprocess.run([str(script), *args], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, check=False)
 
-    def test_aws_readonly_uses_metadata_allowlist_and_blocks_secret_or_data_reads(self):
+    def test_aws_readonly_uses_allowlist_and_blocks_secrets_and_other_data_reads(self):
         script = ROOT / 'wrappers' / 'bin' / 'aws-readonly.example'
         run = lambda args: self.run_with_fake_bin(script, AWS, args)
         self.assertEqual(run(['sts', 'get-caller-identity']).returncode, 0)
@@ -359,8 +359,34 @@ class WrapperTests(unittest.TestCase):
         self.assertNotEqual(run(['ecr', 'get-login-password']).returncode, 0)
         self.assertNotEqual(run(['logs', 'filter-log-events', '--log-group-name', 'x']).returncode, 0)
         self.assertNotEqual(run(['logs', 'start-query', '--log-group-name', 'x']).returncode, 0)
-        self.assertNotEqual(run(['dynamodb', 'scan', '--table-name', 'x']).returncode, 0)
         self.assertNotEqual(run(['lambda', 'get-function', '--function-name', 'fn']).returncode, 0)
+
+    def test_aws_readonly_allows_dynamodb_reads_and_preserves_arguments(self):
+        script = ROOT / 'wrappers' / 'bin' / 'aws-readonly.example'
+        for operation, options in (
+            ('get-item', ['--key', '{"id":{"S":"example"}}']),
+            ('batch-get-item', ['--request-items', '{"example":{"Keys":[{"id":{"S":"example"}}]}}']),
+            ('query', ['--key-condition-expression', 'id = :id']),
+            ('scan', ['--filter-expression', 'attribute_exists(id)']),
+            ('transact-get-items', ['--transact-items', '[{"Get":{"TableName":"example","Key":{"id":{"S":"example"}}}}]']),
+        ):
+            with self.subTest(operation=operation):
+                args = ['dynamodb', operation, *options]
+                result = self.run_with_fake_bin(script, AWS, args)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), args)
+
+    def test_aws_readonly_blocks_dynamodb_mutations_and_mixed_read_write_apis(self):
+        script = ROOT / 'wrappers' / 'bin' / 'aws-readonly.example'
+        for operation in (
+            'put-item', 'update-item', 'delete-item', 'batch-write-item', 'transact-write-items',
+            'create-table', 'update-table', 'delete-table', 'update-time-to-live',
+            'execute-statement', 'batch-execute-statement', 'execute-transaction',
+        ):
+            with self.subTest(operation=operation):
+                result = self.run_with_fake_bin(script, AWS, ['dynamodb', operation])
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, '')
 
     def test_github_readonly_allows_rest_reads_and_blocks_api_mutations(self):
         script = ROOT / 'wrappers' / 'bin' / 'gh-readonly.example'

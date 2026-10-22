@@ -18,7 +18,7 @@
 - `bin/git-user-approved.example`: パス明示による `git add`、現在の HEAD または明示された開始点からのユーザー指示に基づくブランチ作成、ブランチ切り替え、単一アップストリームのマージに限定。暗黙的なプッシュや、amend / `commit -a` へのフォールバックは禁止。
 - `bin/gh-readonly.example`: 読み取り専用の GitHub CLI コマンドおよび汎用 REST API の `GET` / `HEAD` リクエストのみを許可。変更を伴う HTTP メソッドや、HTTP メソッド上書きヘッダー（method-override headers）はブロック。
 - `bin/gh-user-approved.example`: 最新の明示依頼を確認したCodexが、`--confirm-user-requested pr|issue <command>`でPR・issue操作を実行する経路。`gh pr`・`gh issue`のサブコマンドとオプションはそのまま渡す。汎用API、workflow、認証操作などは対象外。フラグ自体はユーザーの依頼を検証せず、依頼との対応は共通AGENTSとskillで判断する。
-- `bin/aws-readonly.example`: 読み取り専用の AWS CLI コマンドに限定し、シークレットやトークンの取得、および広範なデータプレーンの読み取りはデフォルトでブロック。
+- `bin/aws-readonly.example`: 読み取り専用の AWS CLI コマンドに限定する。DynamoDBの取得・一括取得・query・scan・トランザクション取得は許可し、書き込み・削除・構成変更、読み書き兼用API、secret・tokenの取得や他の広範なデータプレーンの読み取りはブロック。
 - `bin/gcloud-readonly.example`: Google Cloud CLI の明示的な読み取り専用許可リストを適用し、シークレットやトークンへのアクセスはブロック。
 - `bin/grok-x-research.example`: 日付範囲を制限した 1 回限りの xAI X Search リクエストを実行。Web Search は無効化し、正規化された引用注記の付与と明示的なコスト報告を実施。
 - `bin/claude-strategic-review.example`: デフォルトのタイムアウトを 600 秒に設定した 1 回限りの Claude Opus レビューを実行。ハートビート診断を備え、ツール、プロジェクトのカスタマイズ、セッションの永続化、および追加のエージェントターンは無効化。

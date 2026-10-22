@@ -29,12 +29,13 @@ case "$service:$operation" in
   lambda:get-function-configuration|lambda:list-functions|\
   sqs:get-queue-attributes|sqs:list-queues|\
   sns:get-topic-attributes|sns:list-topics|\
-  dynamodb:describe-table|dynamodb:list-tables)
+  dynamodb:describe-table|dynamodb:list-tables|\
+  dynamodb:get-item|dynamodb:batch-get-item|dynamodb:query|dynamodb:scan|dynamodb:transact-get-items)
     exec aws "$service" "$operation" "$@"
     ;;
 
   # Data-plane reads such as logs:filter-log-events, logs:start-query,
-  # dynamodb:get-item/query/scan, and lambda:get-function can expose application
+  # and lambda:get-function can expose application
   # data or signed artifact URLs. Add them locally only when your environment
   # policy explicitly allows that class of read.
 esac
