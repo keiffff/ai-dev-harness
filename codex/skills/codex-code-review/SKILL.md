@@ -29,8 +29,12 @@ For a consequential repo-local change, use one bounded `codex-doubt-review` cycl
 
 ## Copyable Review Output
 
-Return findings in severity order with priority, file/line reference, trigger and impact. Distinguish required fixes from optional suggestions. Include the overall assessment and residual verification gaps; say explicitly when there are no findings.
+Build each comment from the established finding or the user's accepted plain explanation, rather than reconstructing it from implementation names:
 
-Put the complete review body inside an outer four-backtick `markdown` fence. Inline comments and review cards may supplement it, but never replace or shorten the copyable review body.
+1. State the normal operation or prerequisite the reviewer needs, then the concrete triggering action/condition and the resulting failure. Name the actor and affected object. Introduce an internal term only when it explains that chain.
+2. Copy the code location from the current established finding and attach its evidence, priority and required correction. Do not substitute a location from an older draft or claim it was rechecked. Keep an unverified reproduction unverified. A short title does not replace the explanation.
+3. Order findings by severity and retain all requested findings. When changing the format, carry the accepted explanation into the comment; do not revert to an earlier technical draft. Separate optional suggestions and include the overall assessment and residual verification gaps. Say explicitly when there are no findings.
+
+Put the complete review body inside an outer four-backtick `markdown` fence. Inline comments and review cards may supplement it, but never replace or shorten the copyable review body. For a requested prose artifact, compose one file and deliver its absolute link; do not write a second rendition in chat. Review judgment remains in this skill and does not authorize posting.
 
 For OpenSpec-governed work, also identify missing, spec-external, insufficiently tested or unverified behavior against the accepted artifacts. Apply any repository-required sidecar review and reconcile its findings.
