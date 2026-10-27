@@ -20,7 +20,7 @@ MODELS = {
     "fable": "claude-fable-5-1",
 }
 DEFAULT_CLAUDE_CLI = "claude"
-DEFAULT_TIMEOUT_SECONDS = 600
+DEFAULT_TIMEOUT_SECONDS = 0  # No total deadline unless explicitly configured.
 HEARTBEAT_SECONDS = 30
 DIAGNOSTIC_CHARS_PER_STREAM = 8000
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -202,8 +202,8 @@ def timeout_seconds() -> int:
         value = int(raw)
     except ValueError:
         stop("CLAUDE_HTML_REPORT_TIMEOUT_SECONDS must be an integer.")
-    if not 1 <= value <= 900:
-        stop("CLAUDE_HTML_REPORT_TIMEOUT_SECONDS must be between 1 and 900.")
+    if value < 0:
+        stop("CLAUDE_HTML_REPORT_TIMEOUT_SECONDS must be nonnegative (0 disables the total deadline).")
     return value
 
 
@@ -373,8 +373,8 @@ def run_claude(
     first_wait = True
     while True:
         elapsed = time.monotonic() - started
-        remaining = timeout - elapsed
-        if remaining <= 0:
+        remaining = timeout - elapsed if timeout else None
+        if remaining is not None and remaining <= 0:
             try:
                 os.killpg(process.pid, signal.SIGTERM)
             except ProcessLookupError:
@@ -397,7 +397,7 @@ def run_claude(
         try:
             stdout, stderr = process.communicate(
                 input=prompt if first_wait else None,
-                timeout=min(HEARTBEAT_SECONDS, remaining),
+                timeout=HEARTBEAT_SECONDS if remaining is None else min(HEARTBEAT_SECONDS, remaining),
             )
             break
         except subprocess.TimeoutExpired:

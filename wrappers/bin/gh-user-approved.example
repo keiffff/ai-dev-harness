@@ -7,11 +7,12 @@ if [[ "${1:-}" != "--confirm-user-requested" ]]; then
 fi
 shift
 
-if [[ ("${1:-}" != "pr" && "${1:-}" != "issue") || $# -lt 2 ]]; then
-  print -u2 "Usage: gh-user-approved --confirm-user-requested pr|issue <command> [args...]"
+if [[ ("${1:-}" != "pr" && "${1:-}" != "issue" && "${1:-}" != "api") || $# -lt 2 ]]; then
+  print -u2 "Usage: gh-user-approved --confirm-user-requested pr|issue|api <command-or-endpoint> [args...]"
   exit 2
 fi
 
-# The boundary is the PR/issue command families, not individual operations or flags.
+# API supports requested PR/issue operations missing from the CLI command families.
+# Do not maintain per-endpoint, subcommand or field allowlists here.
 # Codex owns matching the requested operation and target to the latest user request.
 exec gh "$@"

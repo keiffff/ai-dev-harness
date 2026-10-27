@@ -158,6 +158,13 @@ class HookPolicyTests(unittest.TestCase):
         self.assertBlocked(run_hook('shell-policy.py', command + f' && {GH} issue close 12'))
         self.assertBlocked(run_hook('gh-policy.py', f'{GH} issue create --title test --body text'))
 
+    def test_github_api_wrapper_route_does_not_allow_raw_cli_bypass(self):
+        command = '/approved/gh-user-approved --confirm-user-requested api repos/example/demo/issues/12/sub_issues -X POST -F sub_issue_id=34'
+        self.assertAllowed(run_hook('gh-policy.py', command))
+        self.assertAllowed(run_hook('shell-policy.py', command))
+        self.assertBlocked(run_hook('gh-policy.py', f'{GH} api repos/example/demo/issues/12/sub_issues -X POST'))
+        self.assertBlocked(run_hook('shell-policy.py', command + f' && {GH} api graphql -f query=mutation'))
+
     def test_git_hook_blocks_raw_commit_push_and_shell_bypass(self):
         self.assertBlocked(run_hook('git-policy.py', 'command git push origin main'))
         self.assertBlocked(run_hook('git-policy.py', 'command sh -c "git push"'))
@@ -439,16 +446,31 @@ class WrapperTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.splitlines(), args)
 
+    def test_github_api_operations_pass_through_without_endpoint_or_field_allowlists(self):
+        script = ROOT / 'wrappers' / 'bin' / 'gh-user-approved.example'
+        operations = (
+            ['api', 'repos/example/demo/issues/12/sub_issues', '--method', 'POST', '-F', 'sub_issue_id=34'],
+            ['api', '--method', 'DELETE', 'repos/example/demo/issues/12/sub_issue', '--input', 'request with spaces.json'],
+            ['api', 'graphql', '-f', 'query=mutation($id: ID!) { addSubIssue(input: {issueId: $id, subIssueId: "synthetic"}) { clientMutationId } }', '-F', 'id=synthetic-parent'],
+            ['api', 'repos/example/demo/issues/12/future-issue-operation', '--future-option', 'unchanged value'],
+        )
+        for args in operations:
+            with self.subTest(args=args):
+                result = self.run_with_fake_bin(script, GH, ['--confirm-user-requested', *args])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), args)
+
     def test_github_pr_and_issue_operations_require_confirmation_and_reject_other_command_families(self):
         script = ROOT / 'wrappers' / 'bin' / 'gh-user-approved.example'
         for args in (
             [],
             ['pr', 'edit', '12', '--body', 'text'],
             ['issue', 'create', '--title', 'test', '--body', 'text'],
+            ['api', 'repos/example/demo/issues/12/sub_issues', '-XPOST'],
             ['--confirm-user-requested'],
             ['--confirm-user-requested', 'pr'],
             ['--confirm-user-requested', 'issue'],
-            ['--confirm-user-requested', 'api', 'repos/acme/example/pulls/12', '-XPATCH'],
+            ['--confirm-user-requested', 'api'],
             ['--confirm-user-requested', 'repo', 'delete', 'acme/example'],
             ['--confirm-user-requested', 'workflow', 'run', 'deploy.yml'],
             ['--confirm-user-requested', 'auth', 'token'],

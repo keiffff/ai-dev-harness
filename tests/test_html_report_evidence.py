@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +15,34 @@ WRAPPER = ROOT / "wrappers/bin/claude-html-report.example"
 
 
 class HtmlReportEvidenceTests(unittest.TestCase):
+    def test_total_timeout_is_opt_in_and_has_no_fifteen_minute_ceiling(self):
+        wrapper = runpy.run_path(str(WRAPPER))
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(wrapper["timeout_seconds"](), 0)
+        for value in ("0", "1", "1800", "7200"):
+            with self.subTest(value=value), patch.dict(os.environ, {"CLAUDE_HTML_REPORT_TIMEOUT_SECONDS": value}):
+                self.assertEqual(wrapper["timeout_seconds"](), int(value))
+        for value in ("-1", "not-a-number"):
+            with self.subTest(value=value), patch.dict(os.environ, {"CLAUDE_HTML_REPORT_TIMEOUT_SECONDS": value}):
+                with self.assertRaises(SystemExit):
+                    wrapper["timeout_seconds"]()
+
+    def test_default_keeps_creation_and_editing_alive_after_previous_deadline(self):
+        wrapper = runpy.run_path(str(WRAPPER))
+        for target in (None, Path("/synthetic/report.html")):
+            with self.subTest(edit_file=target), patch.dict(os.environ, {}, clear=True), \
+                 patch("subprocess.Popen") as launch, patch("os.killpg") as kill, \
+                 patch("time.monotonic", side_effect=[0, 601, 1801, 3601]):
+                process = Mock(returncode=0)
+                process.communicate.side_effect = [subprocess.TimeoutExpired("claude", 30), ("completed", "")]
+                launch.return_value = process
+                self.assertEqual(wrapper["run_claude"](
+                    "synthetic request", "synthetic-token", wrapper["timeout_seconds"](),
+                    "/synthetic/claude", "opus", edit_file=target,
+                ), "completed")
+                kill.assert_not_called()
+                self.assertEqual([call.kwargs["timeout"] for call in process.communicate.call_args_list], [30, 30])
+
     def test_credential_launcher_uses_current_home_and_preserves_override(self):
         wrapper = runpy.run_path(str(WRAPPER))
         home = Path("/synthetic/user home")
