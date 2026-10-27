@@ -37,6 +37,36 @@ continuationの原因説明、investigationの原因説明、stopの未達説明
 
 両条件が合格しても品質向上とは言わない。短い合成例の成功を長い実会話や実製品の保証にしない。判定器自体の故障注入は`tests/test_instruction_load_eval.py`、再利用するCSV判定は`tests/test_daily_totals_eval.py`。
 
+## 私的な実会話を再生する
+
+同じ観測と比較を実会話にも使う入口は`replay.py`。既に監査した、問題直前で切ったnative sessionのseedを使う。会話抽出や採点基準の作成をモデルへ任せず、未来の訂正、toolの生出力、credentialを含めないことを準備側で確認する。共有repoには実会話、seed、案件の識別子や運用前提を置かない。ケース、rubric、snapshot、結果は私的保存先を指定する。
+
+ケースJSONは`id`、`request_file`、`scope_file`、`seed_file`、`session_id`、`rubric_file`、`model`、`reasoning`を持つ。ファイルパスはケースJSONの場所から解決する。`files_dir`を指定すれば必要な初期ファイルを作業場所へコピーする。snapshotは変更対象のskillだけを格納する。対象skillのユーザー側登録をその実行内で無効にし、作業場所の`.agents/skills`へsnapshotを配信する。他の設定・認証・hookは維持する。歴史的なファイルが必要なケースは利用可能な初期ファイルを用意し、欠けたまま技術的正しさを合格にしない。
+
+```sh
+python3 evals/instruction-load/replay.py run --case-file "$CASE_FILE" --skills-root "$SKILL_SNAPSHOT" --output-dir "$PRIVATE_RESULTS" --codex-bin "$CODEX_BIN" --label "$CONDITION"
+```
+
+条件名、採点基準、case manifestをactorの依頼文や作業ディレクトリ名に入れない。rubricはhashのみ実行記録に残す。これはOSの読取制限ではないため、採点や別試行の参照がなかったかtraceも確認する。既存runtimeが外側sandboxで起動できない場合はsetup失敗として保存する。実際の認証・権限拒否を別経路で迂回しない。
+
+rubricの`checks`は重複しない`id`と`description`。回答後の判定ファイルは`artifacts`（result.jsonと同じhash辞書）、manifestと同じ`rubric_sha256`、全criteriaに対応する`checks`を持つ。各checkに`id`、`verdict`（pass/fail/unknown）、`reason`、`evidence`（記録されたfileとその中の正確なquoteの配列）を記入する。引用の一致は根拠の所在確認であり、意味の採点の正しさは別に確認する。
+
+```sh
+python3 evals/instruction-load/replay.py compare --before "$BEFORE_RUN" --after "$AFTER_RUN" --before-assessment "$BEFORE_ASSESSMENT" --after-assessment "$AFTER_ASSESSMENT" --rubric-file "$RUBRIC_FILE" --output "$PRIVATE_COMPARISON"
+```
+
+入力、scope、seed、初期ファイル、モデル、推論設定、rubricが異なる組は比較を拒否する。出力改変、skill snapshotの変更、判定漏れ、存在しない引用を合格にしない。判定未実施・unknownは合格にせず、native起動失敗や回答なしは別に記録する。比較JSONには実回答・保存稿・使用量・時間・コマンド数を残す。`stages`には依頼理解、入口、手順、成果のどこで失敗したかを判定根拠とともに記録できる。`human_corrections`は実際に観測した場合だけ記録し、再生評価の失敗数から人間の訂正回数を捏造しない。
+
+失敗例と正常例を同じ候補で確認し、未解決・回帰も残す。単発比較を成功率にせず、使用量から料金を推測しない。既存結果の再採点と、新しい候補の実行を区別する。これは任意の改善評価であり、通常タスクごとの必須実行やStop hookではない。故障注入は`tests/test_private_replay_eval.py`。
+
+複数件の採否確認は`suite`でまとめる。事前に選んだcase ID一覧を`{"cases": [...]}`として私的に保存し、planの`comparisons`へ各件の`case`とcompareに渡す5つのpathを指定する。宣言した件の欠落・重複、ケース違い、同一条件での異なるskill snapshotの混在を拒否する。別候補から成功例だけを寄せ集めない。
+
+```sh
+python3 evals/instruction-load/replay.py suite --case-list "$CASE_LIST" --plan-file "$COMPARISON_PLAN" --output "$PRIVATE_SUITE_RESULT"
+```
+
+結果に改善・回帰・未解決を別々に残す。未解決や判定保留がある場合は`adoption: not_ready`と終了コード1を返す。すべての対象基準を満たした場合も、返すのは`no_regression_observed`であり、一般的な改善効果や公開許可ではない。この判定は任意の評価コマンドに限定し、通常の回答やGit操作を新たに遮断しない。
+
 ## 共通指示から分けた責務
 
 | 確かめる挙動 | 所有するコード・検証 |

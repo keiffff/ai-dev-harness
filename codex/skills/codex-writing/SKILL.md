@@ -1,6 +1,6 @@
 ---
 name: codex-writing
-description: 文章の作成・内容点検・改稿。PR本文、Slack報告・確認依頼に対応し、レビュー文面はcode-reviewへ接続。通常応答・語句だけの校正は除く。
+description: 文章の作成・送信稿の内容点検・改稿と、その作業を続けるかの判別。引用スレッド付きの「この文でよいか」、Slack報告・確認依頼、PR本文に使う。文面作業中の観測共有を追加改稿と区別する。レビュー文面はcode-reviewへ。独立した通常会話・語句だけの校正は除く。
 ---
 
 # Codex Writing
@@ -10,9 +10,9 @@ Codex writes prose. Ordinary replies and wording-only edits stay outside this wo
 ## Build The Current Deliverable
 
 1. Select the requested operation before selecting a medium: checking/editing supplied prose, restructuring it, or composing a new deliverable. A shared observation without a writing request receives a direct conversational response. Review-comment composition uses `codex-code-review`'s Copyable Review Output on the established findings; it does not require a new code review.
-2. For checking/editing, use the current supplied or accepted draft as the outline. Compare its claims with established facts before choosing edits: identify a source contradiction or requested change, and the smallest correction. An absent extra detail is not by itself an error. Verify that every change is required by the requested delta or a concrete defect. For proposed measures, compare existing system behavior, uncovered path and proposed change in the existing task note; correct a proposal to recreate an existing mechanism into the actual missing change. Then apply those corrections to the draft, preserving other reasoning and voice. Do not trade an unwanted rewrite for over-compression. A medium's outline does not authorize restoring omitted subjects or adding recommendations. An unpublished draft contains the accepted result, not the correction history.
-3. For new composition or requested restructuring, assemble the outline across the whole requested subject before shortening. Place each finding under its question/result. Copy quantitative claims into that outline with their value, unit, population/denominator, included components and measured/estimated basis together. Preserve causal uncertainty, assumptions and completion state with their claims rather than recombining them while phrasing. Use the existing task note for these source correspondences. Do not substitute the last subtopic for the requested scope.
-4. Write the complete draft in one file in the requested destination, or private task storage. Use the mode to order the outline, then phrase it for the reader. Explain an unfamiliar object before relying on its name. Add no unsupported cause, owner, date, commitment or verification claim.
+2. For source-grounded deliverables spanning a long discussion, multiple findings or quantitative/causal comparisons, and follow-up messages in that ongoing prose task, use the [executable source workflow](references/source-workflow.md). Its first phase distinguishes a current writing request from an observation before reading historical evidence; a conversation result ends without producing a draft. For writing, it selects exact source passages without seeing a candidate and generates from that selection. Existing drafts use literal replacements; unselected text is not regenerated. Supply actual source text, not an assistant's rewritten account. Use the configured main model and reasoning setting; do not choose a new provider or model.
+3. For a small self-contained edit, copy the supplied draft and patch only the requested or evidenced defect. Verify every change is required by the requested delta or a concrete defect. Do not trade an unwanted rewrite for over-compression. A medium's outline does not authorize adding subjects or commitments from quoted history. An omitted detail needs correction only when it prevents the recipient from performing the requested action or understanding its result.
+4. Keep the complete deliverable in one file at the requested destination or private task storage. Explain unfamiliar objects before their names. Preserve source definitions, uncertainty and completion state; unpublished drafts contain the accepted result, not correction history. Add no unsupported cause, owner, date, commitment or verification claim.
 
 ## Slack: Choose The Reporting Job
 
