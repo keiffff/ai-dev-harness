@@ -1,174 +1,201 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200" font-family="'Noto Sans JP','Noto Sans CJK JP','Hiragino Sans','Yu Gothic UI','Meiryo',sans-serif" fill="#F3F5F9">
-<defs>
-  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0D1526"/><stop offset="1" stop-color="#090F1B"/></linearGradient>
-  <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="14" cy="14" r="1.1" fill="#233049"/></pattern>
-  <radialGradient id="glow" cx="0.5" cy="0.45" r="0.62"><stop offset="0" stop-color="#34D399" stop-opacity="0.15"/><stop offset="1" stop-color="#34D399" stop-opacity="0"/></radialGradient>
-  <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.45"/></filter>
-  <filter id="gglow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#34D399" flood-opacity="0.32"/></filter>
-  <marker id="a-w" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-  <marker id="a-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-  <marker id="a-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#F87171" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-  <marker id="a-y" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#FBBF24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
-<rect width="1600" height="1200" fill="url(#bg)"/>
-<rect width="1600" height="1200" fill="url(#dots)"/>
-<rect x="260" y="140" width="1080" height="780" fill="url(#glow)"/>
-<text x="800" y="64" text-anchor="middle" font-size="44" font-weight="700" letter-spacing="-0.5">AI Agent Development Harness</text>
-<text x="800" y="100" text-anchor="middle" font-size="18" fill="#8E9AB0">開発者が最終判断を持ち、Codexがリポジトリの文脈と実務を担う</text>
-
-<rect x="440" y="130" width="720" height="100" rx="14" fill="#111A2B" stroke="#3A4A6B" stroke-width="1.2" filter="url(#shadow)"/>
-<rect x="468" y="158" width="44" height="44" rx="11" fill="#93A4C4" fill-opacity="0.14" stroke="#93A4C4" stroke-opacity="0.45"/>
-<circle cx="490" cy="171" r="5" fill="none" stroke="#93A4C4" stroke-width="1.8"/><path d="M480 194a10 10 0 0 1 20 0" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round"/>
-<text x="530" y="158" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#5F6B82">AUTHORITY · DEVELOPER</text>
-<text x="530" y="186" font-size="25" font-weight="700">開発者</text>
-<text x="530" y="212" font-size="14" fill="#8E9AB0">目的・制約・仕様・権限・停止条件・対象外を決定</text>
-
-<line x1="800" y1="230" x2="800" y2="250" stroke="#3A4A6B" stroke-width="1.8"/>
-<rect x="440" y="250" width="720" height="146" rx="14" fill="#0D1925" stroke="#2B3A55" stroke-width="1.1"/>
-<text x="464" y="272" font-size="10.5" font-weight="700" letter-spacing="2" fill="#5F6B82">DEVELOPER ↔ CODEX CONTROL LOOP</text>
-<line x1="800" y1="282" x2="800" y2="330" stroke="#2B3A55"/>
-<text x="464" y="300" font-size="11" font-weight="700" letter-spacing="1.4" fill="#93A4C4">DEVELOPER → CODEX</text>
-<text x="464" y="322" font-size="17" font-weight="700">目的・制約・権限</text>
-<text x="464" y="343" font-size="12" fill="#8E9AB0">最新指示でCodexに実行権限を付与</text>
-<text x="824" y="300" font-size="11" font-weight="700" letter-spacing="1.4" fill="#34D399">CODEX → DEVELOPER</text>
-<text x="824" y="322" font-size="17" font-weight="700">レビュー用資料・完了報告</text>
-<text x="824" y="343" font-size="12" fill="#8E9AB0">HTML・図表・差分・検証／指摘・リスク・判断材料</text>
-<rect x="464" y="356" width="244" height="28" rx="14" fill="#34D399" fill-opacity="0.08" stroke="#34D399" stroke-opacity="0.28"/>
-<text x="586" y="374" text-anchor="middle" font-size="11" fill="#C7CFDC">ANDON: 未確定なら停止して開発者へ戻す</text>
-<rect x="724" y="356" width="412" height="28" rx="14" fill="#93A4C4" fill-opacity="0.08" stroke="#93A4C4" stroke-opacity="0.28"/>
-<text x="930" y="374" text-anchor="middle" font-size="11" fill="#C7CFDC">引き継ぎ: Codex通知 → 開発者承認 → タスク全体を新しいタスクへ</text>
-<line x1="800" y1="396" x2="800" y2="428" stroke="#34D399" stroke-width="1.8" marker-end="url(#a-g)"/>
-
-<g transform="translate(0 28)">
-<rect x="48" y="408" width="340" height="482" rx="14" fill="#111A2B" stroke="#263247" filter="url(#shadow)"/>
-<text x="76" y="438" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#5F6B82">HARNESS SOURCES</text>
-<rect x="76" y="448" width="36" height="36" rx="9" fill="#93A4C4" fill-opacity="0.10" stroke="#93A4C4" stroke-opacity="0.38"/>
-<g transform="translate(84,456) scale(0.75)" fill="none" stroke="#93A4C4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></g>
-<text x="124" y="466" font-size="22" font-weight="700">作業の根拠</text>
-<text x="124" y="488" font-size="12.5" fill="#8E9AB0">Codexが参照する作業ルール</text>
-<line x1="76" y1="508" x2="360" y2="508" stroke="#263247"/>
-<text x="76" y="536" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#5F6B82">ALWAYS ON</text>
-<text x="76" y="559" font-size="15" font-weight="700">codex/AGENTS.md</text>
-<text x="76" y="577" font-size="11.5" fill="#8E9AB0">権限・ANDON・対話・実行の常時ルール</text>
-<rect x="76" y="590" width="284" height="48" rx="9" fill="#34D399" fill-opacity="0.06" stroke="#34D399" stroke-opacity="0.28"/>
-<text x="90" y="610" font-size="12.5" font-weight="700" fill="#34D399">最新ルールを既存タスクへ再注入</text>
-<text x="90" y="627" font-size="10.5" fill="#8E9AB0">SessionStart / UserPromptSubmit</text>
-<text x="76" y="664" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#5F6B82">TASK SCOPED</text>
-<text x="76" y="687" font-size="15" font-weight="700">codex/skills/*</text>
-<text x="76" y="705" font-size="11.5" fill="#8E9AB0">作業ごとの手順と確認基準</text>
-<text x="76" y="732" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#5F6B82">CHANGE SCOPED</text>
-<text x="76" y="755" font-size="15" font-weight="700">OpenSpec / リポジトリ固有の仕様</text>
-<text x="76" y="773" font-size="11.5" fill="#8E9AB0">対象範囲・仕様・非目標・受入条件・検証条件</text>
-<line x1="76" y1="792" x2="360" y2="792" stroke="#263247"/>
-<text x="76" y="812" font-size="10.5" font-weight="700" letter-spacing="1.6" fill="#34D399">IMPROVEMENT LOOP</text>
-<text x="76" y="832" font-size="12.5" font-weight="700">指摘・失敗の分析から再発防止策を作る</text>
-<text x="76" y="850" font-size="10.5" fill="#8E9AB0">AGENTS.md・スキル・フック・ルールへ反映</text>
-<text x="76" y="868" font-size="10.5" fill="#8E9AB0">専用コマンド・テスト・OpenSpecへ必要時のみ反映</text>
-<line x1="396" y1="614" x2="432" y2="614" stroke="#34D399" stroke-width="1.7" marker-end="url(#a-g)"/>
-<text x="414" y="600" text-anchor="middle" font-size="11.5" fill="#34D399">再注入</text>
-<line x1="396" y1="705" x2="432" y2="705" stroke="#93A4C4" stroke-width="1.7" marker-end="url(#a-w)"/>
-<text x="414" y="691" text-anchor="middle" font-size="11.5" fill="#8E9AB0">根拠</text>
-
-<rect x="440" y="408" width="720" height="482" rx="16" fill="#0E1F1C" stroke="#34D399" stroke-width="1.7" filter="url(#gglow)"/>
-<rect x="468" y="438" width="52" height="52" rx="14" fill="#34D399" fill-opacity="0.14" stroke="#34D399" stroke-opacity="0.45"/>
-<rect x="480" y="452" width="28" height="22" rx="3" fill="none" stroke="#34D399" stroke-width="1.8"/><path d="M486 459l5 4-5 4M495 468h7" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="540" y="454" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#34D399">MAIN CONTEXT OWNER</text>
-<text x="540" y="488" font-size="34" font-weight="700">Codex</text>
-<text x="675" y="488" font-size="15" fill="#8E9AB0">リポジトリの文脈把握・実務遂行・統合判断を集約</text>
-<line x1="468" y1="513" x2="1132" y2="513" stroke="#34D399" stroke-opacity="0.25"/>
-<g transform="translate(474,532) scale(0.75)" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></g>
-<text x="520" y="548" font-size="17" font-weight="700">調査</text><text x="620" y="548" font-size="15.5" fill="#C7CFDC">リポジトリ・仕様・一次情報を精読</text>
-<g transform="translate(474,574) scale(0.75)" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></g>
-<text x="520" y="590" font-size="17" font-weight="700">実装</text><text x="620" y="590" font-size="15.5" fill="#C7CFDC">差分を作成</text>
-<g transform="translate(474,616) scale(0.75)" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></g>
-<text x="520" y="632" font-size="17" font-weight="700">検証</text><text x="620" y="632" font-size="15.5" fill="#C7CFDC">差分とテストで検証</text>
-
-<rect x="468" y="652" width="664" height="120" rx="12" fill="#111A2B" fill-opacity="0.72" stroke="#34D399" stroke-opacity="0.24"/>
-<line x1="800" y1="666" x2="800" y2="750" stroke="#263247"/>
-<text x="486" y="675" font-size="12.5" font-weight="700" fill="#34D399">失敗原因の証拠照合</text>
-<text x="486" y="697" font-size="11" fill="#8E9AB0">観測した事実 ＋ 原因・対処候補</text>
-<rect x="486" y="709" width="104" height="30" rx="8" fill="#FBBF24" fill-opacity="0.10" stroke="#FBBF24" stroke-opacity="0.48"/>
-<text x="538" y="729" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FBBF24">Jevが照合</text>
-<line x1="598" y1="724" x2="618" y2="724" stroke="#34D399" stroke-width="1.5" marker-end="url(#a-g)"/>
-<rect x="626" y="709" width="144" height="30" rx="8" fill="#34D399" fill-opacity="0.09" stroke="#34D399" stroke-opacity="0.35"/>
-<text x="698" y="729" text-anchor="middle" font-size="11.5" fill="#C7CFDC">Codexが採否</text>
-<text x="486" y="756" font-size="10.5" fill="#8E9AB0">不支持なら追加観測へ戻る</text>
-
-<text x="818" y="675" font-size="12.5" font-weight="700" fill="#34D399">成果物の検証方針を選ぶ</text>
-<text x="818" y="697" font-size="11" fill="#8E9AB0">差分の意味・構造・実行時の動作を分類</text>
-<rect x="818" y="709" width="78" height="30" rx="8" fill="#FBBF24" fill-opacity="0.10" stroke="#FBBF24" stroke-opacity="0.48"/>
-<text x="857" y="729" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FBBF24">Jev判定</text>
-<line x1="904" y1="724" x2="918" y2="724" stroke="#34D399" stroke-width="1.5" marker-end="url(#a-g)"/>
-<rect x="926" y="704" width="196" height="56" rx="8" fill="#34D399" fill-opacity="0.08" stroke="#34D399" stroke-opacity="0.32"/>
-<text x="1024" y="725" text-anchor="middle" font-size="11.5" font-weight="700">検証方針を選択</text>
-<text x="1024" y="748" text-anchor="middle" font-size="10.5" fill="#8E9AB0">内容の整合性・構造・実行時の動作</text>
-
-<g transform="translate(474,778) scale(0.75)" fill="none" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g>
-<text x="520" y="794" font-size="17" font-weight="700">統合・実務判断</text>
-<text x="680" y="786" font-size="13.5" fill="#C7CFDC">補助出力を採否し、外部との入出力・既存機能への影響を判断</text>
-<text x="680" y="806" font-size="13.5" fill="#C7CFDC">失敗時の動きとGit操作を決める</text>
-<line x1="468" y1="822" x2="1132" y2="822" stroke="#34D399" stroke-opacity="0.25"/>
-<text x="468" y="843" font-size="12.5" font-weight="700" fill="#34D399">ANDON 発動条件</text>
-<text x="580" y="843" font-size="12" fill="#8E9AB0">仕様・省略可否・null許容・必須性・永続化・既存データ・外部挙動・権限</text>
-<text x="580" y="863" font-size="12" fill="#8E9AB0">失敗後の復元手順、既存機能への影響、データ移行を判断できない場合</text>
-
-<rect x="1212" y="408" width="340" height="482" rx="14" fill="#111A2B" stroke="#263247" filter="url(#shadow)"/>
-<text x="1240" y="438" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#5F6B82">HARNESS MODULES</text>
-<rect x="1240" y="448" width="36" height="36" rx="9" fill="#93A4C4" fill-opacity="0.10" stroke="#93A4C4" stroke-opacity="0.38"/>
-<g transform="translate(1248,456) scale(0.75)" fill="none" stroke="#93A4C4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></g>
-<text x="1288" y="466" font-size="22" font-weight="700">補助機能</text>
-<text x="1288" y="488" font-size="12.5" fill="#8E9AB0">スキル・専用コマンド・外部ツール</text>
-<line x1="1240" y1="508" x2="1524" y2="508" stroke="#263247"/>
-<g transform="translate(1226,526) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></g>
-<text x="1256" y="540" font-size="15" font-weight="700">codex-* skills</text><text x="1256" y="557" font-size="11" fill="#8E9AB0">調査・デバッグ・レビュー・文章作成</text>
-<g transform="translate(1226,578) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></g>
-<text x="1256" y="592" font-size="15" font-weight="700">bounded subagents</text><text x="1256" y="609" font-size="11" fill="#8E9AB0">Luna scout／範囲を限定した調査を分担</text>
-<g transform="translate(1226,630) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g>
-<text x="1256" y="644" font-size="15" font-weight="700">external research</text><text x="1256" y="661" font-size="11" fill="#8E9AB0">Web Search・Grok X／一次情報の再確認</text>
-<g transform="translate(1226,682) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></g>
-<text x="1256" y="696" font-size="15" font-weight="700">strategic review</text><text x="1256" y="713" font-size="11" fill="#8E9AB0">claude-strategic-review / Fable review</text>
-<g transform="translate(1226,734) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></g>
-<text x="1256" y="748" font-size="15" font-weight="700">claude-html-report</text><text x="1256" y="765" font-size="11" fill="#8E9AB0">HTML資料を生成し、開発者が確認</text>
-<g transform="translate(1226,786) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="m20 16 .8 2.2L23 19l-2.2.8L20 22l-.8-2.2L17 19l2.2-.8z"/></g>
-<text x="1256" y="800" font-size="15" font-weight="700">gemini-japanese-polish</text><text x="1256" y="817" font-size="11" fill="#8E9AB0">Antigravity経由で文書全体を推敲</text>
-<line x1="1168" y1="613" x2="1204" y2="613" stroke="#93A4C4" stroke-width="1.7" marker-end="url(#a-w)"/><text x="1186" y="599" text-anchor="middle" font-size="11.5" fill="#8E9AB0">依頼</text>
-<line x1="1204" y1="653" x2="1168" y2="653" stroke="#93A4C4" stroke-width="1.7" marker-end="url(#a-w)"/><text x="1186" y="676" text-anchor="middle" font-size="11.5" fill="#8E9AB0">材料</text>
-<text x="1240" y="841" font-size="11.5" fill="#5F6B82">Codexが採否・リポジトリ反映・Git操作を担う</text>
-
-<text x="60" y="922" font-size="11.5" font-weight="700" letter-spacing="2.2" fill="#5F6B82">EXTERNAL OPERATIONS</text>
-<text x="410" y="922" font-size="13" fill="#8E9AB0">外部操作を3種類に分けて扱う</text>
-<line x1="800" y1="890" x2="800" y2="940" stroke="#93A4C4" stroke-width="1.7"/>
-<line x1="296" y1="940" x2="1304" y2="940" stroke="#93A4C4" stroke-width="1.7"/>
-<line x1="296" y1="940" x2="296" y2="960" stroke="#93A4C4" stroke-width="1.7" marker-end="url(#a-w)"/>
-<line x1="800" y1="940" x2="800" y2="960" stroke="#FBBF24" stroke-width="1.7" marker-end="url(#a-y)"/>
-<line x1="1304" y1="940" x2="1304" y2="960" stroke="#F87171" stroke-width="1.7" stroke-dasharray="5 5" marker-end="url(#a-r)"/>
-<rect x="60" y="968" width="472" height="174" rx="14" fill="#111A2B" stroke="#263247" stroke-width="1.1" filter="url(#shadow)"/>
-<text x="84" y="998" font-size="11.5" font-weight="700" letter-spacing="2" fill="#93A4C4">READ · READONLY WRAPPER</text>
-<rect x="84" y="1008" width="32" height="32" rx="8" fill="#93A4C4" fill-opacity="0.10" stroke="#93A4C4" stroke-opacity="0.38"/>
-<g transform="translate(92,1016) scale(0.667)" fill="none" stroke="#93A4C4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></g>
-<text x="132" y="1032" font-size="19" font-weight="700">GitHub・AWS・GCPの読み取り</text>
-<text x="84" y="1062" font-size="13" fill="#8E9AB0">読み取り専用コマンドを使用</text>
-<text x="84" y="1084" font-size="13" fill="#8E9AB0">認証・権限エラー時は迂回せず中断して報告</text>
-<rect x="564" y="968" width="472" height="174" rx="14" fill="#1A1710" stroke="#5E4A1B" stroke-width="1.1" filter="url(#shadow)"/>
-<text x="588" y="998" font-size="11.5" font-weight="700" letter-spacing="1.8" fill="#FBBF24">APPROVAL BOUNDARY · JEV FIRST</text>
-<rect x="588" y="1008" width="32" height="32" rx="8" fill="#FBBF24" fill-opacity="0.10" stroke="#FBBF24" stroke-opacity="0.38"/>
-<g transform="translate(596,1016) scale(0.667)" fill="none" stroke="#FBBF24" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></g>
-<text x="636" y="1032" font-size="19" font-weight="700">Jevの事前判定</text>
-<rect x="588" y="1044" width="72" height="26" rx="13" fill="#FBBF24" fill-opacity="0.12" stroke="#FBBF24" stroke-opacity="0.55"/><text x="624" y="1062" text-anchor="middle" font-size="13" font-weight="700" fill="#FBBF24">Jev</text>
-<line x1="666" y1="1057" x2="686" y2="1057" stroke="#34D399" stroke-width="1.5" marker-end="url(#a-g)"/>
-<rect x="694" y="1044" width="126" height="26" rx="13" fill="#34D399" fill-opacity="0.12" stroke="#34D399" stroke-opacity="0.45"/><text x="757" y="1062" text-anchor="middle" font-size="12.5">許可 → 実行</text>
-<path d="M624 1070 V1093 H686" fill="none" stroke="#93A4C4" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#a-w)"/>
-<rect x="694" y="1080" width="102" height="26" rx="13" fill="#93A4C4" fill-opacity="0.10" stroke="#93A4C4" stroke-opacity="0.4"/><text x="745" y="1098" text-anchor="middle" font-size="12.5" fill="#C7CFDC">保留</text>
-<line x1="802" y1="1093" x2="822" y2="1093" stroke="#93A4C4" stroke-width="1.5" marker-end="url(#a-w)"/>
-<rect x="830" y="1080" width="174" height="26" rx="13" fill="#93A4C4" fill-opacity="0.10" stroke="#93A4C4" stroke-opacity="0.4"/><text x="917" y="1098" text-anchor="middle" font-size="12.5" fill="#C7CFDC">OpenAI auto-review</text>
-<rect x="1068" y="968" width="472" height="174" rx="14" fill="#1A1220" stroke="#6B2A33" stroke-width="1.1" filter="url(#shadow)"/>
-<text x="1092" y="998" font-size="11.5" font-weight="700" letter-spacing="2" fill="#F87171">NO DIRECT EXECUTION</text>
-<rect x="1092" y="1008" width="32" height="32" rx="8" fill="#F87171" fill-opacity="0.10" stroke="#F87171" stroke-opacity="0.38"/>
-<g transform="translate(1100,1016) scale(0.667)" fill="none" stroke="#F87171" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></g>
-<text x="1140" y="1032" font-size="19" font-weight="700">直接実行しない操作</text>
-<text x="1092" y="1056" font-size="13" fill="#8E9AB0">クラウド書き込み・デプロイ・IAM変更</text>
-<text x="1092" y="1076" font-size="13" fill="#8E9AB0">機密情報の参照・本番DBや本番環境の変更</text>
-<text x="1092" y="1096" font-size="13" fill="#8E9AB0">ローカル開発は対象外</text>
-<text x="1092" y="1116" font-size="13" fill="#8E9AB0">必要なコマンドと判断材料を開発者へ提示</text>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1440" width="1600" height="1440" font-family="'Hiragino Sans','Noto Sans JP','Noto Sans CJK JP',sans-serif" fill="#F3F5F9" role="img" aria-labelledby="diagram-title diagram-desc">
+  <title id="diagram-title">AI Agent Development Harness</title>
+  <desc id="diagram-desc">開発者が目的・制約・権限を定め、Codexが実務と補助出力の採否を担う。原資料・検証結果から改善を戻し、外部操作は参照・明示依頼された書き込み・禁止操作に分ける。Jevの事前判定は承認要求が発生した場合に限る。</desc>
+  <defs>
+    <linearGradient id="background" x2="0" y2="1">
+      <stop offset="0" stop-color="#0D1526" />
+      <stop offset="1" stop-color="#090F1B" />
+    </linearGradient>
+    <pattern id="dots" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="16" r="1" fill="#233049" />
+    </pattern>
+    <marker id="arrow-slate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1 L8 5 L2 9" fill="none" stroke="#93A4C4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1 L8 5 L2 9" fill="none" stroke="#34D399" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M2 1 L8 5 L2 9" fill="none" stroke="#F87171" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="1440" rx="0" fill="url(#background)" stroke="none" />
+  <rect x="0" y="0" width="1600" height="1440" rx="0" fill="url(#dots)" stroke="none" />
+  <text data-owner="canvas" x="800" y="64" font-size="40" fill="#F3F5F9" font-weight="700" text-anchor="middle">AI Agent Development Harness</text>
+  <text data-owner="canvas" x="800" y="104" font-size="17" fill="#93A4C4" font-weight="400" text-anchor="middle">開発者が最終判断を持ち、Codexがリポジトリの文脈と実務を担う</text>
+  <rect x="432" y="128" width="736" height="88" rx="14" fill="#111A2B" stroke="#3A4A6B" data-frame="developer" data-inset="16" />
+  <g transform="translate(460 154) scale(1.3333333333333333)" fill="none" stroke="#93A4C4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-owner="developer" data-role="icon">
+    <path d="M12 4 A4 4 0 1 0 12 12 A4 4 0 1 0 12 4" />
+    <path d="M4 22 A8 8 0 0 1 20 22" />
+  </g>
+  <text data-owner="developer" x="512" y="168" font-size="24" fill="#F3F5F9" font-weight="700" text-anchor="start">開発者</text>
+  <text data-owner="developer" x="512" y="196" font-size="14" fill="#C7CFDC" font-weight="400" text-anchor="start">目的・制約・仕様・権限・停止条件・対象外を決める</text>
+  <path id="developer-to-contract" d="M800 220 V232" fill="none" stroke="#93A4C4" stroke-width="1.6" marker-end="url(#arrow-slate)" data-corridor="792,216,16,24" data-role="connector" />
+  <rect x="432" y="240" width="736" height="128" rx="14" fill="#101C2B" stroke="#2B3A55" data-frame="control" data-inset="20" />
+  <text data-owner="control" x="456" y="272" font-size="12" fill="#93A4C4" font-weight="700" text-anchor="start" letter-spacing="1.4">DEVELOPER ↔ CODEX</text>
+  <line x1="800" y1="280" x2="800" y2="320" stroke="#2B3A55" stroke-width="1" />
+  <text data-owner="control" x="456" y="296" font-size="17" fill="#F3F5F9" font-weight="700" text-anchor="start">目的・制約・実行権限</text>
+  <text data-owner="control" x="456" y="320" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">最新の依頼で対象と操作を明示</text>
+  <text data-owner="control" x="824" y="296" font-size="17" fill="#F3F5F9" font-weight="700" text-anchor="start">成果物・検証・判断材料</text>
+  <text data-owner="control" x="824" y="320" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">Claudeの見解とCodexの採否も報告</text>
+  <text data-owner="control" x="456" y="344" font-size="12" fill="#93A4C4" font-weight="400" text-anchor="start">引き継ぎはユーザーの明示依頼から開始</text>
+  <path id="contract-to-main" d="M800 376 V392" fill="none" stroke="#34D399" stroke-width="1.6" marker-end="url(#arrow-green)" data-corridor="792,368,16,32" data-role="connector" />
+  <rect x="48" y="400" width="336" height="576" rx="14" fill="#111A2B" stroke="#2B3A55" data-frame="sources" data-inset="24" />
+  <text data-owner="sources" x="72" y="436" font-size="12" fill="#93A4C4" font-weight="700" text-anchor="start" letter-spacing="1.5">HARNESS SOURCES</text>
+  <g transform="translate(72 448) scale(1.1666666666666667)" fill="none" stroke="#93A4C4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-owner="sources" data-role="icon">
+    <path d="M5 2 H15 L21 8 V22 H5 Z" />
+    <path d="M15 2 V8 H21" />
+    <path d="M9 13 H17 M9 17 H17" />
+  </g>
+  <text data-owner="sources" x="120" y="468" font-size="23" fill="#F3F5F9" font-weight="700" text-anchor="start">作業の根拠</text>
+  <text data-owner="sources" x="72" y="496" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">Codexが参照するルールと仕様</text>
+  <line x1="72" y1="512" x2="360" y2="512" stroke="#2B3A55" stroke-width="1" />
+  <text data-owner="sources" x="72" y="544" font-size="16" fill="#F3F5F9" font-weight="700" text-anchor="start">codex/AGENTS.md</text>
+  <text data-owner="sources" x="72" y="568" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">権限・契約・対話の共通ルール</text>
+  <rect x="72" y="588" width="288" height="64" rx="14" fill="#102828" stroke="#245C52" data-frame="runtime" data-inset="12" />
+  <text data-owner="runtime" x="88" y="612" font-size="13" fill="#34D399" font-weight="700" text-anchor="start">既存タスクへ短いルールを反映</text>
+  <text data-owner="runtime" x="88" y="632" font-size="11.5" fill="#93A4C4" font-weight="400" text-anchor="start">SessionStart / UserPromptSubmit</text>
+  <text data-owner="sources" x="72" y="688" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">codex-recall-work</text>
+  <text data-owner="sources" x="72" y="712" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">過去の判断と検証資産を探す</text>
+  <text data-owner="sources" x="72" y="768" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">codex-openspec-workflow</text>
+  <text data-owner="sources" x="72" y="792" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">明示依頼時／既存OpenSpecが規定する作業</text>
+  <line x1="72" y1="824" x2="360" y2="824" stroke="#2B3A55" stroke-width="1" />
+  <text data-owner="sources" x="72" y="860" font-size="15" fill="#34D399" font-weight="700" text-anchor="start">codex-learn-from-work</text>
+  <text data-owner="sources" x="72" y="884" font-size="13" fill="#F3F5F9" font-weight="700" text-anchor="start">訂正・失敗から所有する手順を直す</text>
+  <text data-owner="sources" x="72" y="908" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">実行して確かめ、改善を正本へ戻す</text>
+  <text data-owner="sources" x="72" y="932" font-size="12" fill="#93A4C4" font-weight="400" text-anchor="start">実会話の記録は共有repoに置かない</text>
+  <path id="evidence-to-main" d="M392 640 H424" fill="none" stroke="#34D399" stroke-width="1.6" marker-end="url(#arrow-green)" data-corridor="384,632,48,16" data-role="connector" />
+  <text data-owner="canvas" x="408" y="620" font-size="11.5" fill="#34D399" font-weight="400" text-anchor="middle">根拠</text>
+  <path id="improvement-to-sources" d="M424 848 H392" fill="none" stroke="#34D399" stroke-width="1.6" marker-end="url(#arrow-green)" data-corridor="384,840,48,16" data-role="connector" />
+  <text data-owner="canvas" x="408" y="832" font-size="11.5" fill="#34D399" font-weight="400" text-anchor="middle">還流</text>
+  <rect x="432" y="400" width="736" height="576" rx="14" fill="#0E1F1C" stroke="#34D399" data-frame="main" data-inset="24" />
+  <g transform="translate(456 440) scale(1.6666666666666667)" fill="none" stroke="#34D399" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-owner="main" data-role="icon">
+    <path d="M4 4 H20 V20 H4 Z" />
+    <path d="M8 9 L11 12 L8 15" />
+    <path d="M13 15 H17" />
+  </g>
+  <text data-owner="main" x="520" y="436" font-size="12" fill="#34D399" font-weight="700" text-anchor="start" letter-spacing="1.5">MAIN CONTEXT OWNER</text>
+  <text data-owner="main" x="520" y="472" font-size="34" fill="#F3F5F9" font-weight="700" text-anchor="start">Codex</text>
+  <text data-owner="main" x="664" y="472" font-size="14" fill="#93A4C4" font-weight="400" text-anchor="start">文脈把握・実務遂行・採否判断を集約</text>
+  <line x1="456" y1="488" x2="1144" y2="488" stroke="#245C52" stroke-width="1" />
+  <g transform="translate(464 508) scale(1.0)" fill="none" stroke="#34D399" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-owner="main" data-role="icon">
+    <path d="M10 3 A7 7 0 1 0 10 17 A7 7 0 1 0 10 3" />
+    <path d="M16 16 L22 22" />
+  </g>
+  <text data-owner="main" x="512" y="528" font-size="18" fill="#F3F5F9" font-weight="700" text-anchor="start">調査</text>
+  <text data-owner="main" x="628" y="528" font-size="14" fill="#F3F5F9" font-weight="700" text-anchor="start">codex-context-engineering</text>
+  <text data-owner="main" x="628" y="548" font-size="12" fill="#C7CFDC" font-weight="400" text-anchor="start">問いに合う証拠・既存の所有者・実行経路を確認</text>
+  <g transform="translate(464 556) scale(1.0)" fill="none" stroke="#34D399" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-owner="main" data-role="icon">
+    <path d="M8 6 L2 12 L8 18" />
+    <path d="M16 6 L22 12 L16 18" />
+  </g>
+  <text data-owner="main" x="512" y="576" font-size="18" fill="#F3F5F9" font-weight="700" text-anchor="start">実装</text>
+  <text data-owner="main" x="628" y="576" font-size="14" fill="#F3F5F9" font-weight="700" text-anchor="start">codex-incremental-implementation</text>
+  <text data-owner="main" x="628" y="596" font-size="12" fill="#C7CFDC" font-weight="400" text-anchor="start">必要な範囲だけ変更し、契約と既存の挙動を保つ</text>
+  <g transform="translate(464 604) scale(1.0)" fill="none" stroke="#34D399" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-owner="main" data-role="icon">
+    <path d="M12 2 L21 5 V12 Q21 18 12 22 Q3 18 3 12 V5 Z" />
+    <path d="M8 12 L11 15 L17 9" />
+  </g>
+  <text data-owner="main" x="512" y="624" font-size="18" fill="#F3F5F9" font-weight="700" text-anchor="start">検証</text>
+  <text data-owner="main" x="628" y="624" font-size="14" fill="#F3F5F9" font-weight="700" text-anchor="start">codex-code-review / codex-interface-review</text>
+  <text data-owner="main" x="628" y="644" font-size="12" fill="#C7CFDC" font-weight="400" text-anchor="start">差分の不具合・回帰と、API・状態・保存形式を確認</text>
+  <rect x="456" y="672" width="332" height="144" rx="14" fill="#111E29" stroke="#245C52" data-frame="cause" data-inset="16" />
+  <text data-owner="cause" x="472" y="700" font-size="14" fill="#34D399" font-weight="700" text-anchor="start">codex-debugging-loop</text>
+  <text data-owner="cause" x="472" y="720" font-size="12" fill="#C7CFDC" font-weight="400" text-anchor="start">観測事実と原因・対処候補を照合</text>
+  <rect x="472" y="736" width="64" height="32" rx="14" fill="#282719" stroke="#806823" data-frame="cause-jev" data-inset="8" />
+  <text data-owner="cause-jev" x="504" y="758" font-size="13" fill="#FBBF24" font-weight="700" text-anchor="middle">Jev</text>
+  <path id="cause-decision" d="M544 752 H568" fill="none" stroke="#34D399" stroke-width="1.6" marker-end="url(#arrow-green)" data-corridor="536,744,40,16" data-role="connector" />
+  <rect x="576" y="736" width="180" height="32" rx="14" fill="#122C29" stroke="#245C52" data-frame="cause-result" data-inset="8" />
+  <text data-owner="cause-result" x="666" y="758" font-size="13" fill="#F3F5F9" font-weight="700" text-anchor="middle">Codexが採否</text>
+  <text data-owner="cause" x="472" y="796" font-size="12" fill="#93A4C4" font-weight="400" text-anchor="start">不支持なら追加観測へ戻る</text>
+  <rect x="812" y="672" width="332" height="144" rx="14" fill="#111E29" stroke="#245C52" data-frame="artifact" data-inset="16" />
+  <text data-owner="artifact" x="828" y="700" font-size="14" fill="#34D399" font-weight="700" text-anchor="start">codex-artifact-integrity</text>
+  <text data-owner="artifact" x="828" y="720" font-size="12" fill="#C7CFDC" font-weight="400" text-anchor="start">保持・比較の要件と候補を照合</text>
+  <rect x="828" y="736" width="64" height="32" rx="14" fill="#282719" stroke="#806823" data-frame="artifact-jev" data-inset="8" />
+  <text data-owner="artifact-jev" x="860" y="758" font-size="13" fill="#FBBF24" font-weight="700" text-anchor="middle">Jev</text>
+  <path id="artifact-decision" d="M900 752 H924" fill="none" stroke="#34D399" stroke-width="1.6" marker-end="url(#arrow-green)" data-corridor="892,744,40,16" data-role="connector" />
+  <rect x="932" y="736" width="180" height="32" rx="14" fill="#122C29" stroke="#245C52" data-frame="artifact-result" data-inset="8" />
+  <text data-owner="artifact-result" x="1022" y="758" font-size="13" fill="#F3F5F9" font-weight="700" text-anchor="middle">Codexが検証</text>
+  <text data-owner="artifact" x="828" y="796" font-size="12" fill="#93A4C4" font-weight="400" text-anchor="start">元資料・実物・実行結果で確かめる</text>
+  <g transform="translate(464 836) scale(1.0)" fill="none" stroke="#34D399" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-owner="main" data-role="icon">
+    <path d="M12 2 A10 10 0 1 0 12 22 A10 10 0 1 0 12 2" />
+    <path d="M7 12 L11 16 L17 9" />
+  </g>
+  <text data-owner="main" x="512" y="856" font-size="18" fill="#F3F5F9" font-weight="700" text-anchor="start">文章・統合</text>
+  <text data-owner="main" x="628" y="856" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">codex-writing</text>
+  <text data-owner="main" x="628" y="880" font-size="12" fill="#C7CFDC" font-weight="400" text-anchor="start">根拠選択・構成照合・局所置換。採否とGit判断はCodexが担う</text>
+  <line x1="456" y1="900" x2="1144" y2="900" stroke="#245C52" stroke-width="1" />
+  <text data-owner="main" x="456" y="928" font-size="14" fill="#34D399" font-weight="700" text-anchor="start">判断に不可欠な情報・権限が不足したらANDON</text>
+  <text data-owner="main" x="456" y="948" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">不明点を絞り、目的と未達を保って開発者へ戻す</text>
+  <rect x="1216" y="400" width="336" height="576" rx="14" fill="#111A2B" stroke="#2B3A55" data-frame="modules" data-inset="24" />
+  <text data-owner="modules" x="1240" y="436" font-size="12" fill="#93A4C4" font-weight="700" text-anchor="start" letter-spacing="1.5">HARNESS MODULES</text>
+  <g transform="translate(1240 448) scale(1.1666666666666667)" fill="none" stroke="#93A4C4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-owner="modules" data-role="icon">
+    <path d="M3 6 H21 V22 H3 Z" />
+    <path d="M8 6 V2 H16 V6" />
+    <path d="M8 6 V22 M16 6 V22" />
+  </g>
+  <text data-owner="modules" x="1288" y="468" font-size="23" fill="#F3F5F9" font-weight="700" text-anchor="start">補助機能</text>
+  <text data-owner="modules" x="1240" y="496" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">範囲と役割を分けて利用</text>
+  <line x1="1240" y1="512" x2="1528" y2="512" stroke="#2B3A55" stroke-width="1" />
+  <text data-owner="modules" x="1240" y="544" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">subagent / external research</text>
+  <text data-owner="modules" x="1240" y="568" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">Web調査、grok-x-researchでX調査</text>
+  <text data-owner="modules" x="1240" y="624" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">claude-strategic-review</text>
+  <text data-owner="modules" x="1240" y="648" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">元の目的から問題設定を問い直す</text>
+  <text data-owner="modules" x="1240" y="668" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">Claudeの見解とCodexの採否を報告</text>
+  <text data-owner="modules" x="1240" y="712" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">claude-html-report</text>
+  <text data-owner="modules" x="1240" y="736" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">Claudeが構成・執筆・直接編集</text>
+  <text data-owner="modules" x="1240" y="756" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">Codexは原資料の収集・検証</text>
+  <text data-owner="modules" x="1240" y="800" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">gemini-japanese-polish</text>
+  <text data-owner="modules" x="1240" y="824" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">Geminiは明示依頼時だけ利用</text>
+  <text data-owner="modules" x="1240" y="844" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">ClaudeのHTMLでは言語reviewのみ</text>
+  <text data-owner="modules" x="1240" y="888" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">chrome-devtools-on-demand</text>
+  <text data-owner="modules" x="1240" y="912" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">登録を維持し、必要な調査で利用</text>
+  <text data-owner="modules" x="1240" y="932" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">外部ブラウザは明示許可が必要</text>
+  <path id="request-to-modules" d="M1176 640 H1208" fill="none" stroke="#93A4C4" stroke-width="1.6" marker-end="url(#arrow-slate)" data-corridor="1168,632,48,16" data-role="connector" />
+  <text data-owner="canvas" x="1192" y="620" font-size="11.5" fill="#93A4C4" font-weight="400" text-anchor="middle">依頼</text>
+  <path id="findings-to-main" d="M1208 720 H1176" fill="none" stroke="#93A4C4" stroke-width="1.6" marker-end="url(#arrow-slate)" data-corridor="1168,712,48,16" data-role="connector" />
+  <text data-owner="canvas" x="1192" y="744" font-size="11.5" fill="#93A4C4" font-weight="400" text-anchor="middle">見解</text>
+  <line x1="800" y1="976" x2="800" y2="1000" stroke="#2B3A55" stroke-width="1" />
+  <line x1="288" y1="1000" x2="1312" y2="1000" stroke="#2B3A55" stroke-width="1" />
+  <path id="policy-read" d="M288 1000 V1040" fill="none" stroke="#93A4C4" stroke-width="1.6" marker-end="url(#arrow-slate)" data-corridor="280,992,16,56" data-role="connector" />
+  <path id="policy-write" d="M800 1000 V1040" fill="none" stroke="#34D399" stroke-width="1.6" marker-end="url(#arrow-green)" data-corridor="792,992,16,56" data-role="connector" />
+  <path id="policy-prohibited" d="M1312 1000 V1040" fill="none" stroke="#F87171" stroke-width="1.6" marker-end="url(#arrow-red)" data-corridor="1304,992,16,56" data-role="connector" stroke-dasharray="5 5" />
+  <text data-owner="canvas" x="48" y="1032" font-size="16" fill="#93A4C4" font-weight="700" text-anchor="start">外部操作</text>
+  <rect x="48" y="1056" width="480" height="176" rx="14" fill="#111A2B" stroke="#3A4A6B" data-frame="read" data-inset="24" />
+  <text data-owner="read" x="72" y="1120" font-size="19" fill="#F3F5F9" font-weight="700" text-anchor="start">読み取り</text>
+  <text data-owner="read" x="72" y="1092" font-size="11.5" fill="#93A4C4" font-weight="700" text-anchor="start" letter-spacing="1">READONLY WRAPPER</text>
+  <text data-owner="read" x="72" y="1152" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">GitHub・AWS・GCPはreadonly wrapperを使用</text>
+  <text data-owner="read" x="72" y="1176" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">DynamoDBのreadも同じ経路で許可</text>
+  <text data-owner="read" x="72" y="1200" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">認証・権限エラーでは迂回しない</text>
+  <rect x="560" y="1056" width="480" height="176" rx="14" fill="#111A2B" stroke="#245C52" data-frame="write" data-inset="24" />
+  <text data-owner="write" x="584" y="1120" font-size="19" fill="#F3F5F9" font-weight="700" text-anchor="start">明示依頼に基づく書き込み</text>
+  <text data-owner="write" x="584" y="1092" font-size="11.5" fill="#93A4C4" font-weight="700" text-anchor="start" letter-spacing="1">EXPLICIT REQUEST</text>
+  <text data-owner="write" x="584" y="1152" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">Git・PR・issue：codex-git-publishでwrapperを使用</text>
+  <text data-owner="write" x="584" y="1176" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">クラウドコンテンツ：MCP・connector・API</text>
+  <text data-owner="write" x="584" y="1200" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">対象・操作と共有ブランチへの直接pushを明示</text>
+  <rect x="1072" y="1056" width="480" height="176" rx="14" fill="#111A2B" stroke="#6B2A33" data-frame="prohibited" data-inset="24" />
+  <text data-owner="prohibited" x="1096" y="1120" font-size="19" fill="#F3F5F9" font-weight="700" text-anchor="start">実行しない操作</text>
+  <text data-owner="prohibited" x="1096" y="1092" font-size="11.5" fill="#93A4C4" font-weight="700" text-anchor="start" letter-spacing="1">EXECUTION LIMITS</text>
+  <text data-owner="prohibited" x="1096" y="1152" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">deploy・IAM変更・secret参照</text>
+  <text data-owner="prohibited" x="1096" y="1176" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">リモートDB操作はDynamoDBのreadを除き禁止</text>
+  <text data-owner="prohibited" x="1096" y="1200" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">ローカルDBは接続先を確認して操作可</text>
+  <rect x="48" y="1264" width="1504" height="128" rx="14" fill="#171C26" stroke="#5E4A1B" data-frame="approval" data-inset="24" />
+  <text data-owner="approval" x="72" y="1308" font-size="17" fill="#F3F5F9" font-weight="700" text-anchor="start">承認要求が発生したとき</text>
+  <text data-owner="approval" x="72" y="1336" font-size="13" fill="#93A4C4" font-weight="400" text-anchor="start">PreToolUse・sandboxの制約も維持</text>
+  <rect x="432" y="1304" width="112" height="48" rx="14" fill="#282719" stroke="#806823" data-frame="approval-jev" data-inset="12" />
+  <text data-owner="approval-jev" x="488" y="1336" font-size="18" fill="#FBBF24" font-weight="700" text-anchor="middle">Jev</text>
+  <rect x="624" y="1288" width="128" height="32" rx="14" fill="#122C29" stroke="#245C52" data-frame="approval-allow" data-inset="8" />
+  <text data-owner="approval-allow" x="688.0" y="1308" font-size="12.5" fill="#F3F5F9" font-weight="700" text-anchor="middle">許可</text>
+  <rect x="800" y="1288" width="128" height="32" rx="14" fill="#122C29" stroke="#245C52" data-frame="approval-execute" data-inset="8" />
+  <text data-owner="approval-execute" x="864.0" y="1308" font-size="12.5" fill="#F3F5F9" font-weight="700" text-anchor="middle">実行</text>
+  <rect x="624" y="1336" width="128" height="32" rx="14" fill="#1B2535" stroke="#3A4A6B" data-frame="approval-defer" data-inset="8" />
+  <text data-owner="approval-defer" x="688.0" y="1356" font-size="12.5" fill="#F3F5F9" font-weight="700" text-anchor="middle">その他</text>
+  <rect x="800" y="1336" width="288" height="32" rx="14" fill="#1B2535" stroke="#3A4A6B" data-frame="approval-ordinary" data-inset="8" />
+  <text data-owner="approval-ordinary" x="944.0" y="1356" font-size="12.5" fill="#F3F5F9" font-weight="700" text-anchor="middle">OpenAI auto-review／ユーザー承認</text>
+  <path id="jev-allow" d="M544 1328 H576 V1304 H616" fill="none" stroke="#34D399" stroke-width="1.6" marker-end="url(#arrow-green)" data-corridor="544,1296,80,40" data-role="connector" />
+  <path id="jev-defer" d="M576 1328 V1352 H616" fill="none" stroke="#93A4C4" stroke-width="1.6" marker-end="url(#arrow-slate)" data-corridor="568,1320,56,40" data-role="connector" />
+  <path id="allow-execute" d="M760 1304 H792" fill="none" stroke="#34D399" stroke-width="1.6" marker-end="url(#arrow-green)" data-corridor="752,1296,48,16" data-role="connector" />
+  <path id="defer-review" d="M760 1352 H792" fill="none" stroke="#93A4C4" stroke-width="1.6" marker-end="url(#arrow-slate)" data-corridor="752,1344,48,16" data-role="connector" />
+  <text data-owner="approval" x="1144" y="1308" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">Jevの許可は操作権限を広げない</text>
+  <text data-owner="approval" x="1144" y="1336" font-size="13" fill="#C7CFDC" font-weight="400" text-anchor="start">拒否や認証エラーを迂回しない</text>
 </svg>

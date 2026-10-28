@@ -1,6 +1,378 @@
 {
-  "prompt": "Use case: infographic-diagram\nAsset type: one-page architecture diagram for a technical README, 3:2 landscape.\nPrimary request: Carefully edit the supplied \"AI Agent Development Harness\" diagram. Preserve the established composition, colors, icons, spacing system, and architecture. Correct the external research section and prioritize flawless Japanese typography over adding detail.\n\nExact title:\nAI Agent Development Harness\n\nExact subtitle:\nCodex main agent を中心に、人間の介入・skills・research・review・実行境界で実務開発ループを制御する構成\n\nLayout and exact content:\n- Top blue node: 人間\n  Subtitle: 文脈・方針・停止判断\n  Bullets: 目的・制約 / 事業文脈 / 仕様判断 / やらないこと\n- Center green node: Codex main agent\n  Subtitle: 実務担当のmain engineer\n  Bullets: repo読解 / 実装 / 差分確認 / テスト確認 / 最終判断\n- Left purple column: Context / Workflow\n  1) OpenSpec / SDD — proposal / design / tasks / spec delta\n  2) Skill selection — main agentが必要なskillを直接選択\n  3) Skills — context engineering / debugging loop / code review / interface review / doubt review / writing\n- Right orange column: Review / Research / Advisor\n  1) Subagents — bounded repo scout / 影響範囲調査 / evidence pack\n  2) External research tools / scouts — Codex Web Search / Grok X Search / latest evidence / citations / 一次確認はmain agent\n  3) Quality review loop — code / interface / doubt review\n  4) Strategic advisors — Claude / Fable / Astra native subagent review / 採否はmain agent\n- Bottom gray band: Execution harness\n  Four boxes only: wrapper / rules / hooks / approval boundary\n  Do not add any tiny explanatory sentence beneath these boxes.\n- Protected red boxes: Git / AWS/GCP / GitHub CLI / Secrets / Production\n- Teal Outputs node: 実装差分 / テスト結果 / PR body / design doc / 残リスク\n\nExact callouts:\n1) 完全自動化ではない: 人間が文脈と停止判断を入れる\n2) main agentに判断を集約: subagent・research scout・advisorは補助\n3) skillsは手順書: 必要な時だけ読む\n4) 危険操作は外側で止める: Git / cloud / secret / production\n\nArrows and labels:\n- 人間 to Codex: 文脈・制約・判断を入力\n- Codex back to 人間: ANDON / 判断が必要な時に戻す\n- Bidirectional arrows between Codex and both side columns\n- Codex to Execution harness: 外部操作は必ず経由\n- Execution harness to protected resources: 危険操作を制御\n- Outputs back to 人間: 確認・介入\n\nTypography is the highest-priority invariant:\n- Render every Japanese character as a crisp, standard Japanese sans-serif glyph comparable to Noto Sans JP or Hiragino Sans.\n- The exact word \"制御\" appears in the subtitle and the lower label. Render both instances clearly and identically: 制御. Never approximate, deform, merge, substitute, or stylize these glyphs.\n- Also preserve exact legibility for 文脈, 方針, 停止判断, 仕様判断, 影響範囲調査, 一次確認, 採否, 実装差分, 残リスク.\n- Do not horizontally squeeze Japanese text. If text is tight, enlarge the box, wrap at phrase boundaries, reduce surrounding whitespace, or slightly reduce English text instead.\n- Use no text smaller than the existing readable body text. Avoid condensed fonts and fake Japanese glyphs.\n- Keep generous line height and prevent characters from touching borders, icons, bullets, or arrows.\n\nVisual constraints:\n- Preserve the supplied clean modern SaaS architecture-diagram style: white background, subtle dot grid, rounded rectangles, simple line icons, blue/purple/green/orange/gray/red/teal palette.\n- Keep the central Codex node visually dominant.\n- Do not create a linear backlog-to-merge pipeline.\n- Do not make Grok, Web Search, subagents, research scouts, Claude, Fable, or Astra look like implementation owners.\n- Do not connect research results directly to Git, cloud, Secrets, Production, or repo changes.\n- Preserve all unchanged labels exactly and introduce no additional prose.",
-  "referenced_image_paths": [
-    "assets/agent-development-harness.png"
-  ]
+  "generation_mode": "canonical-svg-rasterization",
+  "canonical_svg": "assets/agent-development-harness.svg",
+  "output_png": "assets/agent-development-harness.png",
+  "prompt": "Maintain the dark AI Agent Development Harness diagram with the developer owning final judgment and Codex owning repository context, execution and adoption. Preserve the actual skill names and explain each included skill’s concrete responsibility beside its name; do not replace names with abstract category labels. Use the canonical source files for behavior and authority. Explicitly requested cloud content writes are permitted through the named routes; deployment, IAM, secrets and remote database operations remain constrained, with DynamoDB read as the stated exception. Handoff starts only from an explicit user request. Claude owns HTML composition and scoped direct edits; Gemini is explicit-only, and provides language review for Claude-owned HTML. Jev prechecks only actual permission requests and cannot override PreToolUse or sandbox policy. Keep the three operation policies separate from the conditional approval flow. Use the SVG as the geometry and text source, and rasterize it deterministically to PNG; do not independently redraw the PNG or use the PNG as its own generation reference. Preserve comfortable grid spacing, phrase-level line breaks and all text inside its declared content inset. Never include customer information, actual conversations, project-specific operations, identifiers, secrets or local paths. QA overlays and measurements are temporary verification artifacts and are not part of the published image.",
+  "canvas": {
+    "width": 1600,
+    "height": 1440
+  },
+  "style": {
+    "font_family": "'Hiragino Sans','Noto Sans JP','Noto Sans CJK JP',sans-serif",
+    "background": [
+      "#0D1526",
+      "#090F1B"
+    ],
+    "primary": "#34D399",
+    "body_text": "#C7CFDC"
+  },
+  "layout": {
+    "outer_horizontal_margin": 48,
+    "main_columns": {
+      "sources": {
+        "x": 48.0,
+        "y": 400.0,
+        "width": 336.0,
+        "height": 576.0,
+        "inset": 24.0
+      },
+      "main": {
+        "x": 432.0,
+        "y": 400.0,
+        "width": 736.0,
+        "height": 576.0,
+        "inset": 24.0
+      },
+      "modules": {
+        "x": 1216.0,
+        "y": 400.0,
+        "width": 336.0,
+        "height": 576.0,
+        "inset": 24.0
+      }
+    },
+    "operation_cards": {
+      "read": {
+        "x": 48.0,
+        "y": 1056.0,
+        "width": 480.0,
+        "height": 176.0,
+        "inset": 24.0
+      },
+      "write": {
+        "x": 560.0,
+        "y": 1056.0,
+        "width": 480.0,
+        "height": 176.0,
+        "inset": 24.0
+      },
+      "prohibited": {
+        "x": 1072.0,
+        "y": 1056.0,
+        "width": 480.0,
+        "height": 176.0,
+        "inset": 24.0
+      }
+    },
+    "approval_flow": {
+      "x": 48.0,
+      "y": 1264.0,
+      "width": 1504.0,
+      "height": 128.0,
+      "inset": 24.0
+    },
+    "component_frames": {
+      "developer": {
+        "x": 432.0,
+        "y": 128.0,
+        "width": 736.0,
+        "height": 88.0,
+        "inset": 16.0
+      },
+      "control": {
+        "x": 432.0,
+        "y": 240.0,
+        "width": 736.0,
+        "height": 128.0,
+        "inset": 20.0
+      },
+      "sources": {
+        "x": 48.0,
+        "y": 400.0,
+        "width": 336.0,
+        "height": 576.0,
+        "inset": 24.0
+      },
+      "runtime": {
+        "x": 72.0,
+        "y": 588.0,
+        "width": 288.0,
+        "height": 64.0,
+        "inset": 12.0
+      },
+      "main": {
+        "x": 432.0,
+        "y": 400.0,
+        "width": 736.0,
+        "height": 576.0,
+        "inset": 24.0
+      },
+      "cause": {
+        "x": 456.0,
+        "y": 672.0,
+        "width": 332.0,
+        "height": 144.0,
+        "inset": 16.0
+      },
+      "cause-jev": {
+        "x": 472.0,
+        "y": 736.0,
+        "width": 64.0,
+        "height": 32.0,
+        "inset": 8.0
+      },
+      "cause-result": {
+        "x": 576.0,
+        "y": 736.0,
+        "width": 180.0,
+        "height": 32.0,
+        "inset": 8.0
+      },
+      "artifact": {
+        "x": 812.0,
+        "y": 672.0,
+        "width": 332.0,
+        "height": 144.0,
+        "inset": 16.0
+      },
+      "artifact-jev": {
+        "x": 828.0,
+        "y": 736.0,
+        "width": 64.0,
+        "height": 32.0,
+        "inset": 8.0
+      },
+      "artifact-result": {
+        "x": 932.0,
+        "y": 736.0,
+        "width": 180.0,
+        "height": 32.0,
+        "inset": 8.0
+      },
+      "modules": {
+        "x": 1216.0,
+        "y": 400.0,
+        "width": 336.0,
+        "height": 576.0,
+        "inset": 24.0
+      },
+      "read": {
+        "x": 48.0,
+        "y": 1056.0,
+        "width": 480.0,
+        "height": 176.0,
+        "inset": 24.0
+      },
+      "write": {
+        "x": 560.0,
+        "y": 1056.0,
+        "width": 480.0,
+        "height": 176.0,
+        "inset": 24.0
+      },
+      "prohibited": {
+        "x": 1072.0,
+        "y": 1056.0,
+        "width": 480.0,
+        "height": 176.0,
+        "inset": 24.0
+      },
+      "approval": {
+        "x": 48.0,
+        "y": 1264.0,
+        "width": 1504.0,
+        "height": 128.0,
+        "inset": 24.0
+      },
+      "approval-jev": {
+        "x": 432.0,
+        "y": 1304.0,
+        "width": 112.0,
+        "height": 48.0,
+        "inset": 12.0
+      },
+      "approval-allow": {
+        "x": 624.0,
+        "y": 1288.0,
+        "width": 128.0,
+        "height": 32.0,
+        "inset": 8.0
+      },
+      "approval-execute": {
+        "x": 800.0,
+        "y": 1288.0,
+        "width": 128.0,
+        "height": 32.0,
+        "inset": 8.0
+      },
+      "approval-defer": {
+        "x": 624.0,
+        "y": 1336.0,
+        "width": 128.0,
+        "height": 32.0,
+        "inset": 8.0
+      },
+      "approval-ordinary": {
+        "x": 800.0,
+        "y": 1336.0,
+        "width": 288.0,
+        "height": 32.0,
+        "inset": 8.0
+      }
+    }
+  },
+  "rendering": {
+    "renderer": "sharp / librsvg",
+    "density": 72,
+    "scale": 1,
+    "renderer_versions": {
+      "sharp": "0.35.5",
+      "rsvg": "2.63.2",
+      "pango": "1.58.2"
+    },
+    "background": "defined in canonical SVG",
+    "output_dimensions_match_svg": true
+  },
+  "canonical_sources": [
+    "codex/AGENTS.md",
+    "hooks/codex/runtime-contract.md",
+    "codex/config.example.toml",
+    "codex/skills/README.md",
+    "codex/skills/chrome-devtools-on-demand/SKILL.md",
+    "codex/skills/claude-html-report/SKILL.md",
+    "codex/skills/claude-strategic-review/SKILL.md",
+    "codex/skills/codex-artifact-integrity/SKILL.md",
+    "codex/skills/codex-code-review/SKILL.md",
+    "codex/skills/codex-context-engineering/SKILL.md",
+    "codex/skills/codex-debugging-loop/SKILL.md",
+    "codex/skills/codex-git-publish/SKILL.md",
+    "codex/skills/codex-incremental-implementation/SKILL.md",
+    "codex/skills/codex-interface-review/SKILL.md",
+    "codex/skills/codex-learn-from-work/SKILL.md",
+    "codex/skills/codex-openspec-workflow/SKILL.md",
+    "codex/skills/codex-recall-work/SKILL.md",
+    "codex/skills/codex-writing/SKILL.md",
+    "codex/skills/gemini-japanese-polish/SKILL.md",
+    "codex/skills/grok-x-research/SKILL.md"
+  ],
+  "included_skills": [
+    "chrome-devtools-on-demand",
+    "claude-html-report",
+    "claude-strategic-review",
+    "codex-artifact-integrity",
+    "codex-code-review",
+    "codex-context-engineering",
+    "codex-debugging-loop",
+    "codex-git-publish",
+    "codex-incremental-implementation",
+    "codex-interface-review",
+    "codex-learn-from-work",
+    "codex-openspec-workflow",
+    "codex-recall-work",
+    "codex-writing",
+    "gemini-japanese-polish",
+    "grok-x-research"
+  ],
+  "visible_text": [
+    "AI Agent Development Harness",
+    "開発者が最終判断を持ち、Codexがリポジトリの文脈と実務を担う",
+    "開発者",
+    "目的・制約・仕様・権限・停止条件・対象外を決める",
+    "DEVELOPER ↔ CODEX",
+    "目的・制約・実行権限",
+    "最新の依頼で対象と操作を明示",
+    "成果物・検証・判断材料",
+    "Claudeの見解とCodexの採否も報告",
+    "引き継ぎはユーザーの明示依頼から開始",
+    "HARNESS SOURCES",
+    "作業の根拠",
+    "Codexが参照するルールと仕様",
+    "codex/AGENTS.md",
+    "権限・契約・対話の共通ルール",
+    "既存タスクへ短いルールを反映",
+    "SessionStart / UserPromptSubmit",
+    "codex-recall-work",
+    "過去の判断と検証資産を探す",
+    "codex-openspec-workflow",
+    "明示依頼時／既存OpenSpecが規定する作業",
+    "codex-learn-from-work",
+    "訂正・失敗から所有する手順を直す",
+    "実行して確かめ、改善を正本へ戻す",
+    "実会話の記録は共有repoに置かない",
+    "根拠",
+    "還流",
+    "MAIN CONTEXT OWNER",
+    "Codex",
+    "文脈把握・実務遂行・採否判断を集約",
+    "調査",
+    "codex-context-engineering",
+    "問いに合う証拠・既存の所有者・実行経路を確認",
+    "実装",
+    "codex-incremental-implementation",
+    "必要な範囲だけ変更し、契約と既存の挙動を保つ",
+    "検証",
+    "codex-code-review / codex-interface-review",
+    "差分の不具合・回帰と、API・状態・保存形式を確認",
+    "codex-debugging-loop",
+    "観測事実と原因・対処候補を照合",
+    "Jev",
+    "Codexが採否",
+    "不支持なら追加観測へ戻る",
+    "codex-artifact-integrity",
+    "保持・比較の要件と候補を照合",
+    "Jev",
+    "Codexが検証",
+    "元資料・実物・実行結果で確かめる",
+    "文章・統合",
+    "codex-writing",
+    "根拠選択・構成照合・局所置換。採否とGit判断はCodexが担う",
+    "判断に不可欠な情報・権限が不足したらANDON",
+    "不明点を絞り、目的と未達を保って開発者へ戻す",
+    "HARNESS MODULES",
+    "補助機能",
+    "範囲と役割を分けて利用",
+    "subagent / external research",
+    "Web調査、grok-x-researchでX調査",
+    "claude-strategic-review",
+    "元の目的から問題設定を問い直す",
+    "Claudeの見解とCodexの採否を報告",
+    "claude-html-report",
+    "Claudeが構成・執筆・直接編集",
+    "Codexは原資料の収集・検証",
+    "gemini-japanese-polish",
+    "Geminiは明示依頼時だけ利用",
+    "ClaudeのHTMLでは言語reviewのみ",
+    "chrome-devtools-on-demand",
+    "登録を維持し、必要な調査で利用",
+    "外部ブラウザは明示許可が必要",
+    "依頼",
+    "見解",
+    "外部操作",
+    "読み取り",
+    "READONLY WRAPPER",
+    "GitHub・AWS・GCPはreadonly wrapperを使用",
+    "DynamoDBのreadも同じ経路で許可",
+    "認証・権限エラーでは迂回しない",
+    "明示依頼に基づく書き込み",
+    "EXPLICIT REQUEST",
+    "Git・PR・issue：codex-git-publishでwrapperを使用",
+    "クラウドコンテンツ：MCP・connector・API",
+    "対象・操作と共有ブランチへの直接pushを明示",
+    "実行しない操作",
+    "EXECUTION LIMITS",
+    "deploy・IAM変更・secret参照",
+    "リモートDB操作はDynamoDBのreadを除き禁止",
+    "ローカルDBは接続先を確認して操作可",
+    "承認要求が発生したとき",
+    "PreToolUse・sandboxの制約も維持",
+    "Jev",
+    "許可",
+    "実行",
+    "その他",
+    "OpenAI auto-review／ユーザー承認",
+    "Jevの許可は操作権限を広げない",
+    "拒否や認証エラーを迂回しない"
+  ],
+  "canonical_svg_sha256": "11d8550837a096f89261e2118fbfcc9f1f78c229a6aed7d57405eb6c4241b83a",
+  "output_png_sha256": "b6800fc97c596107680aca019cfc5b58457f553371188a36f19f3e504b2f22db"
 }
