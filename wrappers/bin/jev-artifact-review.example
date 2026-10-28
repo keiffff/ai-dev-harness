@@ -312,7 +312,14 @@ def concrete_review(original_request, requirements, candidate, baseline):
             )
         if completed.returncode != 0:
             return {"status": "unavailable", "reason": "reviewer_exit", "exit_code": completed.returncode}
-        response = json.loads(completed.stdout)
+        # The tool-free reviewer uses a text transport and may fence its JSON.
+        # Unwrap only a complete JSON block; do not extract or repair payloads.
+        response_text = completed.stdout.strip()
+        fenced = re.fullmatch(r"```(?:json)?[ \t]*\r?\n(.*)\r?\n```", response_text,
+                              flags=re.DOTALL | re.IGNORECASE)
+        if fenced is not None:
+            response_text = fenced.group(1)
+        response = json.loads(response_text)
         findings = response.get("findings") if isinstance(response, dict) else None
         if not isinstance(findings, list):
             raise ValueError("invalid findings")

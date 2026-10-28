@@ -5,7 +5,7 @@
   "prompt": "Maintain the dark AI Agent Development Harness diagram with the developer owning final judgment and Codex owning repository context, execution and adoption. Preserve the actual skill names and explain each included skill’s concrete responsibility beside its name; do not replace names with abstract category labels. Use the canonical source files for behavior and authority. Explicitly requested cloud content writes are permitted through the named routes; deployment, IAM, secrets and remote database operations remain constrained, with DynamoDB read as the stated exception. Handoff starts only from an explicit user request. Claude owns HTML composition and scoped direct edits; Gemini is explicit-only, and provides language review for Claude-owned HTML. Jev prechecks only actual permission requests and cannot override PreToolUse or sandbox policy. Keep the three operation policies separate from the conditional approval flow. Use the SVG as the geometry and text source, and rasterize it deterministically to PNG; do not independently redraw the PNG or use the PNG as its own generation reference. Preserve comfortable grid spacing, phrase-level line breaks and all text inside its declared content inset. Never include customer information, actual conversations, project-specific operations, identifiers, secrets or local paths. QA overlays and measurements are temporary verification artifacts and are not part of the published image.",
   "canvas": {
     "width": 1600,
-    "height": 1440
+    "height": 1512
   },
   "style": {
     "font_family": "'Hiragino Sans','Noto Sans JP','Noto Sans CJK JP',sans-serif",
@@ -23,50 +23,50 @@
         "x": 48.0,
         "y": 400.0,
         "width": 336.0,
-        "height": 576.0,
+        "height": 624.0,
         "inset": 24.0
       },
       "main": {
         "x": 432.0,
         "y": 400.0,
         "width": 736.0,
-        "height": 576.0,
+        "height": 624.0,
         "inset": 24.0
       },
       "modules": {
         "x": 1216.0,
         "y": 400.0,
         "width": 336.0,
-        "height": 576.0,
+        "height": 624.0,
         "inset": 24.0
       }
     },
     "operation_cards": {
       "read": {
         "x": 48.0,
-        "y": 1056.0,
+        "y": 1104.0,
         "width": 480.0,
-        "height": 176.0,
+        "height": 200.0,
         "inset": 24.0
       },
       "write": {
         "x": 560.0,
-        "y": 1056.0,
+        "y": 1104.0,
         "width": 480.0,
-        "height": 176.0,
+        "height": 200.0,
         "inset": 24.0
       },
       "prohibited": {
         "x": 1072.0,
-        "y": 1056.0,
+        "y": 1104.0,
         "width": 480.0,
-        "height": 176.0,
+        "height": 200.0,
         "inset": 24.0
       }
     },
     "approval_flow": {
       "x": 48.0,
-      "y": 1264.0,
+      "y": 1336.0,
       "width": 1504.0,
       "height": 128.0,
       "inset": 24.0
@@ -90,7 +90,7 @@
         "x": 48.0,
         "y": 400.0,
         "width": 336.0,
-        "height": 576.0,
+        "height": 624.0,
         "inset": 24.0
       },
       "runtime": {
@@ -104,7 +104,7 @@
         "x": 432.0,
         "y": 400.0,
         "width": 736.0,
-        "height": 576.0,
+        "height": 624.0,
         "inset": 24.0
       },
       "cause": {
@@ -153,68 +153,68 @@
         "x": 1216.0,
         "y": 400.0,
         "width": 336.0,
-        "height": 576.0,
+        "height": 624.0,
         "inset": 24.0
       },
       "read": {
         "x": 48.0,
-        "y": 1056.0,
+        "y": 1104.0,
         "width": 480.0,
-        "height": 176.0,
+        "height": 200.0,
         "inset": 24.0
       },
       "write": {
         "x": 560.0,
-        "y": 1056.0,
+        "y": 1104.0,
         "width": 480.0,
-        "height": 176.0,
+        "height": 200.0,
         "inset": 24.0
       },
       "prohibited": {
         "x": 1072.0,
-        "y": 1056.0,
+        "y": 1104.0,
         "width": 480.0,
-        "height": 176.0,
+        "height": 200.0,
         "inset": 24.0
       },
       "approval": {
         "x": 48.0,
-        "y": 1264.0,
+        "y": 1336.0,
         "width": 1504.0,
         "height": 128.0,
         "inset": 24.0
       },
       "approval-jev": {
         "x": 432.0,
-        "y": 1304.0,
+        "y": 1376.0,
         "width": 112.0,
         "height": 48.0,
         "inset": 12.0
       },
       "approval-allow": {
         "x": 624.0,
-        "y": 1288.0,
+        "y": 1360.0,
         "width": 128.0,
         "height": 32.0,
         "inset": 8.0
       },
       "approval-execute": {
         "x": 800.0,
-        "y": 1288.0,
+        "y": 1360.0,
         "width": 128.0,
         "height": 32.0,
         "inset": 8.0
       },
       "approval-defer": {
         "x": 624.0,
-        "y": 1336.0,
+        "y": 1408.0,
         "width": 128.0,
         "height": 32.0,
         "inset": 8.0
       },
       "approval-ordinary": {
         "x": 800.0,
-        "y": 1336.0,
+        "y": 1408.0,
         "width": 288.0,
         "height": 32.0,
         "inset": 8.0
@@ -326,12 +326,15 @@
     "文章・統合",
     "codex-writing",
     "根拠選択・構成照合・局所置換。採否とGit判断はCodexが担う",
-    "判断に不可欠な情報・権限が不足したらANDON",
-    "不明点を絞り、目的と未達を保って開発者へ戻す",
+    "判断に不可欠な事項が未確定ならANDON",
+    "例：仕様・API・必須項目・null／省略・保存形式・権限・互換性・既存機能への影響・復元・移行の判断",
+    "判断できない点を絞り、目的と未達を保って開発者へ戻す",
     "HARNESS MODULES",
     "補助機能",
     "範囲と役割を分けて利用",
-    "subagent / external research",
+    "bounded subagents",
+    "範囲を限定した調査・独立レビュー",
+    "external research",
     "Web調査、grok-x-researchでX調査",
     "claude-strategic-review",
     "元の目的から問題設定を問い直す",
@@ -363,6 +366,7 @@
     "deploy・IAM変更・secret参照",
     "リモートDB操作はDynamoDBのreadを除き禁止",
     "ローカルDBは接続先を確認して操作可",
+    "必要ならコマンドと判断材料を開発者へ提示",
     "承認要求が発生したとき",
     "PreToolUse・sandboxの制約も維持",
     "Jev",
@@ -373,6 +377,6 @@
     "Jevの許可は操作権限を広げない",
     "拒否や認証エラーを迂回しない"
   ],
-  "canonical_svg_sha256": "11d8550837a096f89261e2118fbfcc9f1f78c229a6aed7d57405eb6c4241b83a",
-  "output_png_sha256": "b6800fc97c596107680aca019cfc5b58457f553371188a36f19f3e504b2f22db"
+  "canonical_svg_sha256": "63e5ba9d1d7e44bdd89e0f4fb48dd9642386f2e90ced8e806af9ef8179d6e1f8",
+  "output_png_sha256": "f349cb923dd3592b8d69e81ceb8c2b260a3080e05c90eb4e2e4eb8101e6ef08c"
 }

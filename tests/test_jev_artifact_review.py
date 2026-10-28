@@ -41,6 +41,7 @@ class JevArtifactReviewTests(unittest.TestCase):
         original_request=None,
         review_response=None,
         review_exit=0,
+        review_text=None,
     ):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -82,7 +83,7 @@ class JevArtifactReviewTests(unittest.TestCase):
                 "JEV_TEST_RESPONSE": json.dumps(response),
                 "ARTIFACT_REVIEW_CLAUDE": str(reviewer),
                 "REVIEW_TEST_CAPTURE": str(review_capture),
-                "REVIEW_TEST_RESPONSE": json.dumps(review_response or {"findings": []}),
+                "REVIEW_TEST_RESPONSE": review_text if review_text is not None else json.dumps(review_response or {"findings": []}),
                 "REVIEW_TEST_EXIT": str(review_exit),
             })
             result = subprocess.run(
@@ -276,6 +277,61 @@ class JevArtifactReviewTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0)
         self.assertEqual(captured["review_calls"], 0)
+
+    def test_complete_json_code_block_preserves_findings_and_review_decision(self):
+        finding = {"source": "request", "requirement": "Keep the form usable.",
+                   "evidence": "blocking dialog", "reason": "The dialog prevents form interaction."}
+        for language, findings in [("json", [finding]), ("", [])]:
+            with self.subTest(language=language):
+                result, captured = self.run_review(
+                    self.response(0.95), original_request="Keep the form usable.",
+                    candidate="blocking dialog", review_text="  ```" + language + "\n"
+                    + json.dumps({"findings": findings}) + "\n```\n",
+                )
+                output = json.loads(result.stdout)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(output["decision"], "review")
+                self.assertEqual(output["concrete_review"], {"status": "completed", "findings": findings})
+                self.assertEqual(captured["review_calls"], 1)
+
+    def test_incomplete_json_extra_prose_and_multiple_payloads_are_not_repaired(self):
+        payload = '{"findings": []}'
+        responses = [
+            '```json\n{"findings": [}\n```',
+            '```json\n' + payload,
+            'Explanation\n```json\n' + payload + '\n```',
+            '```json\n' + payload + '\n```\nExplanation',
+            '```json\n' + payload + '\n```\n```json\n' + payload + '\n```',
+            payload + '\n' + payload,
+            '```python\n' + payload + '\n```',
+        ]
+        for response in responses:
+            with self.subTest(response=response):
+                result, captured = self.run_review(
+                    self.response(0.95), original_request="Keep the form usable.", review_text=response,
+                )
+                output = json.loads(result.stdout)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(output["decision"], "review")
+                self.assertEqual(output["concrete_review"]["status"], "unavailable")
+                self.assertNotIn("findings", output["concrete_review"])
+                self.assertEqual(captured["review_calls"], 1)
+
+    def test_fenced_response_still_requires_valid_schema_and_grounded_quotes(self):
+        for response in [
+            {"findings": "none"},
+            {"findings": [{"source": "request", "requirement": "Not requested.",
+                           "evidence": "blocking dialog", "reason": "Unsupported."}]},
+            {"findings": [{"source": "request", "requirement": "Keep the form usable.",
+                           "evidence": "not in candidate", "reason": "Unsupported."}]},
+        ]:
+            with self.subTest(response=response):
+                result, captured = self.run_review(
+                    self.response(0.95), original_request="Keep the form usable.",
+                    candidate="blocking dialog", review_text='```json\n' + json.dumps(response) + '\n```',
+                )
+                self.assertEqual(json.loads(result.stdout)["concrete_review"]["status"], "unavailable")
+                self.assertEqual(captured["review_calls"], 1)
 
     def test_ungrounded_findings_do_not_become_verified_defects(self):
         result, captured = self.run_review(
