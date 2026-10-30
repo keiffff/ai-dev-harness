@@ -13,9 +13,11 @@ Inspect the source checkout read-only and record:
 - required ignored artifacts, including repository-local specifications;
 - whether each required artifact is available from a durable commit or another verified checkpoint.
 
-Classify differences as task-required artifacts, user-owned or unknown changes, or known environment-generated files. Block on missing task artifacts and user-owned or unknown differences. A source-only or destination-only environment-generated file does not block the handoff when its owner and trigger are known, it is unrelated to the task, and the base commit plus required-artifact manifest still match. Record it separately as excluded environment state; do not put it in expected task changes or the required-artifact manifest, and do not transfer, edit, delete, or require it at the destination.
+Classify differences as task-required artifacts, user-owned or unknown changes, or known environment-generated files. Block on missing task artifacts and user-owned or unknown differences that conflict with required transferred state. In a parallel split, source edits outside the approved scope remain in the source; do not treat them as required destination state. A source-only or destination-only environment-generated file does not block the handoff when its owner and trigger are known, it is unrelated to the task, and the base commit plus required-artifact manifest still match. Record it separately as excluded environment state; do not put it in expected task changes or the required-artifact manifest, and do not transfer, edit, delete, or require it at the destination.
 
 Do not rely on ordinary `git status` for ignored artifacts. Search the active contract, conversation references, and repository instructions for artifact roots. For OpenSpec, enumerate candidates directly under `openspec/changes/`, establish the active change from source evidence, and inspect the complete selected tree. If multiple candidates remain, stop before destination creation instead of choosing one. Do not sweep unrelated ignored areas such as dependency caches or secrets.
+
+For a parallel split, unrelated source edits stay in the source and are recorded as outside the approved split scope; they are not a reason to copy the whole working tree. Freeze the selected artifacts once and record that snapshot's hashes. Subsequent transfers must use that snapshot, not a fresh read of files the source may still be editing. Preserve staged and unstaged distinctions only when they belong to the split. Never stage, reset, stash, or otherwise rearrange source changes to prepare isolation.
 
 ## Build The Required-Artifact Manifest
 
@@ -70,6 +72,11 @@ Use this structure:
 ## Workspace checkpoint
 - Source checkout: `<path>`
 - Source HEAD: `<commit>`
+- Checkout ownership: <exclusive whole-task move or parallel split; parallel destinations each require their own Codex app-managed worktree>
+- Destination checkout: <resolved app-managed path after creation; all destination editing and commands use this path>
+- Other active destination checkouts: <paths that must remain distinct, when splitting parallel work>
+- Source changes outside the split: <retained in source, not transferred>
+- Frozen split snapshot: <selected task-required state and capture point, when needed>
 - Task-required changes: <tracked, staged, untracked, and required ignored state that must match or transfer>
 - Excluded environment state: <known generated files that may legitimately differ by checkout; omit when empty>
 - Recovery source: <commit, approved snapshot, or verified transfer>

@@ -130,6 +130,22 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         self.assertIn("references/verify-destination.md", content)
         self.assertNotIn("## Build The Required-Artifact Manifest", content)
 
+    def test_parallel_split_requires_app_worktree_and_frozen_selected_state(self):
+        content = handoff_instructions()
+        self.assertIn("separate Codex app-managed worktree for each destination", content)
+        self.assertIn('`target.environment.type: "worktree"`', content)
+        self.assertIn("verified immutable SHA", content)
+        self.assertIn("Never share the source checkout", content)
+        self.assertIn("Do not clone the source's whole dirty state", content)
+        self.assertIn("Subsequent transfers must use that snapshot", content)
+        self.assertIn("Source changes outside the split", content)
+        self.assertIn("Reject a shared or aliased source path", content)
+        self.assertIn("Git index differ from the source", content)
+        self.assertIn("source absolute paths are provenance, not editing targets", content)
+        self.assertIn("After a parallel split, retain the source task and checkout", content)
+        self.assertIn("only for an exclusive whole-task move", content)
+        self.assertIn("do not fall back to a shared checkout, raw Git worktree", content)
+
     def test_handoff_is_user_initiated(self):
         content = SKILL.read_text()
 

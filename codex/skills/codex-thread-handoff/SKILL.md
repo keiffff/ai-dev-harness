@@ -1,6 +1,6 @@
 ---
 name: codex-thread-handoff
-description: Move the whole owned task to a fresh task when the user explicitly asks. Preserves scope and workspace state.
+description: Hand off a whole task or explicitly split parallel work into a fresh task, preserving scope and isolating parallel edits in app-managed worktrees.
 ---
 
 # Codex Thread Handoff
@@ -13,7 +13,15 @@ Do not proactively suggest a handoff. Create a destination only when the latest 
 
 Record whether the latest request is a plain handoff or explicitly asks the destination to continue, resume, or finish the owned task. A plain handoff stops after verification. An explicit handoff-and-resume request authorizes the destination to continue the already-owned local task after successful verification, without another confirmation message. Do not infer resume authority from the existence of a proposed resume point.
 
-Archive the source only after destination verification and only when the user explicitly requested source archival for this handoff or has a verified standing preference to archive successfully handed-off tasks. Otherwise leave it unchanged. Archival is cleanup after success, never a substitute for verification.
+For a parallel split, retain the source task and its checkout; a standing preference to archive migrated tasks does not apply to work retained in the source. Archive the source only after destination verification and only when the user explicitly requested source archival for this handoff or has a verified standing preference to archive successfully handed-off tasks. Otherwise leave it unchanged. Archival is cleanup after success, never a substitute for verification.
+
+## Select Checkout Ownership
+
+Distinguish an exclusive move of the whole task from a parallel split before creation. If the source or another destination will continue editing, or the user asks to split a workstream or hand off multiple independent workstreams, use a separate Codex app-managed worktree for each destination. A parallel split request authorizes this isolation without another worktree question. Never share the source checkout or reuse another active destination's worktree for parallel work. Only an exclusive whole-task move may use the same-checkout fast path.
+
+Record the source checkout, the exact base commit, the approved split scope, and the checkout ownership in the packet. Start parallel worktrees from the immutable commit and transfer only the split's task-required artifacts from a frozen snapshot. Do not clone the source's whole dirty state with `startingState: working-tree`, copy unrelated changes, or keep using absolute source paths for destination edits. If one changed file contains work owned by several tasks, separate the requested change using the scope evidence; stop before creation if ownership cannot be established.
+
+Require the Codex app's managed-worktree creation capability as part of destination creation. If it is unavailable, report the blocker; do not fall back to a shared checkout, raw Git worktree, or temporary clone. Before destination work, verify its resolved checkout path and Git index differ from the source and all other active destinations; a shared Git common directory is normal. Source changes after the snapshot belong to the source and must not be synchronized into the destination implicitly.
 
 ## Preflight Task Coordination
 
@@ -45,7 +53,7 @@ Use the source task identity and root outcome for the destination title and obje
 
 A plain handoff authorizes only destination-task creation, context transfer, required-artifact transfer, and read-only destination verification. Selecting or correcting the destination checkout to the exact recovery commit is part of context transfer. When the latest request explicitly asks to hand off and continue, resume, or finish, the destination may continue already-authorized local investigation or implementation within the retained task scope after verification. Neither form transfers authority for browser use, credentials, external services, cloud operations, commit, branch creation, rebase, push, deployment, or other separately gated mutation. Source archival requires the separate authority described above.
 
-The destination must verify transferred state before substantive work. On a same-host destination that shares the exact checkout and needs no post-creation artifact transfer, use the fast verification path: create the destination, take at most one immediate status snapshot, report the created task without waiting for its verification turn, and stop. The destination verifies before either resuming authorized work or responding. Use synchronous source-side verification only when checkout setup, host transfer, or post-creation artifact delivery makes it necessary.
+The destination must verify transferred state before substantive work. Only for an exclusive whole-task move, on a same-host destination that shares the exact checkout and needs no post-creation artifact transfer, use the fast verification path: create the destination, take at most one immediate status snapshot, report the created task without waiting for its verification turn, and stop. The destination verifies before either resuming authorized work or responding. Use synchronous source-side verification only when checkout setup, host transfer, or post-creation artifact delivery makes it necessary.
 
 Verification gates only task-bearing state: semantic scope, the exact recovery commit, task-required state outside that commit, and active contract artifacts such as OpenSpec. A known environment-generated file that is unrelated to the task and intentionally excluded from the required-artifact manifest does not become a blocker merely because it is present in only one checkout. Do not surface such excluded state in the user-facing verification result unless it affects the proposed resume point.
 
