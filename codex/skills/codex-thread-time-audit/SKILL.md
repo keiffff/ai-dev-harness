@@ -9,6 +9,8 @@ description: Report Codex work times by project, task, and day from turn-level s
 
 Report Codex activity at the individual turn interval level. Do not collapse a whole day or thread into one min/max range unless the user explicitly asks for a coarse summary.
 
+The default report is for directly operated chats. Non-interactive `codex exec` sessions (`session_meta.source: "exec"`) run helpers and evaluations; exclude them from the default report and retain their file/task-start counts in diagnostics. Do not use temporary folder basenames as user projects or infer exclusions from generic directory names. Interactive CLI sessions and Desktop/VS Code sessions remain eligible, including those with a stale `thread_source` flag. The existing `--session-scope all` includes non-interactive sessions for evidence inspection, not automatic addition to user activity.
+
 The user's goal is usually to see gaps within the same day, so preserve each `startedAt` to `completedAt` interval.
 
 ## Deterministic collection

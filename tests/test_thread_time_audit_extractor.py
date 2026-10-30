@@ -31,6 +31,51 @@ def write_jsonl(path, rows):
 
 
 class ThreadTimeAuditExtractorTests(unittest.TestCase):
+    def test_noninteractive_jobs_are_excluded_and_auditable(self):
+        extractor = load_extractor()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir)
+            for session_id, source, cwd in (
+                ("desktop", "vscode", "/workspace/project"),
+                ("terminal", "cli", "/workspace/project"),
+                ("helper", "exec", "/tmp/writing-job/extract"),
+                ("evaluation", "exec", "/workspace/checks/trial/selection"),
+            ):
+                write_jsonl(home / "sessions" / f"{session_id}.jsonl", [
+                    {"type": "session_meta", "payload": {
+                        "id": session_id, "cwd": cwd, "source": source,
+                        "thread_source": "subagent" if session_id == "desktop" else "user",
+                    }},
+                    {"type": "event_msg", "payload": {
+                        "type": "task_started", "turn_id": session_id, "started_at": 1001,
+                    }},
+                    {"type": "response_item", "payload": {"type": "message", "role": "user"}},
+                    {"type": "turn_context", "payload": {"turn_id": session_id, "cwd": cwd}},
+                    {"type": "event_msg", "payload": {
+                        "type": "task_complete", "turn_id": session_id, "completed_at": 1003,
+                    }},
+                ])
+            rows, stats = extractor.extract_rows(home, 1000, 1100, {}, {})
+            self.assertEqual({row["session_id"] for row in rows}, {"desktop", "terminal"})
+            self.assertEqual({row["project"] for row in rows}, {"project"})
+            diagnostics = extractor.build_diagnostics(
+                stats, datetime.fromtimestamp(1000, timezone.utc),
+                datetime.fromtimestamp(1100, timezone.utc), "UTC", "top-level",
+            )
+            self.assertEqual(diagnostics["coverage"]["skippedNonInteractiveFiles"], 2)
+            self.assertEqual(diagnostics["coverage"]["skippedNonInteractiveTaskStarts"], 2)
+            self.assertEqual(diagnostics["coverage"]["unaccountedTaskStarts"], 0)
+            self.assertEqual(diagnostics["status"], "ok")
+
+            all_rows, all_stats = extractor.extract_rows(home, 1000, 1100, {}, {}, "all")
+            self.assertEqual(len(all_rows), 4)
+            self.assertEqual(
+                {row["session_id"] for row in all_rows if row["sessionKind"] == "noninteractive"},
+                {"helper", "evaluation"},
+            )
+            self.assertEqual(all_stats["skipped_noninteractive_task_starts"], 0)
+            self.assertEqual(all_stats["noninteractive_task_starts"], 2)
+
     def test_each_turn_uses_its_matching_turn_context_cwd(self):
         extractor = load_extractor()
         with tempfile.TemporaryDirectory() as temp_dir:

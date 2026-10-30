@@ -159,6 +159,22 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides, session_scope=
                 stats["skipped_subagent_task_starts"] += subagent_task_starts
             continue
 
+        # `codex exec` sessions are non-interactive jobs (including helpers
+        # and evaluations), not directly operated chats. Their workspace
+        # directory is not evidence of a user project. Preserve counts for
+        # audit and allow inspection through the existing all-sessions scope.
+        noninteractive = source == "exec"
+        if noninteractive:
+            exec_task_starts = count_task_starts_in_window(lines, start_ts, end_ts)
+            if exec_task_starts:
+                stats["noninteractive_files"] += 1
+                stats["noninteractive_task_starts"] += exec_task_starts
+            if session_scope == "top-level":
+                if exec_task_starts:
+                    stats["skipped_noninteractive_files"] += 1
+                    stats["skipped_noninteractive_task_starts"] += exec_task_starts
+                continue
+
         stats["parsed_files"] += 1
         tasks = {}
         active = []
@@ -259,7 +275,8 @@ def extract_rows(codex_home, start_ts, end_ts, titles, overrides, session_scope=
                     "startedAt": started,
                     "completedAt": completed,
                     "status": "進行中" if completed is None else ("中断" if task["complete_type"] == "turn_aborted" else "completed"),
-                    "sessionKind": "subagent" if structural_subagent else "top-level",
+                    "sessionKind": "subagent" if structural_subagent else ("noninteractive" if noninteractive else "top-level"),
+                    "sessionSource": source,
                     "parentThreadId": parent_thread_id,
                     "userEvidence": sorted(task["user_evidence"]),
                 }
@@ -287,6 +304,8 @@ def build_diagnostics(stats, start, end, timezone, session_scope):
         review_reasons.append("some turns used session cwd because turn_context cwd was unavailable")
     if session_scope == "all" and stats["structural_subagent_files"]:
         review_reasons.append("subagent logs may contain inherited parent history; review provenance before reporting")
+    if session_scope == "all" and stats["noninteractive_files"]:
+        review_reasons.append("non-interactive exec jobs are included; do not treat helper or evaluation runs as directly operated chats")
     return {
         "schemaVersion": 1,
         "window": {"start": start.isoformat(), "end": end.isoformat(), "timezone": timezone},
@@ -306,6 +325,10 @@ def build_diagnostics(stats, start, end, timezone, session_scope):
             "structuralSubagentTaskStarts": stats["structural_subagent_task_starts"],
             "skippedSubagentFiles": stats["skipped_subagent_files"],
             "skippedSubagentTaskStarts": stats["skipped_subagent_task_starts"],
+            "nonInteractiveFiles": stats["noninteractive_files"],
+            "nonInteractiveTaskStarts": stats["noninteractive_task_starts"],
+            "skippedNonInteractiveFiles": stats["skipped_noninteractive_files"],
+            "skippedNonInteractiveTaskStarts": stats["skipped_noninteractive_task_starts"],
         },
         "status": "review_required" if review_reasons else "ok",
         "reviewReasons": review_reasons,
