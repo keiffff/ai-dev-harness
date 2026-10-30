@@ -14,7 +14,9 @@ Require reasoning from the supplied prompt only: no repository inspection, tools
 
 Within the same review response, ask Claude to first frame the problem from the original requests, constraints and observations, then assess Codex's proposal against that framing. Treat the proposal as a hypothesis, not the premise of the review.
 
-Focus on whether the work solves the right problem, whether it treats a symptom while leaving the cause or requested outcome unresolved, and whether local benefits hide wider impact or unnecessary work. Consider a different intervention or no change when supported by the evidence. Challenge unsupported assumptions and exclusions without overriding explicit user decisions or inventing new objectives, requirements or operational restrictions.
+Focus on whether the work solves the right problem, treats a symptom while leaving the cause unresolved, or shifts cost and responsibility outside the local change. For consequential new mechanisms, compare keeping/repairing them with reducing responsibility or using an existing supported mechanism. Check overdefense, duplicated state/ownership and unsupported future-proofing against present requirements. Concrete recurring maintenance or operating cost can justify a design concern without a runtime failure; a required change still needs evidence and a feasible alternative preserving the purpose, permissions, compatibility and recovery behavior.
+
+Retain complexity justified by an external contract or evidenced safety boundary. Do not force criticism or removal; identify the exact missing fact when the governing requirement or alternative is unresolved. Challenge unsupported assumptions and exclusions without overriding explicit user decisions or inventing objectives, restrictions or additional defensive machinery.
 
 Ask for the recommended direction and its rationale, material alternatives and trade-offs, hidden operational costs, and evidence that would change the recommendation. Distinguish supported findings from uncertainty. Do not require criticism or alternatives when the existing direction is supported.
 

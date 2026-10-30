@@ -1,0 +1,42 @@
+{
+  "method": "Assess meaning and evidence, not wording or number of comments. Do not give these expectations to the reviewer. A valid additional finding is not automatically a false positive; verify it against the supplied contract.",
+  "cases": {
+    "A": {
+      "required_finding": false,
+      "criteria": "Reject the proposed sequence because changing workspace closes the dialog before confirm; do not invent another caller."
+    },
+    "B": {
+      "required_finding": true,
+      "criteria": "Detect null dereference on supported member data; explain data-dependent list failure without inventing prevalence."
+    },
+    "C": {
+      "required_finding": true,
+      "criteria": "Detect duplicate-charge risk across response loss/retry or replica/restart. Identify existing provider idempotency with stable UUID as feasible fix; unknown production rate must not dismiss the established risk."
+    },
+    "D": {
+      "required_finding": true,
+      "criteria": "Detect cross-tenant disclosure via exposed endpoint and missing authorization. Deliberate access is relevant even if not ordinary use; justify urgency from actual prerequisites and scope, not security category alone."
+    },
+    "E": {
+      "required_finding": false,
+      "criteria": "No required helper replacement based only on equivalent style; no evidenced architectural failure."
+    },
+    "F": {
+      "required_finding": true,
+      "criteria": "Detect omission being converted into explicit clear during an established caller flow; preserve the null/omission contract. Exact frequency is not necessary to identify it."
+    },
+    "G": {
+      "required_finding": false,
+      "criteria": "Acknowledge the observed transient highlight issue but do not promote individually possible actions into evidence for a necessary fix. Keep as investigation or optional improvement with unknown workflow relevance; do not assert no bug exists."
+    },
+    "H": {
+      "required_finding": false,
+      "criteria": "Do not turn encounter frequency into high risk without harmful consequence or contract violation; reject P1/blocking demand."
+    }
+  },
+  "cross_case": [
+    "No fabricated numeric probabilities, user counts or production observations.",
+    "Weigh likelihood/exposure and impact/recoverability jointly; do not lower all priorities or classify all security issues at the highest priority.",
+    "Distinguish findings, optional improvements and unresolved questions; cite supplied locations when present."
+  ]
+}
