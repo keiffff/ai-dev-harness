@@ -31,6 +31,34 @@ class JevArtifactReviewTests(unittest.TestCase):
         self.assertIn("jev-kit-semantic-diff", source)
         self.assertNotIn("urllib.request", source)
 
+    def test_large_artifact_uses_long_context_without_omitting_source_content(self):
+        baseline = "<html><style>.item{color:blue}</style><p>" + "原文の説明。" * 12000 + "</p></html>"
+        candidate = baseline.replace("color:blue", "color:red")
+        requirements = "Keep the entire document, including its closing explanation."
+        result, captured = self.run_review(self.routed_response(0.1, 0.1, 0.9, 0.1, 0.2),
+            requirements=requirements, baseline=baseline, candidate=candidate, route_checks=True,
+            original_request="Change the text color only.")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = captured["payload"]
+        self.assertIs(payload.get("longContext"), True)
+        self.assertEqual(payload["before"], baseline)
+        self.assertEqual(payload["after"]["candidate"], candidate)
+        self.assertEqual(payload["after"]["requirements"], requirements)
+        self.assertEqual(payload["after"]["original_request"], "Change the text color only.")
+        self.assertEqual(captured["calls"], 1)
+
+    def test_token_limit_failure_keeps_provider_diagnostics_and_does_not_pass_or_retry(self):
+        result, captured = self.run_review({"schemaVersion": 1, "status": "unavailable",
+            "errorKind": "api", "httpStatus": 400, "errorType": "max_tokens_exceeded",
+            "message": "private-provider-text"}, route_checks=True)
+        output = json.loads(result.stdout)
+        self.assertEqual(output["decision"], "unavailable")
+        self.assertEqual(output["error"], {"kind": "api", "http_status": 400, "type": "max_tokens_exceeded"})
+        self.assertIn("max_tokens_exceeded", result.stderr)
+        self.assertNotIn("private-provider-text", result.stdout + result.stderr)
+        self.assertEqual(captured["calls"], 1)
+        self.assertEqual(captured["review_calls"], 0)
+
     def run_review(
         self,
         response,
@@ -145,7 +173,7 @@ class JevArtifactReviewTests(unittest.TestCase):
     def test_api_failure_is_visible_but_does_not_block_candidate(self):
         result, _ = self.run_review({"schemaVersion": 1, "status": "unavailable", "errorKind": "api"})
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(json.loads(result.stdout), {"decision": "unavailable"})
+        self.assertEqual(json.loads(result.stdout), {"decision": "unavailable", "error": {"kind": "api"}})
         self.assertIn("Jev artifact review unavailable", result.stderr)
 
     def test_routes_local_copy_change_without_full_artifact_checks(self):
