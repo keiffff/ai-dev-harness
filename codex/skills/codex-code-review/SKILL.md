@@ -17,7 +17,13 @@ For a substantive full change review, use `claude-strategic-review` to independe
 
 Give Claude the relevant user request, constraints and source evidence under its existing reviewer contract. Keep the proposed implementation separate from those requirements; do not make Codex's findings or approval the premise. Use the same bounded pass for overdefense, overengineering and viable existing mechanisms, rather than separate reviewers for each criterion.
 
-Reconcile Claude's material claims against the actual contracts and code. Keep justified complexity; adopt a design finding only with concrete operating/maintenance cost and a feasible alternative preserving the purpose. Missing evidence stays a question. Report Claude's significant assessment separately from Codex's adoption or rejection and its reason, including material disagreements. Follow the strategic-review skill's existing execution and failure handling.
+Reconcile each material objection before writing the overall assessment:
+
+1. Identify the disputed claim, its supporting evidence, the consequence if true and the observation that would settle it. Preserve Claude's stated confidence and limits; evaluate the claim rather than the reviewer's identity.
+2. Adopt an evidenced defect. Resolve or reject an objection only by showing source evidence that contradicts its premise, or an established contract that makes its consequence inapplicable. For a design finding, keep justified complexity and require a concrete cost plus a feasible alternative preserving the purpose. Not finding a prohibition, not reproducing an unexercised path, and passing checks that do not cover the disputed boundary are not counterevidence.
+3. Keep a material claim unresolved when neither its validity nor its rebuttal is established. State the remaining fact and its consequence; do not turn uncertainty into a confirmed defect, mandatory redesign or automatic deployment requirement. Use relevant existing code, documents, tests or observations to settle it within the task's authority.
+
+Build the overall assessment from these dispositions. If an unresolved objection could invalidate the change's purpose, deployment or promised behavior, name it in the overall assessment and qualify the conclusion. Do not report an unconditional clean review while burying it in verification limits. "No confirmed defects" does not mean the unresolved acceptance condition is satisfied. Report Claude's significant assessment and the evidence for Codex's disposition separately. Follow the strategic-review skill's existing execution and failure handling.
 
 ### Trace affected operations before deciding severity
 
@@ -35,7 +41,7 @@ For each candidate, establish the actor's goal or exposed system condition, the 
 
 Weigh occurrence likelihood/frequency together with affected scope, recurrence, harm and recoverability. Frequent small failures can accumulate; rare failures can have severe consequences. Use numbers only when supported; do not invent user counts, probabilities or urgency. Apply the repository's priority scale; a security or data-loss label alone does not imply its highest priority. Deliberate abuse, concurrent updates, network failures and retries are judged by their actual exposure and contract, not whether they resemble ordinary UI use.
 
-Adopt a required finding when the supported path and consequence justify correction. Keep contrived or unexplained action combinations with unestablished harm as investigation candidates, not required fixes. Keep material unresolved contracts visible as questions without claiming a defect. Separate findings, optional improvements and questions. Retain the operation, evidence, consequence, location and reason for priority with adopted findings; no mandatory numeric scorecard. Avoid speculative hardening and unrelated cleanup.
+Adopt a required finding when the supported path and consequence justify correction. Keep contrived or unexplained action combinations with unestablished harm as investigation candidates, not required fixes. Carry material unresolved contracts into the overall assessment using the reconciliation above. Separate findings, optional improvements and questions. Retain the operation, evidence, consequence, location and reason for priority with adopted findings; no mandatory numeric scorecard. Avoid speculative hardening and unrelated cleanup.
 
 ## Test Scope
 
@@ -55,7 +61,7 @@ Build each comment from the established finding or the user's accepted plain exp
 
 1. For behavior, state the actor’s purpose, evidenced trigger and resulting failure. For approach, state the requirement, unnecessary responsibility, concrete cost and feasible simplification. Explain why likelihood and impact justify the priority; introduce internal terms only when they explain the issue.
 2. Copy the code location from the current established finding and attach its evidence, priority and required correction. Do not substitute a location from an older draft or claim it was rechecked. Keep an unverified reproduction unverified. A short title does not replace the explanation.
-3. Order findings by severity and retain all requested findings. When changing the format, carry the accepted explanation into the comment; do not revert to an earlier technical draft. Separate optional suggestions and include the overall assessment, Claude’s significant assessment and Codex’s disposition, and residual verification gaps. Say explicitly when there are no findings.
+3. Write the overall assessment from the reconciled findings and material unresolved objections, then order findings by severity and retain all requested findings. State separately when no defect is confirmed and when an acceptance condition remains unresolved. Include Claude's significant assessment, Codex's disposition and its evidence. Keep ordinary unexercised checks in verification limits; do not hide a disputed condition there. When changing the format, preserve the accepted explanation rather than reverting to an earlier technical draft. Separate optional suggestions.
 
 Put the complete review body inside an outer four-backtick `markdown` fence. Inline comments and review cards may supplement it, but never replace or shorten the copyable review body. When composing from a long findings discussion, use the [source-grounded prose execution](../codex-writing/references/source-workflow.md) on those established findings. Deliver the saved file's absolute link without a second rendition in chat. Review judgment remains here and does not authorize posting.
 
