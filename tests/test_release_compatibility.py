@@ -34,6 +34,30 @@ class ReleaseCompatibilityTests(unittest.TestCase):
         self.assertEqual(run.call_count, 1)
         self.assertEqual(run.call_args.args[0], ['/synthetic/claude', '--help'])
 
+    def test_claude_strategic_unreadable_cwd_is_not_an_unsupported_cli(self):
+        check = self.wrapper('claude-strategic-review')['require_safe_mode']
+        with mock.patch.object(check.__globals__['os'], 'getcwd', side_effect=PermissionError(1, 'Operation not permitted')):
+            with mock.patch.object(check.__globals__['subprocess'], 'run') as run:
+                with contextlib.redirect_stderr(io.StringIO()) as diagnostic:
+                    with self.assertRaises(SystemExit) as result:
+                        check('/synthetic/claude')
+        self.assertEqual(result.exception.code, 1)
+        run.assert_not_called()
+        self.assertIn('Cannot read the current working directory', diagnostic.getvalue())
+        self.assertNotIn('does not support required --safe-mode', diagnostic.getvalue())
+
+    def test_claude_strategic_help_startup_failure_does_not_check_version(self):
+        check = self.wrapper('claude-strategic-review')['require_safe_mode']
+        failed = subprocess.CompletedProcess([], 1, '', 'Unexpected')
+        with mock.patch.object(check.__globals__['subprocess'], 'run', return_value=failed) as run:
+            with contextlib.redirect_stderr(io.StringIO()) as diagnostic:
+                with self.assertRaises(SystemExit) as result:
+                    check('/synthetic/claude')
+        self.assertEqual(result.exception.code, 1)
+        self.assertEqual(run.call_count, 1)
+        self.assertIn('failed to start for --help', diagnostic.getvalue())
+        self.assertNotIn('does not support required --safe-mode', diagnostic.getvalue())
+
     def test_claude_timeout_kills_process_group_after_term_does_not_close_pipes(self):
         for name, function_name, extra in (
             ('claude-strategic-review', 'run_review', []),

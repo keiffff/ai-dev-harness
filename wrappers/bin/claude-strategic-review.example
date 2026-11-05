@@ -35,7 +35,7 @@ def load_oauth_token() -> str:
     token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
     if token:
         return token
-    launcher = os.environ.get("KEYCHAIN_ENV_EXEC", "/Users/kei/.local/bin/keychain-env-exec")
+    launcher = os.environ.get("KEYCHAIN_ENV_EXEC", str(Path.home() / ".local/bin/keychain-env-exec"))
     try:
         os.execv(
             launcher,
@@ -83,6 +83,15 @@ def resolve_claude_cli() -> str:
 
 def require_safe_mode(claude_cli: str) -> None:
     try:
+        os.getcwd()
+    except OSError as error:
+        stop(
+            "Cannot read the current working directory before starting Claude CLI. "
+            f"Run from the intended readable project directory ({error}).",
+            1,
+        )
+
+    try:
         help_result = subprocess.run(
             [claude_cli, "--help"],
             text=True,
@@ -94,8 +103,14 @@ def require_safe_mode(claude_cli: str) -> None:
     except (OSError, subprocess.TimeoutExpired) as error:
         stop(f"Failed to inspect Claude CLI at {claude_cli}: {error}", 1)
 
+    if help_result.returncode != 0:
+        stop(
+            f"Claude CLI at {claude_cli} failed to start for --help "
+            f"(exit {help_result.returncode}); --safe-mode support could not be determined.",
+            1,
+        )
     help_text = f"{help_result.stdout}\n{help_result.stderr}"
-    if help_result.returncode == 0 and "--safe-mode" in help_text:
+    if "--safe-mode" in help_text:
         return
 
     try:
