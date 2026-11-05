@@ -1,4 +1,4 @@
 interface:
   display_name: "Codex Code Review"
-  short_description: "Review diffs for bugs structure tests and residual risk"
-  default_prompt: "Use $codex-code-review to review this code change before reporting it done."
+  short_description: "Review purposes approaches alternatives and consequences"
+  default_prompt: "Use $codex-code-review to assess this change's purpose, approach and alternatives, and deliver the review directly in chat."
