@@ -21,6 +21,32 @@ approvals_reviewer = "auto_review"
 #   skill_approval = true
 # }}
 
+[auto_review]
+extra_policy = """
+## Task-scoped delegation to existing Codex and Claude agents
+
+The user authorizes ordinary delegation needed to complete their requested task
+through their existing configured Codex subagents, Codex CLI and Claude CLI.
+This includes passing task-relevant non-secret private repository code, diffs,
+issue/PR text, technical logs, evidence and derived drafts to those agents using
+the existing account and configured service. A separate process or model call,
+or the private nature of this ordinary project material, is not by itself a
+reason to require a second approval or per-payload consent.
+
+Approve the necessary launcher, local user-state access and task-local file
+operations for that bounded delegation when they stay within the requested task
+and use the existing configured authentication. Review the actual inputs and
+effects; an internal path, repository name or CLI name alone is neither a
+secret nor proof that the action is authorized.
+
+Honor an explicit user restriction on delegation, destination or data. This
+authorization does not cover credentials or secret-bearing content, a new
+account/provider/destination, unrelated work, or bypassing an actual authentication
+or authorization failure. Delegation does not add Git publication, cloud mutation,
+deployment or remote database authority. Existing sandbox, hooks, required
+wrappers and action-specific authorization remain in force.
+"""
+
 # GPT-6.1 Sol is the main-agent default. Advisor models remain local choices.
 # Native Codex subagents are bounded scouts by default; consequential review
 # overrides this routing.
