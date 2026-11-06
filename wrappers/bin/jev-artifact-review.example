@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import base64
+import binascii
+import copy
 import json
 import os
 import re
@@ -170,11 +173,77 @@ def routed_checks(base, scores):
     }
 
 
+def artifact_transport(baseline, candidate):
+    """Losslessly expose embedded HTML and share unchanged source text once.
+
+    Base64 is an encoding of the artifact, not meaningful source for a text
+    evaluator. Preserve its exact header/bytes through reversible source parts.
+    No text, code, CSS, metadata or behavior is omitted or summarized.
+    """
+    pattern = re.compile(r"data:text/html;base64,[A-Za-z0-9+/]+={0,2}")
+
+    def split(value):
+        if value is None:
+            return None
+        parts, end = [], 0
+        for match in pattern.finditer(value):
+            header, encoded = match.group().split(",", 1)
+            try:
+                raw = base64.b64decode(encoded, validate=True)
+                decoded = raw.decode("utf-8")
+            except (ValueError, binascii.Error, UnicodeDecodeError):
+                continue
+            if base64.b64encode(raw).decode("ascii") != encoded:
+                continue
+            if SECRET_RE.search(decoded):
+                stop("Decoded artifact input contains a credential or secret candidate; nothing was sent.")
+            parts += [value[end:match.start()], {"data_uri": {"header": header + ",", "text": decoded}}]
+            end = match.end()
+        return parts + [value[end:]]
+
+    before, after = split(baseline), split(candidate)
+    if len(after) == 1 and (before is None or len(before) == 1):
+        return baseline, candidate, None
+    sources = []
+
+    def share(left, right):
+        prefix = len(os.path.commonprefix([left, right]))
+        suffix = len(os.path.commonprefix([left[prefix:][::-1], right[prefix:][::-1]]))
+        if not prefix and not suffix:
+            return left, right
+        shared = ([left[:prefix]] if prefix else []) + ([left[len(left)-suffix:]] if suffix else [])
+        refs = [{"source_ref": len(sources) + i} for i in range(len(shared))]
+        def pack(value):
+            middle = value[prefix:len(value)-suffix if suffix else len(value)]
+            return {"parts": (refs[:1] if prefix else []) + ([middle] if middle else [])
+                    + (refs[-1:] if suffix else [])}
+        packed = pack(left), pack(right)
+        if len(json.dumps([*packed, shared])) >= len(json.dumps([left, right])):
+            return left, right
+        sources.extend(shared)
+        return packed
+
+    if before is not None and len(before) == len(after):
+        for index, (left, right) in enumerate(zip(before, after)):
+            if isinstance(left, str) and isinstance(right, str):
+                before[index], after[index] = share(left, right)
+            elif isinstance(left, dict) and isinstance(right, dict):
+                left["data_uri"]["text"], right["data_uri"]["text"] = share(
+                    left["data_uri"]["text"], right["data_uri"]["text"])
+    encoded_before = {"parts": before} if before is not None else None
+    encoded_after = {"parts": after}
+    transport = {"format": "lossless-source-parts-v1", "sources": sources}
+    if len(json.dumps([encoded_before, encoded_after, transport])) >= len(json.dumps([baseline, candidate])):
+        return baseline, candidate, None
+    return encoded_before, encoded_after, transport
+
+
 def request_review(requirements, candidate, baseline, candidate_name, route_checks, original_request=None):
+    transport_before, transport_candidate, transport = artifact_transport(baseline, candidate)
     after = {
         "requirements": requirements,
         "candidate_name": candidate_name,
-        "candidate": candidate,
+        "candidate": transport_candidate,
     }
     if original_request is not None:
         after["original_request"] = original_request
@@ -233,9 +302,19 @@ def request_review(requirements, candidate, baseline, candidate_name, route_chec
                 ),
             },
         ])
+    if transport is not None:
+        after["artifact_sources"] = transport
+        for dimension in dimensions:
+            dimension["instructions"] += (
+                " Artifact text uses lossless source parts, not altered artifact content: concatenate parts "
+                "in order; source_ref indexes after.artifact_sources.sources. For data_uri, its original "
+                "value is header plus Base64(UTF-8(text)), where text may itself use parts. Evaluate the "
+                "decoded embedded HTML and its scripts/styles in context. References are transport only, "
+                "not new URLs or runtime changes. All original source text is retained."
+            )
     payload = {
         "schemaVersion": 1,
-        "before": baseline,
+        "before": transport_before,
         "after": after,
         "contract": {
             "id": "ai-dev-harness.artifact-review",
@@ -247,6 +326,59 @@ def request_review(requirements, candidate, baseline, candidate_name, route_chec
         # Opt in here only; permission reviews keep the provider's normal context.
         "longContext": True,
     }
+    return evaluate_artifact_payload(payload, route_checks)
+
+
+def evaluate_artifact_payload(payload, route_checks):
+    """Partition only an oversized shared source; evaluate every source window.
+
+    Requirements, changed text and artifact structure stay in every view. A
+    failed view invalidates the complete evaluation. No fixed character/token
+    estimate, score averaging, content truncation or generic retry is used.
+    """
+    sources = payload["after"].get("artifact_sources", {}).get("sources", [])
+    pending = [[(0, len(source)) for source in sources]]
+    scores, views, partitioned = {}, 0, False
+    while pending:
+        spans = pending.pop()
+        current = copy.deepcopy(payload)
+        if partitioned:
+            current["after"]["artifact_sources"]["sources"] = [
+                {"text": source[start:end], "start": start, "end": end, "total": len(source)}
+                for source, (start, end) in zip(sources, spans)
+            ]
+            for dimension in current["contract"]["dimensions"]:
+                dimension["instructions"] += (
+                    " Shared sources are windowed: each source_ref resolves to the source object's text "
+                    "at [start,end) of total characters. Other windows are evaluated separately. "
+                    "Only identical baseline/candidate source text is windowed; requirements, changes "
+                    "and artifact structure remain here. Window boundaries are not artifact deletions. "
+                    "Judge only evidence supported by this view; do not invent missing-source defects."
+                )
+        material, routes, reason, diagnostic = evaluate_payload_once(current, route_checks)
+        if material is None:
+            if diagnostic.get("type") != "max_tokens_exceeded" or not sources:
+                return None, {}, reason, diagnostic
+            index = max(range(len(spans)), key=lambda i: spans[i][1] - spans[i][0])
+            start, end = spans[index]
+            if end - start <= 1:
+                return None, {}, reason, diagnostic
+            middle = (start + end) // 2
+            left, right = list(spans), list(spans)
+            left[index], right[index] = (start, middle), (middle, end)
+            pending.extend([right, left])
+            partitioned = True
+            continue
+        views += 1
+        for name, value in {"material_violation": material, **routes}.items():
+            scores[name] = max(scores.get(name, 0.0), value)
+    material = scores.pop("material_violation")
+    return material, scores, None, ({"source_evaluation": {
+        "views": views, "scope": "all-source-windows", "aggregation": "maximum-per-dimension",
+    }} if partitioned else {})
+
+
+def evaluate_payload_once(payload, route_checks):
     evaluator = os.environ.get(
         "JEV_KIT_SEMANTIC_DIFF_CLI",
         "/Users/kei/.local/bin/jev-kit-semantic-diff",
@@ -400,6 +532,8 @@ def main():
         "decision": decision,
         "material_violation": score,
     }
+    if "source_evaluation" in diagnostic:
+        output["source_evaluation"] = diagnostic["source_evaluation"]
     if args.route_checks:
         output.update(routed_checks(base_route, route_scores))
     if decision == "review" and original_request is not None:

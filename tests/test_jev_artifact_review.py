@@ -1,5 +1,7 @@
+import base64
 import json
 import os
+import runpy
 import subprocess
 import tempfile
 import unittest
@@ -26,6 +28,100 @@ sys.exit(int(os.environ["REVIEW_TEST_EXIT"]))
 
 
 class JevArtifactReviewTests(unittest.TestCase):
+    def partition_fixture(self, evaluate):
+        owner = runpy.run_path(str(WRAPPER))
+        payload = {"before": {"parts": [{"source_ref": 0}, "old"]}, "after": {
+            "original_request": "Keep all content; change only the heading.",
+            "requirements": "Preserve script and style behavior.",
+            "candidate": {"parts": [{"source_ref": 0}, "new"]},
+            "artifact_sources": {"sources": ["abcdefghijLAST"]},
+        }, "contract": {"dimensions": [{"id": "material_violation", "instructions": "Check the change."}]}}
+        owner["evaluate_artifact_payload"].__globals__["evaluate_payload_once"] = evaluate
+        return owner["evaluate_artifact_payload"](payload, False), payload
+
+    def test_context_limit_partitions_all_shared_source_without_losing_tail_findings(self):
+        covered, successful, calls = set(), [], []
+        def evaluate(payload, route_checks):
+            calls.append(payload)
+            source = payload["after"]["artifact_sources"]["sources"][0]
+            if isinstance(source, str) or len(source["text"]) > 4:
+                return None, {}, "evaluator unavailable", {"type": "max_tokens_exceeded"}
+            covered.update(range(source["start"], source["end"]))
+            successful.append(source)
+            return (0.95 if source["end"] == source["total"] else 0.1), {}, None, {}
+        (score, routes, reason, diagnostic), original = self.partition_fixture(evaluate)
+        self.assertEqual(covered, set(range(14)))
+        self.assertEqual("".join(s["text"] for s in successful), "abcdefghijLAST")
+        self.assertEqual(score, 0.95)
+        self.assertIsNone(reason)
+        self.assertEqual(diagnostic["source_evaluation"]["views"], len(successful))
+        for payload in calls:
+            self.assertEqual(payload["before"], original["before"])
+            for key in ("original_request", "requirements", "candidate"):
+                self.assertEqual(payload["after"][key], original["after"][key])
+
+    def test_any_window_provider_failure_invalidates_the_complete_evaluation(self):
+        calls = []
+        def evaluate(payload, route_checks):
+            source = payload["after"]["artifact_sources"]["sources"][0]
+            calls.append(source)
+            if isinstance(source, str):
+                return None, {}, "unavailable", {"type": "max_tokens_exceeded"}
+            if source["start"] == 0:
+                return 0.1, {}, None, {}
+            return None, {}, "unavailable", {"type": "overloaded", "http_status": 529}
+        (score, routes, reason, diagnostic), _ = self.partition_fixture(evaluate)
+        self.assertIsNone(score)
+        self.assertEqual(diagnostic, {"type": "overloaded", "http_status": 529})
+        self.assertEqual(len(calls), 3)
+
+    @staticmethod
+    def reconstruct(value, sources):
+        if isinstance(value, str) or value is None:
+            return value
+        if "source_ref" in value:
+            return sources[value["source_ref"]]
+        if "data_uri" in value:
+            item = value["data_uri"]
+            text = JevArtifactReviewTests.reconstruct(item["text"], sources)
+            return item["header"] + base64.b64encode(text.encode("utf-8")).decode("ascii")
+        return "".join(JevArtifactReviewTests.reconstruct(p, sources) for p in value["parts"])
+
+    def test_embedded_html_is_lossless_and_shared_code_is_not_sent_twice(self):
+        common = "const value = readCurrentState(); render(value);\n" * 2500
+        before_frame = "<html><style>.row{display:flex}</style><script>" + common + "move(1);</script></html>"
+        after_frame = before_frame.replace("move(1)", "move(2)")
+        def frame(value):
+            return '<iframe src="data:text/html;base64,' + base64.b64encode(value.encode()).decode() + '"></iframe>'
+        baseline = '<html><h1>比較</h1>' + frame(before_frame) + '<!-- metadata retained --></html>'
+        candidate = '<html><h1>比較</h1>' + frame(after_frame) + '<!-- metadata retained --></html>'
+        result, captured = self.run_review(self.response(0.1), baseline=baseline, candidate=candidate)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = captured["payload"]
+        sources = payload["after"]["artifact_sources"]["sources"]
+        self.assertEqual(self.reconstruct(payload["before"], sources), baseline)
+        self.assertEqual(self.reconstruct(payload["after"]["candidate"], sources), candidate)
+        self.assertLess(len(json.dumps(payload)), len(json.dumps([baseline, candidate])))
+        self.assertEqual(sum(s.count("const value = readCurrentState(); render(value);") for s in sources), 2500)
+        self.assertIn("source_ref", payload["contract"]["dimensions"][0]["instructions"])
+        self.assertEqual(captured["calls"], 1)
+
+    def test_invalid_or_non_utf8_embeds_remain_exactly_as_supplied(self):
+        for embed in ["data:text/html;base64,invalid", "data:text/html;base64,/w=="]:
+            with self.subTest(embed=embed):
+                candidate = '<iframe src="' + embed + '"></iframe>'
+                result, captured = self.run_review(self.response(0.1), candidate=candidate)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(captured["payload"]["after"]["candidate"], candidate)
+
+    def test_decoded_embed_cannot_send_secret_values_to_the_provider(self):
+        text = '<html>Authorization: Bearer abcdefghijklmnop</html>'
+        candidate = '<iframe src="data:text/html;base64,' + base64.b64encode(text.encode()).decode() + '"></iframe>'
+        result, captured = self.run_review(self.response(0.1), candidate=candidate)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("secret candidate", result.stderr)
+        self.assertEqual(captured["calls"], 0)
+
     def test_delegates_jev_execution_to_jev_kit(self):
         source = WRAPPER.read_text(encoding="utf-8")
         self.assertIn("jev-kit-semantic-diff", source)
