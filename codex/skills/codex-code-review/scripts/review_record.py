@@ -364,7 +364,7 @@ def render(receipt_file, assessment_file, discovery_file=None, advice_file=None)
     if re.search(r"(?<![A-Za-z0-9])P[0-3](?![A-Za-z0-9])", rendered):
         raise ValueError("Explain consequence and required action without priority codes")
     # No free-text model summarizer can drop unresolved items after this step.
-    return "````markdown\n" + rendered + "\n````"
+    return rendered
 
 
 def main():

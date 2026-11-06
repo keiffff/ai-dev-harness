@@ -1,4 +1,4 @@
 interface:
   display_name: "Codex Code Review"
   short_description: "Review purposes approaches alternatives and consequences"
-  default_prompt: "Use $codex-code-review to assess this change's purpose, approach and alternatives, and deliver the review directly in chat."
+  default_prompt: "Use $codex-code-review to assess this change's purpose, approach and alternatives, and display the complete review directly in chat as rendered Markdown without an outer code fence."

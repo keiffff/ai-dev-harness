@@ -59,7 +59,8 @@ class ReviewRecordTests(unittest.TestCase):
         self.assertIn("実際の受理はまだ確認できない", output)
         self.assertIn("修正が必要な点：0件", output)
         self.assertIn("判断・確認してほしい点：1件", output)
-        self.assertTrue(output.startswith("````markdown\n"))
+        self.assertTrue(output.startswith("### upload\n"))
+        self.assertFalse(output.startswith("````"))
         self.assertFalse((self.root / "review.md").exists())
 
     def test_missing_lookup_result_is_not_completion(self):
