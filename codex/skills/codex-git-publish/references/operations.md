@@ -34,4 +34,6 @@ For operations absent from the installed PR/issue CLI, use `gh-user-approved --c
 
 For a body update, preserve unrequested content and use `--body-file` for the complete revised body. PR/issue publication does not authorize deployment, workflow dispatch, secret access or unrelated GitHub writes. The API route is for requested PR/issue operations, not a generic mutation exemption. Do not use a connector, raw `gh`, API writes outside the approved wrapper or GitHub blob/tree/commit APIs to bypass the approved wrappers. Authentication failures follow AGENTS.md; do not change accounts or credentials.
 
+For PR creation or a requested PR body update, apply `codex-writing`'s PR Body check to the exact Markdown to be submitted after all edits and verification results have been added. For a scoped update, check the changed passages and preserve the rest. Save any corrections, then submit that file unchanged. Keep file edits and the GitHub write in separate calls. If the text changes after the check, inspect the changed passages before submitting. For API writes, use the same checked Markdown as the body value.
+
 After creating a PR, attach its URL to the current task. Also attach an existing PR when asked to review, update or continue it. Verify the requested change using `gh-readonly` and report the PR URL and completed operation.
