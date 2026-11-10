@@ -20,7 +20,7 @@ A successful fallback does not verify the primary path. Record their outcomes se
 
 First identify only the immediate stopping layer shown by the observation. Do not present that layer as a root cause or treat it as permission to apply a remedy.
 
-Before acting on a causal or remediation claim, state the exact claim, the observation that directly supports it, and at least one plausible alternative that the observation excludes. If the evidence is merely consistent with the claim, collect the smallest additional observation that distinguishes the live alternatives. Do not broaden the investigation, repeat an unchanged check, or turn uncertainty into a new user approval gate.
+Before acting on a causal or remediation claim, state the exact claim, the observation that directly supports it, and at least one plausible alternative that the observation excludes. If observations disagree or the known paths cannot account for an observed effect, revisit the scope before assigning a cause or recommending escalation based on that mismatch. Use `codex-context-engineering` to check which relevant candidates were omitted and whether each queried source matches the deployed configuration. Read the missing source or align the mismatched scope, then compare again. Keep an inaccessible source as a coverage gap; use attributable evidence to support an external cause. Otherwise collect the smallest observation that distinguishes the live alternatives. Avoid repeating unchanged checks or turning uncertainty into a new approval gate.
 
 When the root cause or remedy is not stated directly by deterministic evidence, write the non-secret observed evidence and the exact proposed claim to separate UTF-8 files, then run one check before reporting or acting on that claim:
 

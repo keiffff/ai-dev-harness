@@ -29,7 +29,7 @@ When the user asks to inspect a conversation, read the named or current task bef
 
 Before proposing a new owner or saying a mechanism is absent or broken, trace the current owner, trigger, target discovery, inclusion/exclusion boundary, and execution evidence. Include schedules, events, implicit creation write, and downstream actions before calling an operational procedure safe.
 
-Report the inspected scope when something is not found. A missing search result does not establish absence. If an existing owner excludes the target, describe that boundary before proposing another mechanism.
+Before using a negative result to rule out an execution path, derive candidate paths from the deployed entry points, callers and configuration that can produce the observed effect. For each relevant candidate, resolve its actual observation source from the running configuration, then record the queried source, time window, filters and result in the existing investigation notes. Distinguish a completed search with no matches from an unknown source, a denied read or an incomplete search. Limit an absence claim to the paths and window covered by those observations. If an existing owner excludes the target, describe that boundary before proposing another mechanism.
 
 ## Evidence Quality
 
