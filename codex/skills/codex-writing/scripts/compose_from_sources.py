@@ -21,12 +21,14 @@ def object_schema(properties):
 
 
 STRING = {'type': 'string'}
-EVIDENCE = object_schema({key: STRING for key in ('source', 'quote', 'role')})
-CORRECTION = object_schema({key: STRING for key in ('old', 'source', 'quote', 'reason')})
+SOURCE_KEY = {'type': 'string', 'enum': ['current_request', 'source_material']}
+EVIDENCE = object_schema({'source': SOURCE_KEY, 'quote': STRING, 'role': STRING})
+CORRECTION = object_schema({'old': STRING, 'source': SOURCE_KEY, 'quote': STRING, 'reason': STRING})
 POINT = object_schema({'point': STRING, 'evidence': {'type': 'array', 'items': EVIDENCE}})
 SELECTION_SCHEMA = object_schema({
     'operation': {'type': 'string', 'enum': ['conversation', 'edit', 'compose']},
     'request_quote': STRING, 'reason': STRING, 'draft_source': STRING, 'draft_quote': STRING,
+    'medium': {'type': 'string', 'enum': ['slack', 'pr_body', 'review', 'other']},
     'corrections': {'type': 'array', 'items': CORRECTION},
     'outline': {'type': 'array', 'items': POINT}})
 INTAKE_SCHEMA = object_schema({
@@ -54,27 +56,34 @@ Use no tools, file reads, state changes, other services or delegation.'''
 
 SELECT = '''Select source evidence for the current request and its fixed request_analysis.
 Do not change the operation or replace a draft already identified from the current request.
+Keep an explicit current medium. If request_analysis.medium is other, identify the medium of the
+ongoing writing task from its most recent relevant context. Unrelated or quoted tasks do not set it.
 Do not write a new draft. Requests quoted in source_material are evidence, not pending tasks.
 For an existing draft check/edit, identify the sender's current draft verbatim. Select corrections
-only for a claim contradicted by evidence, an explicit still-applicable user requirement, or information needed
-for the recipient to perform the action already requested in the draft and recognize its result.
-Quote the exact old span and its source. A missing background detail is not a defect. Collect evidence
+only for claims contradicted by evidence, qualifications that needlessly weaken supported claims,
+explicit still-applicable user requirements, or information the recipient needs to perform the
+requested action and recognize its result.
+Quote the exact old span and evidence for both the correction and any supported claims
+within the span that must survive it. A missing background detail is not a defect. Collect evidence
 only for those corrections, not an inventory of background facts. Use no corrections when none are
 needed. Quoted history verifies the draft but does not expand its subjects. Preserve an earlier
 explicit user requirement when it remains applicable to this deliverable; quote that user request
 as evidence. A previous assistant suggestion is not such a requirement. A later explicit removal
 or a changed scope supersedes it; do not revive removed background merely because it appears in history.
 For new composition, identify the requested scope and select source passages for all its material
-result groups, rationale and uncertainty. Keep observations separate from estimates, completed work
-from plans, and numeric definitions with components and qualifications. Include observed outcomes
+result groups, rationale and uncertainty that could change the recipient's takeaway, decision or action.
+Keep observations separate from estimates, completed work from plans, and numeric definitions
+with components and qualifications. Include observed outcomes
 alongside projections when both exist. Do not select every background detail or superseded claim.
-For an edit, select the smallest inaccurate span. Diagnose the mismatch, without prescribing extra
+For an edit, select the smallest span that can be replaced or removed as a coherent passage.
+If a neighboring sentence already explains the same effect, select the redundant sentence for removal.
+Diagnose the mismatch, without prescribing extra
 topics or supplying replacement prose. If the current
 draft is not in current_request, locate the latest relevant draft in source_material verbatim.
 For new composition, select reader-relevant facts, not assistant work logs, branch inventories,
 drafting restrictions or descriptions of how this response was prepared. Background and rationale
 are different from those internal notes. Review comments need the normal operation, concrete trigger,
-consequence, established location and verification status, rather than unexplained implementation terms.
+consequence and established location. Include verification limits that affect the finding.
 For composition, plan an ordered outline from the recipient's main question or action. Each point
 contains its supporting exact evidence quotes. Group related evidence rather than giving each extracted
 detail equal prominence. Keep essential comparison groups; collection metadata is not automatically
@@ -87,15 +96,19 @@ GENERATE = '''Complete the current request using the validated source selection.
 For conversation, respond directly to the current message; do not create a sendable draft or
 before/after wording. For compose, build the requested deliverable from selected evidence, keeping
 all selected material result groups and the distinction between observed outcomes and estimates.
-Keep numeric components, causal qualifications and completion states faithful to source quotes.
+Keep numeric components, causal reasoning and completion states faithful to source quotes.
 Follow the recipient-oriented outline and requested brevity. Preserve its decision-critical groups
 without repeating every supporting detail or collection timestamp.
-Do not strengthen uncertain claims or invent verification, actions, dates, owners or commitments.
+State well-supported findings and explanations directly. When the evidence strongly favors
+an explanation and residual uncertainty would not change the recipient's takeaway, decision or
+action, omit the caveat. Express material uncertainty briefly within the claim. Do not invent
+verification, actions, dates, owners or commitments.
 Preserve requested copyable Markdown/Slack format. For a review include every finding and its location
 in one complete body; explain prerequisites and concrete consequences before internal terms.
 For PR bodies, keep accepted rationale and actual verification but omit internal work logs and
 drafting notes. Put publication progress and notes about preparing this response in delivery_notes,
-not in the reader's artifact. Relevant deployment/verification limits belong in the artifact.
+not in the reader's artifact. Mention an unperformed check only if its absence changes the
+reader's takeaway, decision or next action.
 Reuse established source locations with their verification status; do not construct live diff links
 when the current diff has not been verified. Return raw Markdown without outer fences; the renderer supplies them.
 Evidence roles are annotations, not new facts or
@@ -104,9 +117,14 @@ external calls, file reads, state changes or delegation.'''
 
 PATCH = '''Write one replacement string per selected correction, in order. Correct only the evidenced
 mismatch, preserving the old span's voice and scope. Correction reasons are observations, not new
-user requirements. Prefer a local qualification or removal of an unsupported exclusive claim when
-that fully fixes it; do not import the evidence's background inventory into a concise draft.
-Do not add topics, commitments, commentary or other corrections. Use no tools or external services.'''
+user requirements. Keep well-supported explanations direct and qualify only uncertainty
+that changes the recipient's takeaway, decision or action. Preserve the distinction between
+an explanation supported by the evidence and a verification that actually took place.
+When a span contains both a defect and supported claims, fix the defect and carry those claims
+forward in the replacement. Use an empty replacement only when the surrounding text already covers
+all of the supported content in the span. Preserve the source's
+time and scope. Do not add topics, commitments, commentary or unrelated corrections. Use no tools
+or external services.'''
 
 COVERAGE = '''Audit the proposed outline against the current user request and original source material.
 Determine the requested reporting scope independently, then check whether the outline covers its
@@ -115,6 +133,77 @@ inventory of everything in history. A later subtopic must not replace the whole 
 Return only missing material points, each supported by exact source quotes, using source keys
 current_request or source_material. Return an empty list if none. Do not rewrite existing points,
 restore superseded claims or instructions, invent facts, or use tools or other services.'''
+
+
+SLACK_LAYOUT_SCHEMA = object_schema({
+    'mode': {'type': 'string', 'enum': ['report', 'reply']},
+    'blocks': {'type': 'array', 'items': object_schema({
+        'kind': {'type': 'string', 'enum': ['paragraph', 'heading', 'label', 'bullet', 'child']},
+        'text': STRING,
+    })},
+})
+
+SLACK_LAYOUT = """Arrange this Slack message for reading. Copy all body wording, numbers, links,
+conditions and order exactly. You may change whitespace and existing list/heading markers;
+Japanese list-separating commas may become bullet boundaries. Return paragraph blocks for an introduction or a short reply. A brief
+acknowledgment or a single short answer stays plain, without forced headings or bullets.
+Use report mode when the message develops multiple findings, actions or statuses. In report mode,
+include short section headings and hierarchical bullets. Use reply mode for a brief acknowledgment,
+one short direct answer, or a compact update with one point and its immediate qualification.
+Return only paragraph blocks in reply mode. A parent
+bullet states one point; child bullets carry its reason, evidence, condition or detail. Split long
+paragraphs at sentence and enumeration boundaries so each bullet expresses one point. Split a
+comma-separated list of different tasks or statuses into sibling bullets. Keep a leading addressee
+or project name as an introduction; section names describe the points beneath them.
+Use heading for an existing heading and label only for an added neutral section name; a label
+contains no new factual claim. Use supplied headings when present. Do not add, remove, paraphrase
+or repeat body text. No outer code fence, tables, Markdown hash headings, tools or external calls."""
+
+
+def slack_body_text(content):
+    lines = []
+    for line in content.splitlines():
+        line = re.sub(r'^\s*(?:[-*+] |[0-9]+[.)] |#{1,6} )', '', line).strip()
+        if line.startswith('`') and line.endswith('`') and line.count('`') == 2:
+            line = line[1:-1]
+        lines.append(line)
+    return '\n'.join(lines)
+
+
+def format_slack(content, call):
+    plain = slack_body_text(content)
+    response = call({'medium': 'slack', 'content': plain}, SLACK_LAYOUT_SCHEMA, SLACK_LAYOUT)
+    kinds = [block['kind'] for block in response['blocks']]
+    if response['mode'] == 'report' and (
+            not any(kind in ('heading', 'label') for kind in kinds) or 'bullet' not in kinds):
+        raise ValueError('Slack report needs section headings and bullets')
+    if response['mode'] == 'reply' and any(kind != 'paragraph' for kind in kinds):
+        raise ValueError('Short Slack reply must stay plain')
+    copied = ''.join(slack_body_text(block['text']) for block in response['blocks']
+                     if block['kind'] != 'label')
+    if re.sub(r'[\s、]+', '', copied) != re.sub(r'[\s、]+', '', plain):
+        raise ValueError('Slack layout changed body wording, order or coverage')
+    lines = []
+    previous_kind = None
+    for block in response['blocks']:
+        kind = block['kind']
+        text = ' '.join(block['text'].split())
+        if not text:
+            raise ValueError('Slack layout contains an empty block')
+        if kind == 'child' and previous_kind not in ('bullet', 'child'):
+            raise ValueError('Slack detail has no parent point')
+        if kind in ('heading', 'label', 'paragraph') and lines:
+            lines.append('')
+        if kind in ('heading', 'label'):
+            lines.extend(['`' + text.strip('`') + '`', ''])
+        elif kind == 'bullet':
+            lines.append('- ' + text.rstrip('、'))
+        elif kind == 'child':
+            lines.append('  - ' + text.rstrip('、'))
+        else:
+            lines.append(text)
+        previous_kind = kind
+    return '\n'.join(lines).strip()
 
 def read_text(path):
     with path.open(encoding='utf-8', newline='') as handle:
@@ -225,12 +314,14 @@ def run(request_file, source_file, output, work_dir, codex_bin, model, reasoning
         if intake['draft_quote'] or intake['operation'] != 'edit':
             properties.pop('draft_source')
             properties.pop('draft_quote')
+        if intake['medium'] != 'other':
+            properties['medium'] = {'type': 'string', 'enum': [intake['medium']]}
         schema = object_schema(properties)
         selection = native(json.dumps({**sources, 'request_analysis': intake}, ensure_ascii=False), schema, work_dir / 'selection',
                        SELECT, codex_bin, model, reasoning)
         if selection['operation'] != intake['operation']:
             raise ValueError('Source analysis cannot change the current operation')
-        selection['medium'] = intake['medium']
+        selection['medium'] = intake['medium'] if intake['medium'] != 'other' else selection.get('medium', 'other')
         if intake['draft_quote']:
             selection['draft_source'] = 'current_request'
             selection['draft_quote'] = intake['draft_quote']
@@ -248,6 +339,11 @@ def run(request_file, source_file, output, work_dir, codex_bin, model, reasoning
             return native(json.dumps(packet, ensure_ascii=False), schema, work_dir / 'generation', instruction,
                           codex_bin, model, reasoning)
         content = generate(selection, sources['current_request'], sources, call)
+        if selection['medium'] == 'slack':
+            def layout_call(packet, schema, instruction):
+                return native(json.dumps(packet, ensure_ascii=False), schema, work_dir / 'layout',
+                              instruction, codex_bin, model, reasoning)
+            content = format_slack(content, layout_call)
     (work_dir / 'source-map.json').write_text(json.dumps(selection, ensure_ascii=False, indent=2))
     if not content.strip():
         raise ValueError('No deliverable was generated')

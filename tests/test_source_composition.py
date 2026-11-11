@@ -21,6 +21,11 @@ class SourceCompositionTests(unittest.TestCase):
                 'draft_source': '', 'draft_quote': '', 'evidence': [], 'corrections': [],
                 'replacements': [], 'medium': 'other', 'outline': []}
 
+    def test_evidence_source_is_a_packet_key_not_a_description(self):
+        for schema in (workflow.EVIDENCE, workflow.CORRECTION):
+            self.assertEqual(schema['properties']['source']['enum'],
+                             ['current_request', 'source_material'])
+
     def test_source_and_draft_selection_cannot_invent_quotes(self):
         sources = {'current_request': 'request', 'source_material': 'source'}
         selection = self.selection('compose')
@@ -171,6 +176,102 @@ class SourceCompositionTests(unittest.TestCase):
                              root / 'unused', 'fixture', 'medium')
             self.assertEqual(calls, ['intake', 'selection', 'coverage', 'generation'])
             self.assertEqual((root / 'output.txt').read_text(), 'Both results.')
+
+
+
+    def test_slack_layout_preserves_body_and_requires_parent_for_details(self):
+        original = "確認結果\n待ち時間は5秒。\n再読み込みで復旧する。"
+        blocks = [
+            {'kind': 'heading', 'text': '確認結果'},
+            {'kind': 'bullet', 'text': '待ち時間は5秒。'},
+            {'kind': 'child', 'text': '再読み込みで復旧する。'},
+        ]
+        result = workflow.format_slack(original, lambda *args: {'mode': 'report', 'blocks': blocks})
+        self.assertEqual(result, '`確認結果`\n\n- 待ち時間は5秒。\n  - 再読み込みで復旧する。')
+        changed = [dict(block) for block in blocks]
+        changed[1]['text'] = '待ち時間は3秒。'
+        with self.assertRaisesRegex(ValueError, 'changed body'):
+            workflow.format_slack(original, lambda *args: {'mode': 'report', 'blocks': changed})
+        with self.assertRaisesRegex(ValueError, 'needs section headings'):
+            workflow.format_slack('詳細。続き。', lambda *args: {
+                'mode': 'report', 'blocks': [{'kind': 'heading', 'text': '詳細。'}, {'kind': 'child', 'text': '続き。'}]})
+        with self.assertRaisesRegex(ValueError, 'no parent'):
+            workflow.format_slack('確認結果。詳細。要点。', lambda *args: {
+                'mode': 'report', 'blocks': [
+                    {'kind': 'heading', 'text': '確認結果。'},
+                    {'kind': 'child', 'text': '詳細。'},
+                    {'kind': 'bullet', 'text': '要点。'}]})
+        with self.assertRaisesRegex(ValueError, 'must stay plain'):
+            workflow.format_slack('確認します。', lambda *args: {
+                'mode': 'reply', 'blocks': [{'kind': 'bullet', 'text': '確認します。'}]})
+        separated = workflow.format_slack('要確認\n接続確認、表示確認', lambda *args: {
+            'mode': 'report', 'blocks': [
+                {'kind': 'heading', 'text': '要確認'},
+                {'kind': 'bullet', 'text': '接続確認'},
+                {'kind': 'bullet', 'text': '表示確認'}]})
+        self.assertEqual(separated, '`要確認`\n\n- 接続確認\n- 表示確認')
+        short = '共有ありがとうございます。確認します。'
+        self.assertEqual(workflow.format_slack(short, lambda *args: {
+            'mode': 'reply', 'blocks': [{'kind': 'paragraph', 'text': short}]}), short)
+
+    def test_unchanged_slack_edit_still_uses_layout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            request = 'Slack文面を確認。'
+            draft = '完了事項\n確認済み。'
+            (root / 'request.txt').write_text(request)
+            (root / 'source.txt').write_text(draft)
+            calls = []
+            def native(prompt, schema, target, instruction, *runtime):
+                calls.append(target.name)
+                if target.name == 'intake':
+                    return {'operation': 'edit', 'medium': 'slack',
+                            'request_quote': request, 'draft_quote': '', 'conversation_response': ''}
+                if target.name == 'selection':
+                    return {'operation': 'edit', 'request_quote': request, 'reason': 'Check.',
+                            'draft_source': 'source_material', 'draft_quote': draft,
+                            'corrections': [], 'outline': []}
+                self.assertEqual(target.name, 'layout')
+                self.assertEqual(json.loads(prompt)['medium'], 'slack')
+                return {'mode': 'report', 'blocks': [{'kind': 'heading', 'text': '完了事項'},
+                                   {'kind': 'bullet', 'text': '確認済み。'}]}
+            with patch.object(workflow, 'native', native):
+                workflow.run(root / 'request.txt', root / 'source.txt', root / 'output.txt',
+                             root / 'work', root / 'unused', 'fixture', 'medium')
+            self.assertEqual(calls, ['intake', 'selection', 'layout'])
+            self.assertEqual((root / 'output.txt').read_text(), '`完了事項`\n\n- 確認済み。')
+
+
+
+    def test_continued_writing_inherits_medium_but_current_explicit_medium_wins(self):
+        for intake_medium in ('other', 'pr_body'):
+            with self.subTest(medium=intake_medium), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'request.txt').write_text('まとめて。')
+                (root / 'source.txt').write_text('確認済み。')
+                calls = []
+                def native(prompt, schema, target, instruction, *runtime):
+                    calls.append(target.name)
+                    if target.name == 'intake':
+                        return {'operation': 'compose', 'medium': intake_medium,
+                                'request_quote': 'まとめて。', 'draft_quote': '', 'conversation_response': ''}
+                    if target.name == 'selection':
+                        if intake_medium == 'pr_body':
+                            self.assertEqual(schema['properties']['medium']['enum'], ['pr_body'])
+                        return {'operation': 'compose', 'medium': 'slack', 'request_quote': 'まとめて。',
+                                'reason': 'Continued task.', 'corrections': [],
+                                'outline': [{'point': '確認済み。', 'evidence': [
+                                    {'source': 'source_material', 'quote': '確認済み。', 'role': 'Fact.'}]}]}
+                    if target.name == 'coverage':
+                        return {'missing_points': []}
+                    if target.name == 'generation':
+                        return {'content': '確認済み。', 'delivery_notes': ''}
+                    self.assertEqual(target.name, 'layout')
+                    return {'mode': 'reply', 'blocks': [{'kind': 'paragraph', 'text': '確認済み。'}]}
+                with patch.object(workflow, 'native', native):
+                    workflow.run(root / 'request.txt', root / 'source.txt', root / 'output.txt',
+                                 root / 'work', root / 'unused', 'fixture', 'medium')
+                self.assertEqual('layout' in calls, intake_medium == 'other')
 
 
 if __name__ == '__main__':
