@@ -1,39 +1,38 @@
 ---
 name: codex-incremental-implementation
-description: Implement multi-file changes while preserving existing owners, observable contracts, focused tests, and completion evidence.
+description: Implement multi-file changes through existing owners, choose focused checks from changed behavior, then complete the requested delivery.
 ---
 
 # Codex Incremental Implementation
 
-Implement complete, reviewable behavior increments. AGENTS.md owns authority and contract-change gates; OpenSpec owns accepted artifacts when applicable.
+Restore the existing task note and results before selecting the next unfinished step below. Completed implementation and checks for unchanged code remain complete; resume at delivery when they are satisfied. Keep scope and results in that same note. AGENTS.md owns authority and continuity.
 
-Identify the faulty behavior, intended observable outcome, and what must remain unchanged from the request and existing contracts. Keep each change tied to that outcome; omit changes whose necessity cannot be explained. These are implementation decision criteria, not a requirement for a separate document, checklist, or approval step.
+## 1. Bound The Change And Delivery
 
-## Preserve Existing Owners
+Read the original request and relevant entrypoint. Identify the behavior to add or repair, the existing behavior to preserve, and the requested final delivery. A request to preserve performance or user operations constrains the implementation; it does not by itself request a benchmark, performance guarantee or new test suite.
 
-Before adding a parallel CLI, parser, mapper, data path, output convention or abstraction, trace the existing entrypoint through data access, transformation, output and tests. Reuse its owner unless the requested behavior requires a distinct responsibility, invariant or external boundary.
+Trace the existing owner through data access, transformation, output and relevant tests. Start with the smallest change there. Add a helper, state, option or shared interface only when the requested behavior needs a responsibility that the existing owner cannot handle. Reuse existing lifecycle and error handling.
 
-Keep adjacent cleanup and hypothetical compatibility out of the change. Prefer existing state and idempotency for repeated requests; use one lifecycle unless a concrete operation, billing rule or contract requires different retention. New flags, artifacts, exit codes, dependencies and shared-code changes need an accepted requirement or established repository pattern.
+## 2. Choose Verification Before Adding Tests
 
-## Verification And Test Scope
+For each changed operation, identify the concrete failure the change could introduce and the existing check that can expose it. Use the existing check first. Add a test only when the change introduces observable behavior or a concrete regression that existing coverage cannot check. Locate it at the owning boundary.
 
-Tests should protect an accepted observable contract or a known regression, at the boundary that owns it. Use response shapes, persisted state, UI behavior, messages, artifacts or operator-visible results as evidence.
+Decide this from the actual diff and accepted contracts. New log fields, helper branches and mocks do not independently require tests. Preserve accepted contract tests; inspect a failure before changing its expectation.
 
-A concrete incident is reproduction evidence, not automatically a general contract. Do not promote incidental log formatting or example-specific steps into assumed interfaces. Tests built on the same unverified assumption as the implementation do not establish that assumption's correctness; ground expected behavior in the requested outcome and independently established contracts or observations.
+For an additive observation, inspect whether it adds awaited work, repeated processing, additional I/O, sensitive output, or an exception that could interrupt the primary operation. Keep any needed check focused on the changed boundary. Existing decoding, storage or UI behavior does not become new test work solely because its result is now logged.
 
-- Add coverage where a distinct transformation or failure mode needs it; avoid duplicating a contract already covered above that layer.
-- Mock interactions and negative assertions are appropriate when the interaction or absence is itself the contract: idempotency, authorization, chargeable calls, queue publish, metrics or a known regression.
-- Remove tests of concepts deliberately removed by the accepted design. Preserve existing contract tests unless the user has authorized changing that behavior; investigate failures before changing expectations.
-- An unnecessary test, helper or defensive branch is a reason to revise the implementation, not a new user approval gate.
+## 3. Implement And Run The Selected Checks
 
-Run checks that can reveal new information after the current increment. Broaden or repeat successful checks only after changes, failures or an unresolved risk justify it. Report environment blockers without borrowing another worktree to fake verification. A production outcome needs production evidence.
+Keep the patch tied to the requested behavior and the identified failure paths. Omit adjacent cleanup, speculative defenses and hypothetical compatibility. A reproduction example does not establish a general contract.
 
-When fresh-task behavioral verification is requested, run actual work in a new task; hook delivery and unit tests are not substitutes. Use the existing installed runtime and normal configuration. Diagnose setup faults separately from target faults; do not bypass actual authentication or permission errors.
+For telemetry, use the existing emission boundary and already available values. Lower layers may attach unique context and rethrow; the owner captures the event. Keep collection out of repeated or critical processing unless the requested observation requires it. Protect the primary operation and sensitive data at that boundary.
 
-## Telemetry Ownership
+Run selected checks whose results are missing or invalidated by the current change. Carry forward recorded successful checks on unchanged code. If a check fails, localize the failure and repair its cause, then repeat the affected check. Broaden checks only for a changed operation, an observed failure, or a concrete unresolved risk shown by the patch. Record that reason before starting the extra work. A caution in the request or an imaginable failure alone does not supply it.
 
-Identify the existing emission owner before adding logging, exception capture or metrics. Lower layers may attach unique context and rethrow; avoid capturing the same exception twice. Local telemetry needs an operator-visible event or information unavailable to the owner.
+## 4. Finish The Requested Delivery
 
-## Completion
+Once the requested behavior and its selected checks are satisfied, advance to the remaining delivery in the task note. For an authorized PR request, continue with codex-git-publish through its saved-body check and the necessary commit, push and PR creation. A draft-only delivery reaches that same body check. Preparing that delivery does not restart implementation or verification.
 
-AGENTS.md owns task continuity and the task-note entrypoint; the runtime hook owns storage and restoration. Check the original requested outcomes against actual artifacts and execution evidence. Continue executable required work after questions or failed checks, and respect explicit stops. Report resolved behavior and remaining uncertainty; passing a subtest or delivering instructions does not establish the whole outcome.
+A later observed defect or changed scope can reopen the affected work. Extra tests, benchmarks, comparison pages and measurement fixtures need the same concrete reason as other scope changes. Keep an optional improvement outside the completion conditions.
+
+Report the resulting behavior and the verification that supports it. State a missing observation when it changes the requested decision or next action. A production claim needs matching evidence; do not turn an unrequested production claim into additional work.

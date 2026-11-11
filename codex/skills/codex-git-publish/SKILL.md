@@ -26,6 +26,12 @@ If the wrapper is blocked by the sandbox, rerun the same wrapper command through
 
 When the Git directory is already known to sit outside the writable sandbox, use the required approval flow on the first wrapper call. Do not run an identical sandboxed attempt merely to reproduce the known permission failure.
 
+## PR Body Delivery
+
+For a new or revised PR body, including a draft-only delivery, reread the exact saved Markdown after the last edit and apply codex-writing's PR Body check against the original request, final change and verification evidence. For each qualification, identify the claim or reviewer decision that needs it. Save corrections before treating the body as final.
+
+For a scoped edit, preserve unrequested content. Submit or deliver the checked file unchanged. If the text changes afterward, check the changed passages again. Keep body edits and the GitHub write in separate calls; an API write uses this same checked body.
+
 ## Operation-Specific Guidance
 
 For branch creation/switching, merge, submodule synchronization or PR/issue operations, read only the relevant section of [operations](references/operations.md). For PR creation, also use the branch section and the commit/push procedure below. Ordinary commit/push needs no additional reference.
