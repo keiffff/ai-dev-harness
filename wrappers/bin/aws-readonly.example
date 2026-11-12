@@ -1,51 +1,160 @@
-#!/bin/zsh
-set -euo pipefail
+#!/usr/bin/env python3
+"""AWS CLI reads classified by AWS Service Authorization Reference, not API prefixes."""
+import json
+import os
+from pathlib import Path
+import re
+import sys
+import tempfile
+import time
+from urllib.request import urlopen
 
-if [[ $# -lt 2 ]]; then
-  print -u2 "Usage: aws-readonly <service> <operation> [args...]"
-  exit 2
-fi
+REFERENCE = "https://servicereference.us-east-1.amazonaws.com/v1/"
+# AWS publishes this reference daily; a missing service/operation refreshes immediately.
+CACHE_SECONDS = 24 * 60 * 60
+ALIASES = {"s3api": "s3", "configservice": "config", "deploy": "codedeploy"}
+DATABASE_APIS = {
+    "rds-data", "redshift-data", "neptunedata", "neptune-graph",
+    "timestream-query", "qldb-session", "dsql", "keyspaces",
+}
 
-service="$1"
-operation="$2"
-shift 2
 
-for arg in "$@"; do
-  case "$arg" in
-    --with-decryption|--include-decryption|--query=SecretString*|--query=SecretBinary*)
-      print -u2 "Blocked AWS option that can expose secrets: $arg"
-      exit 2
-      ;;
-  esac
-done
+def normalized(value):
+    return re.sub(r"[-_]", "", value).lower()
 
-case "$service:$operation" in
-  sts:get-caller-identity|\
-  s3:ls|s3api:list-buckets|s3api:list-objects-v2|s3api:head-object|\
-  cloudformation:describe-stacks|cloudformation:describe-stack-events|cloudformation:list-stacks|cloudformation:list-stack-resources|\
-  logs:describe-log-groups|logs:describe-log-streams|\
-  iam:get-role|iam:list-roles|iam:get-policy|iam:get-policy-version|iam:list-attached-role-policies|\
-  ec2:describe-vpcs|ec2:describe-subnets|ec2:describe-security-groups|ec2:describe-route-tables|\
-  lambda:get-function-configuration|lambda:list-functions|\
-  sqs:get-queue-attributes|sqs:list-queues|\
-  sns:get-topic-attributes|sns:list-topics|\
-  dynamodb:describe-table|dynamodb:list-tables|\
-  dynamodb:get-item|dynamodb:batch-get-item|dynamodb:query|dynamodb:scan|dynamodb:transact-get-items)
-    exec aws "$service" "$operation" "$@"
-    ;;
 
-  # Data-plane reads such as logs:filter-log-events, logs:start-query,
-  # and lambda:get-function can expose application
-  # data or signed artifact URLs. Add them locally only when your environment
-  # policy explicitly allows that class of read.
-esac
+def document(name, refresh=False):
+    if not re.fullmatch(r"[a-z0-9-]+(?:/[a-z0-9-]+)?", name):
+        raise ValueError("Invalid reference name")
+    cache_home = os.environ.get("XDG_CACHE_HOME")
+    base = (Path(cache_home) / "aws-readonly" if cache_home
+            else Path(tempfile.gettempdir()) / f"aws-readonly-{os.getuid()}")
+    path = base / (name.replace("/", "-") + ".json")
+    if not refresh and path.exists() and time.time() - path.stat().st_mtime < CACHE_SECONDS:
+        return json.loads(path.read_text())
+    with urlopen(REFERENCE + name + ".json", timeout=10) as response:
+        result = json.load(response)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as output:
+        json.dump(result, output)
+        temporary = output.name
+    os.replace(temporary, path)
+    return result
 
-case "$service" in
-  secretsmanager|ssm|ecr|codeartifact|cognito-idp|kms)
-    print -u2 "Blocked AWS service that can expose secrets/tokens or sensitive auth material: $service"
-    exit 2
-    ;;
-esac
 
-print -u2 "Blocked AWS command because it is not in the explicit read-only allowlist: aws $service $operation $*"
-exit 2
+def service_document(service, refresh=False):
+    return document(f"{service}/{service}", refresh)
+
+
+def restricted(service, operation):
+    name = normalized(operation)
+    if service in DATABASE_APIS:
+        raise ValueError("Remote database API is outside the permitted DynamoDB reads")
+    if service == "dynamodb" and name in {
+        "executestatement", "batchexecutestatement", "executetransaction",
+    }:
+        raise ValueError("Mixed read/write database API")
+    if (
+        re.search(r"(secretvalue|credential|password|privatekey)", name)
+        or re.match(r"(get|generate|create|issue|retrieve|export|download).*token", name)
+        or (service == "ssm" and name.startswith(("getparameter", "getparameters")))
+        or (service == "lambda" and name in {"getfunction", "getlayerversion", "getlayerversionbyarn"})
+        or (service in {"acm", "acm-pca"} and name == "exportcertificate")
+        or (service == "lightsail" and name in {"getinstanceaccessdetails", "downloaddefaultkeypair"})
+    ):
+        raise ValueError("Secret, credential or signed download URL retrieval")
+
+
+def action_is_read(service, name, data):
+    restricted(service, name)
+    action = next((a for a in data.get("Actions", []) if a.get("Name") == name), None)
+    properties = (action or {}).get("Annotations", {}).get("Properties", {})
+    if not all(properties.get(key) is False for key in (
+        "IsWrite", "IsPermissionManagement", "IsTaggingOnly",
+    )):
+        raise ValueError("AWS does not classify the operation as read/list")
+
+
+def classify(service, operation, refresh=False):
+    sdk = ALIASES.get(service, service)
+    restricted(sdk, operation)
+    mapping = document("mapping", refresh)["SDK"]["Python"]["Boto3"]
+    entry = mapping.get(sdk)
+    if entry is None:
+        if not refresh:
+            return classify(service, operation, True)
+        raise ValueError("Service is not in the AWS reference")
+    prefix = entry["service"]
+    restricted(prefix, operation)
+    data = service_document(prefix, refresh)
+    match = next((o for o in data.get("Operations", []) if any(
+        s.get("Package") == "Boto3" and s.get("Name") == sdk
+        and normalized(s.get("Method", "")) == normalized(operation)
+        for s in o.get("SDK", [])
+    )), None)
+    if match is None:
+        if not refresh:
+            return classify(service, operation, True)
+        raise ValueError("Operation has no AWS reference mapping")
+    # The operation's own IAM action supplies its access classification.
+    # AuthorizedActions also lists conditional permissions (e.g. StartQuery/PassRole),
+    # not additional API calls performed by this wrapper.
+    own = next((a for a in data.get("Actions", []) if a.get("Name") == match["Name"]), None)
+    if own is not None:
+        action_is_read(prefix, own["Name"], data)
+        return
+    # Aliases such as S3 HeadObject have no same-name IAM action.
+    actions = match.get("AuthorizedActions", [])
+    if not actions:
+        raise ValueError("Operation has no classified authorization action")
+    for action in actions:
+        target = action["Service"]
+        action_is_read(target, action["Name"], data if target == prefix else service_document(target, refresh))
+
+
+def command(args):
+    index = 0
+    value_options = {
+        "--profile", "--region", "--endpoint-url", "--ca-bundle", "--output", "--query",
+        "--color", "--cli-read-timeout", "--cli-connect-timeout",
+    }
+    flags = {"--no-cli-pager", "--no-cli-auto-prompt", "--no-sign-request", "--no-verify-ssl", "--no-paginate"}
+    while index < len(args) and args[index].startswith("--"):
+        option = args[index].split("=", 1)[0]
+        if option in value_options:
+            index += 1 if "=" in args[index] else 2
+        elif option in flags:
+            index += 1
+        else:
+            raise ValueError("Unsupported leading global option")
+    if len(args) < index + 2:
+        raise ValueError("Usage: aws-readonly [global options] <service> <operation> [args...]")
+    service, operation = args[index:index + 2]
+    if not re.fullmatch(r"[a-z0-9-]+", service) or not re.fullmatch(r"[a-z0-9-]+", operation):
+        raise ValueError("Invalid service/operation")
+    if any(a.split("=", 1)[0] in {"--debug", "--with-decryption", "--include-decryption", "--unmask"} for a in args):
+        raise ValueError("Secret/decryption/debug output is not permitted")
+    if service == "s3":
+        if operation != "ls":
+            raise ValueError("Only listing is supported for the high-level S3 commands; use s3api for other reads")
+        classify("s3api", "list-buckets")
+        classify("s3api", "list-objects-v2")
+    else:
+        classify(service, operation)
+
+
+def main():
+    args = sys.argv[1:]
+    try:
+        if args not in (["--version"], ["help"]):
+            command(args)
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        # Do not echo CLI arguments or server response bodies, which can contain secrets.
+        reason = str(error) if type(error) is ValueError else "AWS classification metadata unavailable or invalid"
+        print("Blocked AWS command: " + reason, file=sys.stderr)
+        return 2
+    os.execvp("aws", ["aws", *args])
+
+
+if __name__ == "__main__":
+    sys.exit(main())

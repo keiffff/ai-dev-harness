@@ -10,7 +10,7 @@
 
 - Gitは、明示的なパスのステージング、ユーザーが明示したプッシュ、force-with-leaseなどの運用に限定する
 - GitHubの参照は`gh-readonly`、明示依頼されたPR・issue操作は`gh-user-approved`へ分ける。PR・issue操作はサブコマンドやオプションの許可リストではなく、依頼された対象と操作に限定する
-- AWS/Google Cloud は読み取り専用の許可リスト（allowlist）に限定し、シークレットやトークンの取得、および状態変更操作（mutation）を拒否する
+- AWSは公式の操作分類、Google Cloudは読み取り専用の許可リストを使い、シークレットやトークンの取得、および状態変更操作を拒否する
 - プロジェクト固有のプロファイル、ブランチ保護ルール、クラウドポリシーはローカル適応（Local Adaptation）として切り離す
 
 ## 含まれるサンプル（Included Examples）
@@ -18,7 +18,7 @@
 - `bin/git-user-approved.example`: パス明示による `git add`、現在の HEAD または明示された開始点からのユーザー指示に基づくブランチ作成、ブランチ切り替え、単一アップストリームのマージに限定。暗黙的なプッシュや、amend / `commit -a` へのフォールバックは禁止。
 - `bin/gh-readonly.example`: 読み取り専用の GitHub CLI コマンドおよび汎用 REST API の `GET` / `HEAD` リクエストのみを許可。変更を伴う HTTP メソッドや、HTTP メソッド上書きヘッダー（method-override headers）はブロック。
 - `bin/gh-user-approved.example`: 最新の明示依頼を確認したCodexが、`--confirm-user-requested pr|issue|api <command-or-endpoint>`でPR・issue操作を実行する経路。`gh pr`・`gh issue`と、そのCLIが未対応の操作を含む`gh api`（REST/GraphQL）の引数をそのまま渡す。エンドポイントなどの細かな許可リストは設けない。API経路も依頼されたPR・issue操作だけに使い、無関係な書き込み、workflow、secret・認証操作へ許可を広げない。フラグ自体はユーザーの依頼やAPIの意味を検証せず、依頼との対応は共通AGENTSとskillで判断する。
-- `bin/aws-readonly.example`: 読み取り専用の AWS CLI コマンドに限定する。DynamoDBの取得・一括取得・query・scan・トランザクション取得は許可し、書き込み・削除・構成変更、読み書き兼用API、secret・tokenの取得や他の広範なデータプレーンの読み取りはブロック。
+- `bin/aws-readonly.example`: [AWS公式Service Authorization Reference](https://docs.aws.amazon.com/service-authorization/latest/reference/service-reference.html)のSDK/API対応とアクセス分類で判定する。操作名の接頭辞や個別のread許可リストには依存しない。Read/Listを許可し、Write・権限管理・Taggingと分類不能なAPIを拒否する。DynamoDBのread、MediaConvert Probe、CloudWatch Logsの検索を同じ経路で扱う。高水準の`s3`は`ls`だけを対応する公式APIで確認する。secret・credential・token・署名付き取得URLを返す既知のAPI、復号・debug・unmask出力、DynamoDB以外のDBデータAPIとDynamoDBの読み書き兼用APIは別に拒否する。通常のログやS3本文の機微情報まで自動判定する仕組みではなく、共通指示の秘密値禁止は維持する。公式JSONは`$XDG_CACHE_HOME/aws-readonly`（未指定時はOSの一時ディレクトリ内のユーザー別キャッシュ）へ1日キャッシュし、未登録のサービス/APIは再取得する。取得失敗・分類欠落を接頭辞判定へ迂回しない。初回取得には公式公開エンドポイントへのネットワーク接続が必要。Python標準ライブラリのみを使用し、profile・region等を含めて元の引数をAWS CLIへ渡す。
 - `bin/gcloud-readonly.example`: Google Cloud CLI の明示的な読み取り専用許可リストを適用し、シークレットやトークンへのアクセスはブロック。
 - `bin/grok-x-research.example`: 日付範囲を制限した 1 回限りの xAI X Search リクエストを実行。Web Search は無効化し、正規化された引用注記の付与と明示的なコスト報告を実施。
 - `bin/claude-strategic-review.example`: デフォルトのタイムアウトを 600 秒に設定した 1 回限りの Claude Opus レビューを実行。ハートビート診断を備え、ツール、プロジェクトのカスタマイズ、セッションの永続化、および追加のエージェントターンは無効化。
@@ -44,7 +44,7 @@ Antigravityの一時的なrate limitの再試行はCLIに任せます。wrapper�
 サンプルファイルをローカルの `bin` ディレクトリにコピーし、以下の項目を環境に合わせて調整してください。
 
 - ローカルのシークレットマネージャー参照処理
-- 許可する読み取り操作の定義
+- Google Cloudの許可する読み取り操作の定義（AWSの通常readは公式分類に追従）
 - 使用するクラウドプロファイルおよびアカウント
 - リポジトリ固有の履歴保護設定
 - 組織固有の承認要件

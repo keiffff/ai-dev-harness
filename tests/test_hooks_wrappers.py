@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -345,6 +346,44 @@ class HookPolicyTests(unittest.TestCase):
         self.assertAllowed(browser_hook(['browser-control: allow'], 'await pageAlias.doSomething();', prior_browser_runtime=True))
         self.assertAllowed(browser_hook(['計算して'], '2 + 2'))
 
+def aws_reference_fixture(cache):
+    """Small classification fixtures; no credentials, AWS calls or network in wrapper tests."""
+    services = {
+        'sts': {'GetCallerIdentity': False, 'GetSessionToken': False},
+        'ec2': {'DescribeVpcs': False, 'DescribeInstances': False, 'RunInstances': True},
+        'lambda': {'GetFunctionConfiguration': False, 'GetFunction': False},
+        'mediaconvert': {'Probe': False, 'CreateJob': True, 'CancelJob': True, 'UpdateJobTemplate': True},
+        'logs': {'FilterLogEvents': False, 'StartQuery': False, 'GetQueryResults': False, 'StopQuery': False},
+        'dynamodb': {
+            **dict.fromkeys(('GetItem', 'BatchGetItem', 'Query', 'Scan', 'TransactGetItems'), False),
+            **dict.fromkeys(('PutItem', 'UpdateItem', 'DeleteItem', 'BatchWriteItem', 'TransactWriteItems',
+                            'CreateTable', 'UpdateTable', 'DeleteTable', 'UpdateTimeToLive',
+                            'ExecuteStatement', 'BatchExecuteStatement', 'ExecuteTransaction'), True),
+        },
+        's3': {'ListBuckets': False, 'ListObjectsV2': False, 'HeadObject': False, 'PutObject': True},
+        'secretsmanager': {'GetSecretValue': False, 'DescribeSecret': False},
+        'ssm': {'GetParameter': False, 'GetParameterHistory': False, 'DescribeInstanceInformation': False},
+        'ecr': {'GetAuthorizationToken': False, 'DescribeRepositories': False},
+        'iam': {'GetRole': False, 'PassRole': False, 'TagRole': False},
+    }
+    folder = cache / 'aws-readonly'
+    folder.mkdir()
+    mapping = {name: {'service': name} for name in services}
+    (folder / 'mapping.json').write_text(json.dumps({'SDK': {'Python': {'Boto3': mapping}}}))
+    for service, operations in services.items():
+        actions, apis = [], []
+        for name, write in operations.items():
+            # S3 demonstrates CLI/API names that differ from their IAM action.
+            action = {'HeadObject': 'GetObject', 'ListObjectsV2': 'ListBucket'}.get(name, name)
+            props = {'IsWrite': write, 'IsPermissionManagement': name == 'PassRole', 'IsTaggingOnly': name == 'TagRole'}
+            actions.append({'Name': action, 'Annotations': {'Properties': props}})
+            apis.append({'Name': name, 'SDK': [{'Package': 'Boto3', 'Name': service, 'Method': name}],
+                         'AuthorizedActions': [{'Name': action, 'Service': service}]})
+        if service == 'logs':
+            next(a for a in apis if a['Name'] == 'StartQuery')['AuthorizedActions'].append({'Name': 'PassRole', 'Service': 'iam'})
+        (folder / f'{service}-{service}.json').write_text(json.dumps({'Actions': actions, 'Operations': apis}))
+
+
 class WrapperTests(unittest.TestCase):
     def run_with_fake_bin(self, script: Path, fake_name: str, args: list[str]) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as tmp:
@@ -353,9 +392,12 @@ class WrapperTests(unittest.TestCase):
             fake.chmod(0o755)
             env = os.environ.copy()
             env['PATH'] = tmp + os.pathsep + env.get('PATH', '')
+            if fake_name == AWS:
+                env['XDG_CACHE_HOME'] = tmp
+                aws_reference_fixture(Path(tmp))
             return subprocess.run([str(script), *args], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, check=False)
 
-    def test_aws_readonly_uses_allowlist_and_blocks_secrets_and_other_data_reads(self):
+    def test_aws_readonly_classifies_reads_and_blocks_secret_retrieval(self):
         script = ROOT / 'wrappers' / 'bin' / 'aws-readonly.example'
         run = lambda args: self.run_with_fake_bin(script, AWS, args)
         self.assertEqual(run(['sts', 'get-caller-identity']).returncode, 0)
@@ -364,9 +406,81 @@ class WrapperTests(unittest.TestCase):
         self.assertNotEqual(run(['secretsmanager', 'get-secret-value', '--secret-id', 'x']).returncode, 0)
         self.assertNotEqual(run(['ssm', 'get-parameter', '--with-decryption', '--name', 'x']).returncode, 0)
         self.assertNotEqual(run(['ecr', 'get-login-password']).returncode, 0)
-        self.assertNotEqual(run(['logs', 'filter-log-events', '--log-group-name', 'x']).returncode, 0)
-        self.assertNotEqual(run(['logs', 'start-query', '--log-group-name', 'x']).returncode, 0)
+        self.assertEqual(run(['logs', 'filter-log-events', '--log-group-name', 'x']).returncode, 0)
+        self.assertEqual(run(['logs', 'start-query', '--log-group-name', 'x']).returncode, 0)
         self.assertNotEqual(run(['lambda', 'get-function', '--function-name', 'fn']).returncode, 0)
+
+    def test_aws_readonly_allows_only_mediaconvert_probe_and_preserves_arguments(self):
+        script = ROOT / 'wrappers' / 'bin' / 'aws-readonly.example'
+        args = ['mediaconvert', 'probe', '--input-files', '[{"FileUrl":"s3://example-bucket/video.mp4"}]', '--region', 'us-east-1']
+        result = self.run_with_fake_bin(script, AWS, args)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), args)
+        for service, operation in [('mediaconvert', 'create-job'), ('mediaconvert', 'cancel-job'), ('mediaconvert', 'update-job-template')]:
+            with self.subTest(service=service, operation=operation):
+                blocked = self.run_with_fake_bin(script, AWS, [service, operation])
+                self.assertNotEqual(blocked.returncode, 0)
+                self.assertEqual(blocked.stdout, '')
+
+    def test_aws_readonly_new_reads_aliases_and_global_options_need_no_api_allowlist(self):
+        script = ROOT / 'wrappers' / 'bin' / 'aws-readonly.example'
+        for args in (
+            ['--profile', 'example', '--region=us-east-1', 'ec2', 'describe-instances', '--output', 'json'],
+            ['s3api', 'head-object', '--bucket', 'example', '--key', 'clip.mp4'],
+            ['s3', 'ls', 's3://example/'],
+            ['ssm', 'describe-instance-information'], ['ecr', 'describe-repositories'],
+            ['secretsmanager', 'describe-secret', '--secret-id', 'example'],
+        ):
+            with self.subTest(args=args):
+                result = self.run_with_fake_bin(script, AWS, args)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), args)
+
+    def test_aws_readonly_blocks_write_permissions_tagging_credentials_and_database_apis(self):
+        script = ROOT / 'wrappers' / 'bin' / 'aws-readonly.example'
+        for args in (
+            ['ec2', 'run-instances'], ['s3api', 'put-object'], ['s3', 'cp'],
+            ['iam', 'pass-role'], ['iam', 'tag-role'], ['sts', 'get-session-token'],
+            ['ecr', 'get-authorization-token'], ['ssm', 'get-parameter-history'],
+            ['secretsmanager', 'get-random-password'], ['lightsail', 'get-relational-database-master-password'],
+            ['rds-data', 'execute-statement'], ['redshift-data', 'describe-statement'],
+            ['logs', 'filter-log-events', '--unmask'],
+            ['--debug', 'sts', 'get-caller-identity'],
+        ):
+            with self.subTest(args=args):
+                result = self.run_with_fake_bin(script, AWS, args)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, '')
+
+    def test_aws_readonly_refreshes_unknown_operations_and_rejects_missing_classification(self):
+        module = runpy.run_path(str(ROOT / 'wrappers/bin/aws-readonly.example'))
+        classify = module['classify']
+        namespace = classify.__globals__
+        mapping = {'SDK': {'Python': {'Boto3': {'example': {'service': 'example'}}}}}
+        data = {'Operations': [], 'Actions': []}
+        calls = []
+
+        def load(name, refresh=False):
+            calls.append((name, refresh))
+            return mapping if name == 'mapping' else data
+
+        with mock.patch.dict(namespace, document=load):
+            with self.assertRaisesRegex(ValueError, 'no AWS reference mapping'):
+                classify('example', 'inspect-resource')
+            self.assertIn(('example/example', True), calls)
+            data['Operations'] = [{'Name': 'InspectResource', 'SDK': [
+                {'Package': 'Boto3', 'Name': 'example', 'Method': 'inspect_resource'}]}]
+            data['Actions'] = [{'Name': 'InspectResource'}]
+            with self.assertRaisesRegex(ValueError, 'does not classify'):
+                classify('example', 'inspect-resource')
+            # A plausible read name is insufficient when AWS calls it Write.
+            data['Actions'][0]['Annotations'] = {'Properties': {
+                'IsWrite': True, 'IsPermissionManagement': False, 'IsTaggingOnly': False}}
+            with self.assertRaises(ValueError):
+                classify('example', 'inspect-resource')
+        with mock.patch.dict(namespace, document=mock.Mock(side_effect=OSError('offline'))):
+            with self.assertRaises(OSError):
+                classify('example', 'inspect-resource')
 
     def test_aws_readonly_allows_dynamodb_reads_and_preserves_arguments(self):
         script = ROOT / 'wrappers' / 'bin' / 'aws-readonly.example'
