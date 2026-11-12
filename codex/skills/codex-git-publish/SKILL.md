@@ -28,7 +28,7 @@ When the Git directory is already known to sit outside the writable sandbox, use
 
 ## PR Body Delivery
 
-For a new or revised PR body, including a draft-only delivery, reread the exact saved Markdown after the last edit and apply codex-writing's PR Body check against the original request, final change and verification evidence. For each qualification, identify the claim or reviewer decision that needs it. Save corrections before treating the body as final.
+For a new or revised issue/PR body, including a draft-only delivery, use codex-writing's source workflow `--draft-file` check on the exact saved Markdown after the last edit, with the original request, final change and verification evidence. A generated body already checked by that workflow needs no duplicate call if unchanged. Reread its resulting literal edits and retained-qualification evidence against the PR Body criteria. For each qualification, identify the claim or reviewer decision that needs it. Save corrections before treating the body as final.
 
 For a scoped edit, preserve unrequested content. Submit or deliver the checked file unchanged. If the text changes afterward, check the changed passages again. Keep body edits and the GitHub write in separate calls; an API write uses this same checked body.
 
