@@ -35,7 +35,7 @@ Before using a negative result to rule out an execution path, derive candidate p
 
 Prefer observed records, then reproducible calculations, then labeled estimates or extrapolations. Align period, workload, denominator, population and exclusions before claiming an effect. State the observation window and continuation assumption for projections.
 
-Distinguish pre-release checks from production outcomes. Resolve conflicting evidence by source, specificity and contract fit. Missing product requirements need a decision; missing implementation precedent alone does not.
+Distinguish pre-release checks from production outcomes. Resolve conflicting evidence by source, specificity and contract fit. For a requested conclusion, follow available authorized evidence that could change that conclusion before treating a fact as unknown. Keep unfinished reads as work to perform, not a final qualification. Judge sufficiency against the user's actual decision, not universal completeness or an invented stronger claim. Missing product requirements need a decision; missing implementation precedent alone does not. Hand off the supported conclusion and original evidence to writing; investigation notes are not automatically reader-facing content.
 
 ## Bounded Scouts
 
