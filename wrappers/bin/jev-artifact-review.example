@@ -4,6 +4,7 @@ import argparse
 import base64
 import binascii
 import copy
+import hashlib
 import json
 import os
 import re
@@ -41,6 +42,8 @@ def parse_args(argv):
     parser.add_argument("--request-file", help="Original user request, authoritative over producer notes.")
     parser.add_argument("--candidate-file", required=True)
     parser.add_argument("--baseline-file")
+    parser.add_argument("--all-artifacts", action="store_true",
+                        help="Explicitly requested semantic inspection of a non-interactive artifact.")
     parser.add_argument(
         "--route-checks",
         action="store_true",
@@ -58,7 +61,8 @@ def resolve_input_file(raw, option):
 
 def read_utf8(path, option):
     try:
-        value = path.read_text(encoding="utf-8")
+        with path.open(encoding="utf-8", newline="") as stream:
+            value = stream.read()
     except UnicodeDecodeError:
         stop(f"{option} must be UTF-8.")
     if not value.strip():
@@ -88,8 +92,7 @@ def ensure_api_key(fallback=None):
             check=False,
         )
     except OSError as error:
-        unavailable(type(error).__name__, fallback)
-        return None
+        return {"decision": "unavailable", **(fallback or {})}
     try:
         child_output = json.loads(completed.stdout)
     except json.JSONDecodeError:
@@ -97,10 +100,9 @@ def ensure_api_key(fallback=None):
     if (
         completed.returncode not in (0, 1)
         or not isinstance(child_output, dict)
-        or child_output.get("decision") not in {"pass", "review", "unavailable"}
+        or child_output.get("decision") not in {"pass", "review", "unavailable", "skipped"}
     ):
-        unavailable("credential unavailable", fallback)
-        return None
+        return {"decision": "unavailable", **(fallback or {})}
     sys.stdout.write(completed.stdout)
     sys.stderr.write(completed.stderr)
     raise SystemExit(completed.returncode)
@@ -122,7 +124,10 @@ def artifact_features(value):
         "media": r"<(?:video|audio)\b",
         "controls": r"<(?:button|select|input|textarea|form)\b",
     }
-    return sorted(name for name, pattern in patterns.items() if re.search(pattern, lowered))
+    features = {name for name, pattern in patterns.items() if re.search(pattern, lowered)}
+    if re.search(r"\bon(?:click|pointerdown|keydown)\s*=|addEventListener\s*\(\s*['\"](?:click|pointerdown|keydown)['\"]", value, re.IGNORECASE):
+        features.add("controls")
+    return sorted(features)
 
 
 def runtime_fragments(value):
@@ -485,6 +490,32 @@ def concrete_review(original_request, requirements, candidate, baseline):
         return {"status": "unavailable", "reason": type(error).__name__}
 
 
+def evaluate_inputs(args, requirements, original_request, candidate, baseline, candidate_file):
+    """Evaluate once; callers own custody and receipt reuse, never artifact edits."""
+    base_route = inherited_route(candidate, baseline) if args.route_checks else None
+    credential = ensure_api_key(base_route)
+    if credential is not True:
+        return credential
+    score, route_scores, unavailable_reason, diagnostic = request_review(
+        requirements, candidate, baseline, candidate_file.name,
+        args.route_checks, original_request,
+    )
+    if score is None:
+        output = {"decision": "unavailable", **(base_route or {})}
+        if diagnostic:
+            output["error"] = diagnostic
+        return output
+    output = {"decision": "review" if score >= VIOLATION_REVIEW_THRESHOLD else "pass",
+              "material_violation": score}
+    if "source_evaluation" in diagnostic:
+        output["source_evaluation"] = diagnostic["source_evaluation"]
+    if args.route_checks:
+        output.update(routed_checks(base_route, route_scores))
+    if output["decision"] == "review" and original_request is not None:
+        output["concrete_review"] = concrete_review(original_request, requirements, candidate, baseline)
+    return output
+
+
 def main():
     args = parse_args(sys.argv[1:])
     requirements_file = resolve_input_file(args.requirements_file, "--requirements-file")
@@ -509,37 +540,43 @@ def main():
     if SECRET_RE.search("\n".join(values)):
         stop("Artifact review input contains a credential or secret candidate; nothing was sent.")
 
-    base_route = inherited_route(candidate, baseline) if args.route_checks else None
-    if ensure_api_key(base_route) is None:
+    interactive = set(artifact_features(candidate) + artifact_features(baseline or "")) & {"controls", "media", "iframe"}
+    if not args.all_artifacts and not interactive:
+        print(json.dumps({"decision": "skipped", "reason": "non_interactive_artifact"}))
         return
-    score, route_scores, unavailable_reason, diagnostic = request_review(
-        requirements,
-        candidate,
-        baseline,
-        candidate_file.name,
-        args.route_checks,
-        original_request,
-    )
-    if score is None:
-        extra = dict(base_route or {})
-        if diagnostic:
-            extra["error"] = diagnostic
+    hashes = {key: hashlib.sha256(value.encode()).hexdigest() if value is not None else None
+              for key, value in {"request": original_request, "requirements": requirements,
+                                 "candidate": candidate, "baseline": baseline}.items()}
+    identity = {"input_sha256": hashes, "route_checks": args.route_checks,
+                "wrapper_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    receipt = candidate_file.with_name(candidate_file.name + ".integrity-review.json")
+    try:
+        saved = json.loads(receipt.read_text())
+    except (OSError, ValueError):
+        saved = None
+    if isinstance(saved, dict) and saved.get("review_identity") == identity:
+        output = saved
+    else:
+        output = evaluate_inputs(args, requirements, original_request, candidate, baseline, candidate_file)
+        if output is None:
+            return
+        output.update({"kind": "artifact-integrity-review", "input_sha256": hashes,
+                       "input_sources": {"requirements": str(requirements_file),
+                                         "baseline": str(baseline_file) if baseline_file else None},
+                       "review_identity": identity})
+        fd, temporary = tempfile.mkstemp(prefix=receipt.name + ".", dir=receipt.parent)
+        try:
+            with os.fdopen(fd, "w") as stream:
+                json.dump(output, stream, ensure_ascii=False)
+            os.replace(temporary, receipt)
+        finally:
+            Path(temporary).unlink(missing_ok=True)
+    if output["decision"] == "unavailable":
+        diagnostic = output.get("error", {})
         detail = ", ".join(f"{key}={value}" for key, value in diagnostic.items())
-        unavailable((unavailable_reason or "invalid response") + (f" ({detail})" if detail else ""), extra)
-        return
-    decision = "review" if score >= VIOLATION_REVIEW_THRESHOLD else "pass"
-    output = {
-        "decision": decision,
-        "material_violation": score,
-    }
-    if "source_evaluation" in diagnostic:
-        output["source_evaluation"] = diagnostic["source_evaluation"]
-    if args.route_checks:
-        output.update(routed_checks(base_route, route_scores))
-    if decision == "review" and original_request is not None:
-        output["concrete_review"] = concrete_review(original_request, requirements, candidate, baseline)
+        print("Jev artifact review unavailable: evaluator unavailable" + (" (" + detail + ")" if detail else ""), file=sys.stderr)
     print(json.dumps(output, sort_keys=True))
-    if decision == "review":
+    if output["decision"] == "review":
         raise SystemExit(1)
 
 

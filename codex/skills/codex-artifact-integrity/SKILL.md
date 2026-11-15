@@ -1,13 +1,13 @@
 ---
 name: codex-artifact-integrity
-description: Check generated or substantially revised reader-facing artifacts against explicit requirements before adoption.
+description: Check interactive HTML for lost behavior or broken comparison operations, without editing the artifact.
 ---
 
 # Codex Artifact Integrity
 
-Use after creating or substantially revising a reader-facing artifact when the request contains preservation constraints, comparison rules, required roles or flows, or a bounded change scope. Do not use for ordinary short replies, source code changes, or pixel-level visual inspection.
+Use for interactive HTML with controls, media or embeds when the request requires preserving existing behavior or comparing alternatives. Ordinary prose, static reports, SVGs and diagrams do not enter this semantic review. Their existing factual and rendered checks remain with the producing skill. An explicit user request to inspect a static artifact may use `--all-artifacts`; do not add that option to bypass ordinary routing.
 
-This skill verifies artifacts; it grants no editing authority. The producing skill determines who may make corrections. Codex validates findings against the original user request, sources and baseline before accepting them; do not automatically forward reviewer suggestions, rewrite the artifact or add requirements merely because Jev proposed them. A finding needs an evidenced mismatch, not a preference for Codex's wording or structure.
+This skill verifies artifacts; it grants no editing authority. The producing skill determines who may make corrections. Codex validates findings against the original user request, sources and baseline before accepting them; do not automatically forward reviewer suggestions, rewrite the artifact or add requirements merely because Jev proposed them. For a product mockup, follow the affected control through its actual runtime owner instead of judging it by other prose in the report. Read a missing owner/source before selecting a correction; an unverified connection is not a confirmed defect. A finding needs an evidenced mismatch, not a preference for Codex's wording or structure.
 
 Keep the relevant original user request in a UTF-8 file, separate from producer notes or a requirements summary. An assistant proposal is not a user requirement. Keep generated output at a candidate path until review completes. For an existing artifact or product mockup, use the actual pre-change artifact or relevant UI source as the baseline, not merely an earlier assistant-generated alternative. Run:
 
@@ -22,11 +22,14 @@ ${JEV_ARTIFACT_REVIEW_WRAPPER:-$HOME/.local/bin/jev-artifact-review} \
 
 Omit `--baseline-file` for a new artifact. The wrapper sends the non-secret requirements and artifact to the user-managed Jev API under the same standing authorization as Jev permission review. Do not send credentials, tokens, private keys, raw environment dumps, `.env` values or authentication configuration.
 
-The wrapper returns one of three decisions:
+The wrapper saves a content-bound `.integrity-review.json` receipt beside the candidate. Identical request, evidence, baseline and candidate reuse that result, including empty findings or unavailability; do not delete the receipt or change inputs merely to obtain another review. An actual requested change or repaired defect invalidates the affected result.
+
+The wrapper returns:
 
 - `pass`: the detector did not flag a violation; adopt only after the normal source, factual and visual/runtime checks. The score does not establish fidelity to the original request.
-- `review`: the wrapper uses the existing tool-free Claude reviewer once to return `concrete_review.findings`, with exact request/baseline and candidate quotes. Check those mismatches against the original sources. Reject unsupported findings with a reason; a rejected finding does not require an edit or another model call. Route confirmed defects to the authorized editor within the requested scope. If Claude returns no supported finding, resolve the score through the same source comparison rather than inventing a defect. If concrete review is unavailable, do not retry or treat the score as a concrete defect; perform that comparison directly. Do not present a candidate while a confirmed defect remains unresolved.
+- `review`: the wrapper uses the existing tool-free Claude reviewer once to return `concrete_review.findings`, with exact request/baseline and candidate quotes. Check those mismatches against the original sources. Reject unsupported findings with a reason; a rejected finding does not require an edit or another model call. If concrete findings are empty or unavailable, no correction call is needed. Do not invent a defect from the score. For a Claude-owned artifact, pass the unedited receipt via `claude-html-report --integrity-review-file <receipt> --confirmed-finding-index <zero-based index> --edit-file <candidate>`, the same original request and raw evidence. Select only findings whose mismatch you verified; never select the whole list merely because it scored `review`. Without selected findings the editor does not start. The wrapper verifies and transfers the unchanged requirements and baseline automatically. Claude makes the bounded correction; Codex supplies no patch, replacement copy or added requirements. Do not present a candidate while a confirmed defect remains unresolved.
 - `unavailable`: do not retry automatically and do not discard the candidate. Continue the existing factual, deterministic and visual checks; Jev availability is not a new blocker.
+- `skipped`: this is not interactive HTML. Continue the producing skill without a semantic-review call or correction.
 
 When `--route-checks` is present, use `required_checks` to select the checks that the observed change needs:
 

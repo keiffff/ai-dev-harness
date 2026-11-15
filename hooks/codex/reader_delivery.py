@@ -29,14 +29,15 @@ def save(path, value):
     os.replace(temporary, path)
 
 
-def stage(session, source_ref, output, body, supersedes=None):
+def stage(session, source_ref, output, body, supersedes=None, owner='claude-writing'):
     if not session or not source_ref:
         return
     pending, _ = locations(session)
     pending = pending/(hashlib.sha256(str(output.resolve()).encode()).hexdigest()+'.json')
     save(pending, {'source_ref': source_ref, 'path': str(output.resolve()),
                    'sha256': hashlib.sha256(body.encode()).hexdigest(), 'body': body,
-                   'supersedes': str(supersedes.resolve()) if supersedes else None})
+                   'supersedes': str(supersedes.resolve()) if supersedes else None,
+                   'owner': owner})
 
 
 def read(path):
@@ -73,6 +74,7 @@ def consume(session, source_ref):
                     body.write(item['body'])
                 records[item['path']] = {key: item[key] for key in ('source_ref', 'sha256')}
                 records[item['path']]['snapshot'] = str(snapshot)
+                records[item['path']]['owner'] = item.get('owner', 'claude-writing')
             consumed.append(file)
         save(durable, records)
         for file in consumed:
@@ -99,9 +101,10 @@ def direct_edit_reason(session, source_ref, payload):
         target = (target if target.is_absolute() else Path(cwd)/target).resolve()
         record = records.get(str(target))
         if record:
+            owner = record.get('owner', 'claude-writing')
             return ('This file is owned by the Claude writer: '+str(target)+'. '
                     'Read and deliver its saved text unchanged. A new user-requested revision goes '
-                    'to claude-writing with the original request, draft and source data. '
+                    'to '+owner+' with the original request, draft and source data. '
                     'Do not create agent-authored editorial or factual correction requests, '
                     'and do not bypass writer ownership through another editing tool.')
     return None

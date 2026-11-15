@@ -21,7 +21,7 @@ For a visual representation of a plan/spec/schema, read [review visualization](r
 
 ## Verification Boundary
 
-For a new or substantially revised HTML report, SVG, diagram or other reader-facing artifact with explicit preservation or comparison constraints, run `codex-artifact-integrity` before adoption. Supply the original user request separately from producer notes, the complete candidate and the actual pre-change baseline. Keep semantic checking separate from rendered comparison; a test of invented mock controls does not establish preservation of existing product behavior.
+For interactive HTML with explicit behavior-preservation or comparison requirements, run `codex-artifact-integrity` before adoption. Supply the original user request separately from producer notes, the complete candidate and the actual pre-change baseline. Static reports, SVGs and diagrams use the rendered checks below without a semantic-review gate. Keep semantic checking separate from rendered comparison; a test of invented mock controls does not establish preservation of existing product behavior. Inspection does not grant editing authority over Claude-owned reports; return supported observations to their producer.
 
 Start with isolated component, static artifact or screenshot checks when sufficient. Inspect overflow, long labels, labels, contrast and interaction states relevant to the target use. Choose viewports from the request, established viewing context or existing product support; add mobile layout and narrow-width checks only when phone use is in scope. HTML output alone does not imply mobile support. Check keyboard focus where interaction is in scope.
 

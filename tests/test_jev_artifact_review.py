@@ -28,6 +28,15 @@ sys.exit(int(os.environ["REVIEW_TEST_EXIT"]))
 
 
 class JevArtifactReviewTests(unittest.TestCase):
+    def decision_body(self, result):
+        output = json.loads(result.stdout)
+        self.assertEqual(output.pop("kind"), "artifact-integrity-review")
+        identity = output.pop("review_identity")
+        self.assertEqual(set(output.pop("input_sources")), {"requirements", "baseline"})
+        self.assertEqual(identity["input_sha256"], output.pop("input_sha256"))
+        self.assertEqual(set(identity["input_sha256"]), {"request", "requirements", "candidate", "baseline"})
+        return output
+
     def partition_fixture(self, evaluate):
         owner = runpy.run_path(str(WRAPPER))
         payload = {"before": {"parts": [{"source_ref": 0}, "old"]}, "after": {
@@ -184,6 +193,7 @@ class JevArtifactReviewTests(unittest.TestCase):
             command = [
                 "python3",
                 str(WRAPPER),
+                "--all-artifacts",
                 "--requirements-file",
                 str(requirements_file),
                 "--candidate-file",
@@ -248,7 +258,7 @@ class JevArtifactReviewTests(unittest.TestCase):
             baseline="Original wording with the same theme.",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(result.stdout), {"decision": "pass", "material_violation": 0.22})
+        self.assertEqual(self.decision_body(result), {"decision": "pass", "material_violation": 0.22})
         payload = captured["payload"]
         self.assertEqual(payload["before"], "Original wording with the same theme.")
         self.assertIn("candidate", payload["after"])
@@ -261,7 +271,7 @@ class JevArtifactReviewTests(unittest.TestCase):
             candidate="Changed the wording, colors and layout.",
         )
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertEqual(json.loads(result.stdout), {"decision": "review", "material_violation": 0.97})
+        self.assertEqual(self.decision_body(result), {"decision": "review", "material_violation": 0.97})
         instructions = captured["payload"]["contract"]["dimensions"][0]["instructions"]
         self.assertIn("misleading parallel presentation", instructions)
         self.assertIn("excuse copy", instructions)
@@ -269,7 +279,7 @@ class JevArtifactReviewTests(unittest.TestCase):
     def test_api_failure_is_visible_but_does_not_block_candidate(self):
         result, _ = self.run_review({"schemaVersion": 1, "status": "unavailable", "errorKind": "api"})
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(json.loads(result.stdout), {"decision": "unavailable", "error": {"kind": "api"}})
+        self.assertEqual(self.decision_body(result), {"decision": "unavailable", "error": {"kind": "api"}})
         self.assertIn("Jev artifact review unavailable", result.stderr)
 
     def test_routes_local_copy_change_without_full_artifact_checks(self):
@@ -347,7 +357,7 @@ class JevArtifactReviewTests(unittest.TestCase):
             requirements_file = root / "requirements.txt"
             candidate_file = root / "candidate.txt"
             requirements_file.write_text("Keep the theme.", encoding="utf-8")
-            candidate_file.write_text("Same theme.", encoding="utf-8")
+            candidate_file.write_text("<audio controls></audio>", encoding="utf-8")
             env = os.environ.copy()
             env.pop("TYPESAFE_API_KEY", None)
             env["KEYCHAIN_ENV_EXEC"] = str(root / "missing-launcher")
@@ -367,7 +377,7 @@ class JevArtifactReviewTests(unittest.TestCase):
                 check=False,
             )
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(json.loads(result.stdout), {"decision": "unavailable"})
+        self.assertEqual(self.decision_body(result), {"decision": "unavailable"})
 
     def test_original_request_is_separate_from_producer_notes(self):
         result, captured = self.run_review(
