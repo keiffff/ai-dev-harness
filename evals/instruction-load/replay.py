@@ -6,6 +6,8 @@ This extends instruction-load's native trace observation, not the agent runtime.
 import argparse
 import hashlib
 import json
+import os
+import shlex
 from pathlib import Path
 import shutil
 import subprocess
@@ -27,6 +29,24 @@ def skill_receipt(root):
     return {p.name: hashes(p) for p in sorted(root.iterdir()) if p.is_dir()} if root.exists() else {}
 
 
+def frozen_history(seed):
+    """Use only the audited seed, never resolve its id to a newer live thread."""
+    messages = []
+    for line in seed.read_text().splitlines()[1:]:
+        item = json.loads(line)
+        payload = item.get('payload', {})
+        if item.get('type') != 'response_item' or payload.get('type') != 'message':
+            continue
+        if payload.get('role') not in ('user', 'assistant'):
+            continue
+        content = payload.get('content', [])
+        text = '\n'.join(part['text'] for part in content
+                         if isinstance(part, dict) and isinstance(part.get('text'), str))
+        if text:
+            messages.append({'role': payload['role'], 'text': text})
+    return messages
+
+
 def artifact_receipt(run):
     paths = [run / 'answer.txt']
     paths += sorted((run / 'project').rglob('*'))
@@ -34,7 +54,8 @@ def artifact_receipt(run):
             if p.is_file() and '.agents' not in p.relative_to(run).parts}
 
 
-def run_case(case_file, skills_root, output_dir, codex_bin, label):
+def run_case(case_file, skills_root, output_dir, codex_bin, label, harness_root=None, vetted_hooks=False,
+             claude_cli=None):
     case = read_json(case_file)
     base = case_file.resolve().parent
     request = (base / case['request_file']).read_text()
@@ -46,6 +67,12 @@ def run_case(case_file, skills_root, output_dir, codex_bin, label):
             or first['payload'].get('history_base')
             or first['payload'].get('forked_from_id')):
         raise ValueError('Use a self-contained cutoff seed matching the session id')
+    history = frozen_history(seed)
+    # A fresh native task receives the frozen conversation as quoted data.
+    # `exec fork <id>` would read the live history, not this cutoff seed.
+    actor_input = (('Prior conversation (frozen at the requested cutoff):\n'
+                    + json.dumps(history, ensure_ascii=False)
+                    + '\n\nCurrent request:\n') if history else '') + request
     # Rubric hash is provenance only. Never load its content into the actor.
     rubric = base / case['rubric_file']
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -69,16 +96,74 @@ def run_case(case_file, skills_root, output_dir, codex_bin, label):
         source = base / case['files_dir']
         if (source / '.agents').exists():
             raise ValueError('Initial files must not replace the skill snapshot')
-        shutil.copytree(source, project, dirs_exist_ok=True)
+        shutil.copytree(source, project, dirs_exist_ok=True, symlinks=True)
     initial = hashes(project)
+    harness_files = {}
+    hook_config = []
+    env = os.environ.copy()
+    if claude_cli:
+        claude_cli = claude_cli.resolve()
+        if not claude_cli.is_file() or not os.access(claude_cli, os.X_OK):
+            raise ValueError('The supplied Claude CLI must be an existing executable')
+        env['CLAUDE_STRATEGIC_CLI'] = str(claude_cli)
+    if harness_root:
+        harness_root = harness_root.resolve()
+        for relative in ('codex/AGENTS.md', 'hooks/codex/runtime-contract-context.py',
+                         'hooks/codex/hook_utils.py', 'hooks/codex/runtime-contract.md',
+                         'wrappers/bin/claude-strategic-review.example',
+                         'hooks/codex/source_ledger.py', 'hooks/codex/reader_delivery.py',
+                         'hooks/codex/additions_report.py'):
+            file = harness_root / relative
+            if file.is_file():
+                harness_files[relative] = digest(file)
+        if not vetted_hooks:
+            raise ValueError('Harness hooks must be explicitly vetted before automation can execute them')
+        agents = project / 'AGENTS.md'
+        original = agents.read_text() if agents.exists() else ''
+        agents.write_text((harness_root / 'codex/AGENTS.md').read_text() + '\n' + original)
+        command = '/usr/bin/python3 ' + shlex.quote(str(harness_root / 'hooks/codex/runtime-contract-context.py'))
+        if case.get('submitted_prompts_file'):
+            prompts_path = base / case['submitted_prompts_file']
+            prompts = read_json(prompts_path)
+            original_text = '\n'.join([r['text'] for r in history] + [request])
+            if (not isinstance(prompts, list) or not prompts
+                    or any(not isinstance(p, str) or not p.strip() or p.strip() not in original_text for p in prompts)
+                    or not request.strip().endswith(prompts[-1].strip())):
+                raise ValueError('Historical prompt events must occur verbatim in the audited input and end at its current request')
+            fixture = run / 'prompt-events.json'
+            fixture.write_text(json.dumps({'actor_input_sha256': hashlib.sha256(actor_input.encode()).hexdigest(),
+                                           'submitted_prompts': prompts}, ensure_ascii=False))
+            adapter = Path(__file__).with_name('replay_hook.py')
+            command = ('/usr/bin/python3 ' + shlex.quote(str(adapter))
+                       + ' --handler ' + shlex.quote(str(harness_root/'hooks/codex/runtime-contract-context.py'))
+                       + ' --fixture ' + shlex.quote(str(fixture))
+                       + ' --receipt ' + shlex.quote(str(run/'prompt-events-receipt.json')))
+        events = ['SessionStart', 'UserPromptSubmit', 'SubagentStart', 'PreToolUse', 'PostToolUse']
+        if case.get('checked_writer_display'):
+            events.append('Stop')
+        for event in events:
+            hook_config += ['-c', f'hooks.{event}=[{{hooks=[{{type="command",command={json.dumps(command)}}}]}}]']
+        env.update(CODEX_RUNTIME_CONTRACT_STATE_DIR=str(run / 'runtime-state'),
+                   CODEX_READER_DELIVERY_STAGE_DIR=str(project / '.reader-delivery-staged'),
+                   CODEX_RUNTIME_CONTRACT_HANDLER=str(harness_root / 'hooks/codex/runtime-contract-context.py'),
+                   CODEX_RUNTIME_CONTRACT=str(harness_root / 'hooks/codex/runtime-contract.md'),
+                   CODEX_SOURCE_LEDGER_DIR=str(run / 'source-ledger'),
+                   CODEX_SOURCE_LEDGER_SCRIPT=str(harness_root / 'hooks/codex/source_ledger.py'),
+                   CLAUDE_STRATEGIC_REVIEW_WRAPPER=str(harness_root / 'wrappers/bin/claude-strategic-review.example'))
     (run / 'input.txt').write_text(request)
     manifest = {'case': case['id'], 'label': label,
                 'request_sha256': hashlib.sha256(request.encode()).hexdigest(),
                 'scope_sha256': hashlib.sha256(scope.encode()).hexdigest(),
                 'seed_sha256': digest(seed), 'session_id': case['session_id'],
+                'history_delivery': 'frozen_messages_in_fresh_native_task',
+                'history_messages': len(history),
+                'actor_input_sha256': hashlib.sha256(actor_input.encode()).hexdigest(),
                 'rubric_sha256': digest(rubric), 'initial_files': {
                     k: v for k, v in initial.items() if not k.startswith('.agents/')},
                 'skill_files': skill_files, 'model': case['model'],
+                'harness_files': harness_files,
+                'submitted_prompts_sha256': digest(base/case['submitted_prompts_file']) if case.get('submitted_prompts_file') else None,
+                'claude_cli': str(claude_cli) if claude_cli else None,
                 'reasoning': case['reasoning'], 'rubric_sent_to_actor': False,
                 'runner_sha256': digest(Path(__file__)),
                 'harness_revision': subprocess.check_output(
@@ -89,11 +174,14 @@ def run_case(case_file, skills_root, output_dir, codex_bin, label):
                '-c', 'skills.config=[' + ','.join(disabled) + ']',
                '-c', 'developer_instructions=' + json.dumps(scope),
                '--approve-for-me', '--skip-git-repo-check', '-C', str(project),
-               '--json', '-o', str(run / 'answer.txt'), 'fork', case['session_id'], '-']
+               '--json', '-o', str(run / 'answer.txt'), '-']
+    if vetted_hooks:
+        command.insert(1, '--dangerously-bypass-hook-trust')
+    command[2:2] = hook_config
     print('START ' + str(run), flush=True)
     began = time.perf_counter()
     with (run / 'trace.jsonl').open('x') as out, (run / 'stderr.txt').open('x') as err:
-        actor = subprocess.run(command, input=request, text=True, cwd=project, stdout=out, stderr=err)
+        actor = subprocess.run(command, input=actor_input, text=True, cwd=project, stdout=out, stderr=err, env=env)
     answer = (run / 'answer.txt').read_text() if (run / 'answer.txt').is_file() else ''
     result = {'process_exit': actor.returncode, 'seconds': time.perf_counter() - began,
               'execution_status': 'native_error' if actor.returncode else 'completed' if answer.strip() else 'answer_missing',
@@ -102,6 +190,8 @@ def run_case(case_file, skills_root, output_dir, codex_bin, label):
               **trace_metrics(run / 'trace.jsonl')}
     result['skill_snapshot_unchanged'] = skill_receipt(project / '.agents/skills') == skill_files
     result['pass'] = False if actor.returncode or not answer.strip() else None
+    if case.get('submitted_prompts_file') and not (run/'prompt-events-receipt.json').is_file():
+        result.update({'execution_status': 'source_fixture_not_applied', 'pass': False})
     (run / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2))
     print('END ' + str(run), flush=True)
     return run
@@ -160,6 +250,9 @@ def compare(before, after, before_assessment, after_assessment, rubric_file):
                 'rubric_sha256', 'initial_files', 'model', 'reasoning'):
         if left[key] != right[key]:
             raise ValueError('Incomparable conditions: ' + key)
+    for key in ('history_delivery', 'actor_input_sha256', 'claude_cli', 'submitted_prompts_sha256'):
+        if left.get(key) != right.get(key):
+            raise ValueError('Incomparable conditions: ' + key)
     if left['rubric_sha256'] != digest(rubric_file):
         raise ValueError('Rubric changed after execution')
     rubric = read_json(rubric_file)
@@ -187,7 +280,8 @@ def suite(case_list, plan_file):
         if report['case'] != entry['case']:
             raise ValueError('Suite case does not match the execution')
         for condition in ('before', 'after'):
-            files = read_json(paths[condition] / 'manifest.json')['skill_files']
+            manifest = read_json(paths[condition] / 'manifest.json')
+            files = {'skills': manifest['skill_files'], 'harness': manifest.get('harness_files', {})}
             if condition in snapshots and snapshots[condition] != files:
                 raise ValueError('Do not mix different snapshots within a condition')
             snapshots[condition] = files
@@ -209,6 +303,11 @@ def main():
     for name in ('case-file', 'skills-root', 'output-dir', 'codex-bin'):
         run.add_argument('--' + name, required=True, type=Path)
     run.add_argument('--label', required=True)
+    run.add_argument('--harness-root', type=Path)
+    run.add_argument('--claude-cli', type=Path,
+                     help='Verified existing CLI, preserving its configured authentication and model')
+    run.add_argument('--vetted-hooks', action='store_true',
+                     help='Invocation-only hook trust for sources already reviewed by the caller; does not bypass sandbox or approvals')
     diff = subs.add_parser('compare')
     for name in ('before', 'after', 'before-assessment', 'after-assessment', 'rubric-file', 'output'):
         diff.add_argument('--' + name, required=True, type=Path)
@@ -217,9 +316,10 @@ def main():
         all_cases.add_argument('--' + name, required=True, type=Path)
     args = parser.parse_args()
     if args.operation == 'run':
-        folder = run_case(args.case_file, args.skills_root, args.output_dir, args.codex_bin, args.label)
+        folder = run_case(args.case_file, args.skills_root, args.output_dir, args.codex_bin, args.label,
+                          args.harness_root, args.vetted_hooks, args.claude_cli)
         result = read_json(folder / 'result.json')
-        return 0 if result['process_exit'] == 0 and result['answer_present'] else 1
+        return 0 if result['execution_status'] == 'completed' else 1
     elif args.operation == 'compare':
         report = compare(args.before, args.after, args.before_assessment, args.after_assessment, args.rubric_file)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2))

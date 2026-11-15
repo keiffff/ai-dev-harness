@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import importlib.util
 import re
 import shutil
 import signal
@@ -14,6 +15,22 @@ DEFAULT_MODEL = "claude-opus-5-5"
 DEFAULT_CLAUDE_CLI = "claude"
 DEFAULT_TIMEOUT_SECONDS = 600
 HEARTBEAT_SECONDS = 30
+
+
+def attach_submitted_prompts(prompt: str) -> str:
+    local = Path(__file__).resolve().parents[2] / 'hooks/codex/source_ledger.py'
+    path = Path(os.environ.get('CODEX_SOURCE_LEDGER_SCRIPT',
+                str(local if local.is_file() else Path.home() / '.codex/hooks/source_ledger.py')))
+    if not path.is_file():
+        return prompt
+    try:
+        spec = importlib.util.spec_from_file_location('source_ledger', path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.attach_context(prompt)
+    except (OSError, ValueError, ImportError) as error:
+        print(f'Submitted-prompt attachment unavailable: {error}', file=sys.stderr)
+        return prompt
 
 
 def stop(message: str, exit_code: int = 2) -> None:
@@ -234,7 +251,7 @@ def main() -> None:
     claude_cli = resolve_claude_cli()
     require_safe_mode(claude_cli)
     output = run_review(
-        prompt,
+        attach_submitted_prompts(prompt),
         load_oauth_token(),
         timeout_seconds(),
         claude_cli,

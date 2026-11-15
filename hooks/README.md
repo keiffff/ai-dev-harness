@@ -8,9 +8,21 @@ hook は sandbox を置き換えるものではありません。PreToolUse hook
 
 ## Runtime Contract
 
-`runtime-contract-context.py` は、既に開いているtaskにも現在の短い運用規則を届けます。`SessionStart` の startup、resume、clear、compact では必ず注入し、`UserPromptSubmit` では同じtaskへ最後に届けた内容から `runtime-contract.md` または登録済みの作業メモが変わった場合だけ再注入します。これにより、AGENTS.mdを更新した後に既存taskが古い要約や開始時の文脈だけで動き続ける状態を避けます。
+`runtime-contract-context.py` は、既に開いているtaskにも現在の短い運用規則を届けます。`SessionStart` の startup、resume、clear、compact、fork では原文と規則を復元します。`UserPromptSubmit` では届いたpromptを保存し、規則と作業メモは変更時だけ再注入します。原文の追記だけでは同じ規則を毎回注入しません。
 
-`runtime-contract.md` はAGENTS.mdの代替ではありません。全体の規則はAGENTS.mdに置き、そのうち既存taskへ即時に反映する必要がある短い規則だけをこのファイルにも記載します。hookは注入した文脈のSHA-256をtaskごとに `~/.codex/hook-state/runtime-contract/` へ保存し、会話や入力文を自動保存しません。複数工程の作業ではagentが元の目的・未達の結果・証拠・操作範囲を短い作業メモに保ち、`python3 ~/.codex/hooks/runtime-contract-context.py --task-note <作業メモの実パス>` で現在の `CODEX_THREAD_ID` に結び付けます。通常のsandbox内から共通state directoryへ書けないため、登録コマンドはユーザーの一時領域の `codex-runtime-task-notes/` へsession hash別に保存します。同じhookの出力なしのPostToolUse処理が登録コマンド直後に共通state directoryへ永続化し、新規・再開・圧縮後と変更時の注入に含めます。明示的に `CODEX_RUNTIME_CONTRACT_STATE_DIR` を指定した検証では、その指定先を保存・読込先に使います。他のtaskのメモは読みません。新しいメモの永続保存に失敗した場合は古い保存内容の削除を試み、診断をstderrへ残します。保存先の書込みと古い内容の削除がどちらもできない場合、以後の永続復元は保証せず、維持している元メモを確認します。メモは既存の依頼を保つ文脈であり、操作許可や完了判定を自動生成せず、Stop hookも追加しません。ファイルの欠落、入力形式の不一致、状態ファイルへの書き込み失敗は実行を止めません。
+`source_ledger.py` は受信本文をtask別の `~/.codex/hook-state/source-ledger/<session hash>.jsonl` に保存します。保存ファイルは0600、新規ディレクトリは0700です。自動保存を導入する際は、原文がローカルへ残ることについてユーザーの許可を得てください。保存対象はhookへ届いたpromptであり、添付の実体や到着前の会話まで保存できるとは限りません。他agentが送ったpromptも含み得るため、人間の発言や新しい操作許可として認証しません。保存原文は変更せず、委譲時の表示からは既知のアプリ注入タグと認識できるcredential形式を除外し、除外の種類を記録します。この形式検出は包括的なsecret判定ではありません。
+
+原文は再開時、`SubagentStart`、task間の送信、Claudeの既存wrapperへ自動添付します。task間のhookは対象・モデル・既存本文を保持して原文だけを添付し、欠落を拒否理由にしません。taskメモは完了・実行中・必要な未達・証拠・操作範囲を保つ解釈であり、原文を置き換えません。過去の原文も単発の操作許可を更新しません。保存・読込の失敗は診断を残して通常処理を続けます。`CODEX_SOURCE_LEDGER_DIR` で保存先、`CODEX_SOURCE_LEDGER_MAX_CHARS` で明示的な表示予算を指定できます。表示の省略は保存原文を変えません。
+
+`runtime-contract.md` はAGENTS.mdの代替ではありません。全体の規則はAGENTS.mdに置き、そのうち既存taskへ即時に反映する必要がある短い規則だけをこのファイルにも記載します。hookは注入した文脈のSHA-256をtaskごとに `~/.codex/hook-state/runtime-contract/` へ保存します。原文の保存先は別の台帳です。複数工程の作業ではagentが元の目的・未達の結果・証拠・操作範囲を短い作業メモに保ち、`python3 ~/.codex/hooks/runtime-contract-context.py --task-note <作業メモの実パス>` で現在の `CODEX_THREAD_ID` に結び付けます。通常のsandbox内から共通state directoryへ書けないため、登録コマンドはユーザーの一時領域の `codex-runtime-task-notes/` へsession hash別に保存します。同じhookの出力なしのPostToolUse処理が登録コマンド直後に共通state directoryへ永続化し、新規・再開・圧縮後と変更時の注入に含めます。明示的に `CODEX_RUNTIME_CONTRACT_STATE_DIR` を指定した検証では、その指定先を保存・読込先に使います。他のtaskのメモは読みません。新しいメモの永続保存に失敗した場合は古い保存内容の削除を試み、診断をstderrへ残します。保存先の書込みと古い内容の削除がどちらもできない場合、以後の永続復元は保証せず、維持している元メモを確認します。メモは既存の依頼を保つ文脈であり、操作許可や完了判定を自動生成せず、メモの未達を理由に回答を遮りません。ファイルの欠落、入力形式の不一致、状態ファイルへの書き込み失敗は実行を止めません。
+
+## Claude Writer Delivery
+
+`claude-writing`のhelperは、保存された最新の受信原文を依頼へ結び、呼出側が書いた依頼文を追加の編集指示として送りません。原文がない場合はrequest fileを未検証と明記して使います。Claudeは原依頼・原資料・文体の共通契約から1回で本文と送信者向け補足を返します。コードは両者を別ファイルへ無編集で保存し、Codexによる採否・局所置換・2回目の検査は行いません。
+
+PostToolUseはwriter成果物のsnapshotとhashを `~/.codex/hook-state/reader-deliveries/` へ保存します。ファイルは0600、新規directoryは0700です。PreToolUseは、このtaskのwriter成果物へのmainの直接patchを拒否します。新しいユーザーの訂正依頼もClaudeへ返し、Codexの編集権限にはしません。別ファイルの編集や通常のGit/クラウド操作の権限は変えません。
+
+この保護は既知のwriter成果物の直接patchを対象とし、任意のコードやチャット全般を保護するsecurity boundaryではありません。チャットの最終転記を機械的に保証するものではなく、Stopによる再編集は登録しません。保存原文・snapshotがない場合や読込失敗時は、新たな停止条件を作りません。通常の認証・承認・sandboxは維持します。
 
 ## Role In The Harness
 
@@ -59,7 +71,7 @@ Jev CLI 自体は環境変数 `TYPESAFE_API_KEY` のみを読み取り、Keychai
 
 ## Japanese Output
 
-日本語の品質基準については、常時参照される `AGENTS.md` と文章作成時に適用される `codex-writing` が管理します。Stop hook による continuation prompt は、会話上でフィードバックとして表示されてユーザーへの回答を途中で遮ったような挙動に見えるため、日本語の推敲用途には使用しません。
+日本語の品質基準については、常時参照される `AGENTS.md` と文章作成時に適用される `claude-writing` が管理します。Stop hook による continuation prompt は、会話上でフィードバックとして表示されてユーザーへの回答を途中で遮ったような挙動に見えるため、日本語の推敲用途には使用しません。
 
 ## Parse Failure Policy
 

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Codex Writing"
-  short_description: "Write natural Japanese for the requested medium"
-  default_prompt: "Use $codex-writing to draft or revise this prose for its audience and medium while preserving the requested scope."

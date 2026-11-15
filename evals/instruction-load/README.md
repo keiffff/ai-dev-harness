@@ -39,7 +39,7 @@ continuationの原因説明、investigationの原因説明、stopの未達説明
 
 ## 私的な実会話を再生する
 
-同じ観測と比較を実会話にも使う入口は`replay.py`。既に監査した、問題直前で切ったnative sessionのseedを使う。会話抽出や採点基準の作成をモデルへ任せず、未来の訂正、toolの生出力、credentialを含めないことを準備側で確認する。共有repoには実会話、seed、案件の識別子や運用前提を置かない。ケース、rubric、snapshot、結果は私的保存先を指定する。
+同じ観測と比較を実会話にも使う入口は`replay.py`。既に監査した、問題直前で切ったsessionのseedを使う。seed内のuser/assistantメッセージだけを凍結した会話データとして、新規native taskへ渡す。seedのIDでライブの履歴をforkしないため、保存後に追加された訂正は読み込まない。一方、引用された履歴の再生であり、元スレッドの内部状態や圧縮履歴をそのまま再現するものではない。会話抽出や採点基準の作成をモデルへ任せず、未来の訂正、toolの生出力、credentialを含めないことを準備側で確認する。共有repoには実会話、seed、案件の識別子や運用前提を置かない。ケース、rubric、snapshot、結果は私的保存先を指定する。
 
 ケースJSONは`id`、`request_file`、`scope_file`、`seed_file`、`session_id`、`rubric_file`、`model`、`reasoning`を持つ。ファイルパスはケースJSONの場所から解決する。`files_dir`を指定すれば必要な初期ファイルを作業場所へコピーする。snapshotは変更対象のskillだけを格納する。対象skillのユーザー側登録をその実行内で無効にし、作業場所の`.agents/skills`へsnapshotを配信する。他の設定・認証・hookは維持する。歴史的なファイルが必要なケースは利用可能な初期ファイルを用意し、欠けたまま技術的正しさを合格にしない。
 
@@ -48,6 +48,12 @@ python3 evals/instruction-load/replay.py run --case-file "$CASE_FILE" --skills-r
 ```
 
 条件名、採点基準、case manifestをactorの依頼文や作業ディレクトリ名に入れない。rubricはhashのみ実行記録に残す。これはOSの読取制限ではないため、採点や別試行の参照がなかったかtraceも確認する。既存runtimeが外側sandboxで起動できない場合はsetup失敗として保存する。実際の認証・権限拒否を別経路で迂回しない。
+
+共通指示とhookも比較する場合は`--harness-root`へ凍結した正本のsnapshotを指定する。projectのAGENTSとskill、実際のhookコマンド、既存Claude wrapperをそのsnapshotから配信し、原文台帳とruntime stateは試行ごとに隔離する。`harness_files`と入力全体のhashをmanifestへ残す。通常設定と認証は維持するため、user hookは残る。追加hookとの累積を確認し、異なる条件が混在していないことをtraceと保存結果で確認する。これはuser hookの完全な置換を保証する機能ではない。
+
+原文台帳を評価するケースでは`submitted_prompts_file`に、監査済みの実際のprompt本文を時系列のJSON配列で指定する。引用された過去のassistant文まで1つの「現在の依頼」として保存すると本来の入力と異なるため、`replay_hook.py`が最初の引用コンテナを元のpromptイベント列へ戻して実hookへ渡す。actorの入力は変更しない。各本文が監査対象の入力に逐語で存在し、最後が現在の依頼に一致することを確認する。fixtureのhashと適用receiptを保存し、適用できなかった試行を完了扱いにしない。このadapterは評価専用で、通常のruntime hookが受信した本文を加工する機能ではない。
+
+新しいhookは通常のtrust確認が必要。自分で内容を確認済みの評価専用hookだけを実行するautomationでは、`--vetted-hooks`により公式のinvocation限定hook-trustオプションを渡せる。永続trust、sandbox、承認レビュー、認証は変更しない。未確認のprojectや任意のhookをこの方法で実行しない。実環境のwrapperが絶対パスでClaudeを選んでいる場合は、同じ実行可能ファイルを確認して`--claude-cli`へ渡す。PATH上の別バージョンによる準備故障と対象の失敗を区別する。
 
 rubricの`checks`は重複しない`id`と`description`。回答後の判定ファイルは`artifacts`（result.jsonと同じhash辞書）、manifestと同じ`rubric_sha256`、全criteriaに対応する`checks`を持つ。各checkに`id`、`verdict`（pass/fail/unknown）、`reason`、`evidence`（記録されたfileとその中の正確なquoteの配列）を記入する。引用の一致は根拠の所在確認であり、意味の採点の正しさは別に確認する。
 

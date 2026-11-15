@@ -41,7 +41,7 @@ class OperationalSkillGateTests(unittest.TestCase):
             ROOT / "codex" / "skills" / "codex-frontend-ui" / "SKILL.md"
         ).read_text()
         writing = (
-            ROOT / "codex" / "skills" / "codex-writing" / "SKILL.md"
+            ROOT / "codex" / "skills" / "claude-writing" / "SKILL.md"
         ).read_text()
 
         self.assertIn("Claude owns the initial complete report composition", report)
@@ -55,7 +55,8 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertIn("Rejected claims", contract)
         self.assertIn("comprehension dependencies", report)
         self.assertIn("claude-html-report", frontend)
-        self.assertIn("bounded exception", writing)
+        self.assertIn("Claude alone owns reader-facing prose", writing)
+        self.assertIn("HTML uses `claude-html-report`", writing)
         self.assertIn("Do not request separate approval", report)
         self.assertIn("company-internal, confidential-design or personal information", report)
         self.assertIn("every task-required non-secret fact", contract)
@@ -295,7 +296,7 @@ class OperationalSkillGateTests(unittest.TestCase):
         self.assertRegex(section, r"推測.*補完実装.*(?:進めず|進まず).*ANDON")
 
     def test_writing_revision_is_limited_to_the_requested_delta(self):
-        content = (ROOT / "codex" / "skills" / "codex-writing" / "SKILL.md").read_text()
+        content = (ROOT / "codex" / "skills" / "claude-writing" / "SKILL.md").read_text()
 
         self.assertIn("every change is required by the requested delta", content)
         self.assertIn("Do not trade an unwanted rewrite for over-compression", content)

@@ -121,9 +121,9 @@
     <path d="M12 2 A10 10 0 1 0 12 22 A10 10 0 1 0 12 2" />
     <path d="M7 12 L11 16 L17 9" />
   </g>
-  <text data-owner="main" x="512" y="856" font-size="18" fill="#F3F5F9" font-weight="700" text-anchor="start">文章・統合</text>
-  <text data-owner="main" x="628" y="856" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">codex-writing</text>
-  <text data-owner="main" x="628" y="880" font-size="12" fill="#C7CFDC" font-weight="400" text-anchor="start">根拠選択・構成照合・局所置換。採否とGit判断はCodexが担う</text>
+  <text data-owner="main" x="512" y="856" font-size="18" fill="#F3F5F9" font-weight="700" text-anchor="start">文章受渡し</text>
+  <text data-owner="main" x="628" y="856" font-size="15" fill="#F3F5F9" font-weight="700" text-anchor="start">claude-writing</text>
+  <text data-owner="main" x="628" y="880" font-size="12" fill="#C7CFDC" font-weight="400" text-anchor="start">Claudeが執筆・確認・訂正。Codexは原資料と完成稿を運ぶ</text>
   <line x1="456" y1="900" x2="1144" y2="900" stroke="#245C52" stroke-width="1" />
   <text data-owner="main" x="456" y="928" font-size="14" fill="#34D399" font-weight="700" text-anchor="start">判断に不可欠な事項が未確定ならANDON</text>
   <text data-owner="main" x="456" y="952" font-size="12.5" fill="#C7CFDC" font-weight="400" text-anchor="start">例：仕様・API・必須項目・null／省略・保存形式・権限・互換性・既存機能への影響・復元・移行の判断</text>

@@ -22,7 +22,7 @@ AIエージェントへ作業ごとの期待を伝えるCodexのスキルを管�
 | `codex-frontend-ui` | UI の設計方針、HTML/mock/report の作成、レビュー用の可視化、既存デザインシステムへの準拠、visual QA | 既存デザインへの準拠、視覚的品質、元資料との整合、目視・画面検証の観点を確認する | 正本となるソース（canonical source）を生成 HTML に置き換えたり、事前の合意なくフルアプリでのブラウザ検証を始めたりしない |
 | `codex-artifact-integrity` | 保持条件・比較条件・変更範囲がある成果物の作成・大幅改稿後 | 元依頼・原資料・変更前の成果物と候補を照合し、具体的な不一致を確認して作成担当へ返す | 検証を編集権限と扱わず、pixel単位の重なりや余白は別途目視し、API不通を新たなblockerとしない |
 | `claude-html-report` | 複数章の構成、比較図、画像、密度の高い情報設計が必要な単体（standalone）HTML 資料を作成するとき | Codexは元依頼・原資料を渡して検証し、Claudeが構成・執筆・対象HTMLへの直接の局所編集を担当する | Codexが中間の要約・構成指示を作ったり、生成後のHTMLの文章・配置・metadataを編集したりしない |
-| `codex-writing` | PR本文、README、Slack報告・確認依頼などの文章成果物と、その継続会話 | 現在の依頼を先に判定し、長い資料は根拠選択→構成の照合→生成へ進める。既存原稿は選んだ箇所だけを置換する | 観測共有を追加改稿に変えず、通常応答・語句だけの校正へ重い工程を適用しない。`claude-html-report`と明示依頼されたGemini作成の所有を守る |
+| `claude-writing` | Slack報告・確認依頼、issue・PR本文などの作成・推敲・訂正 | 原依頼と原資料を渡し、Claudeが情報選択・構成・執筆・確認・訂正まで1回の呼出しで担当する | Codexは結論・留保・修正案を指定せず、完成稿を編集せず提示する。通常の会話回答は対象外 |
 | `gemini-japanese-polish` | 検証済みの事実や素材をもとに、日本語成果物全体の構成・執筆を Gemini に任せたいとき | Codex が事実と執筆条件を確定し、隔離された Antigravity CLI 上の Gemini 3.8 Flash Medium が全文の構成・見出し・文章を作成し、Codex が事実関係を検証する。HTML は完了状態を検証し、不完全なら 1 回だけ再生成する | 事実調査、暗黙の操作実行、モデルの切り替え、無制限の再試行を任せない |
 | `codex-decision-doc` | design doc、ADR/RFC、移行方針、判断の記録を残すとき | 下された判断、その理由、検討した代替案、互換性への配慮、残存リスクを記録する | 実装対象ファイルの一覧や、単なる作業ログを書き連ねない |
 | `codex-cdk-design-review` | CDK、CloudFormation、スタック分割、共有環境、クロススタック参照を取り扱うとき | リソースの所有権（resource ownership）、依存の向き、物理名、クォータ上限、リージョン制約を事前に確認する | 隔離された環境（isolated 環境）でのみ通るような設計を、安全な構成として扱わない |
@@ -43,7 +43,7 @@ AIエージェントへ作業ごとの期待を伝えるCodexのスキルを管�
 - 単体 HTML 全体の情報設計と構成を Claude へ任せるなら `claude-html-report`
 - API や保存形式を変更するなら `codex-interface-review`
 - 判断の経緯を後から参照できるようにするなら `codex-decision-doc`
-- 読者向けの文章成果物を作成するなら `codex-writing`
+- 読者向けの文章成果物を作成するなら `claude-writing`
 - 方針を外部視点から疑い直したいなら strategic review 系
 - 既存の判断を維持・変更・保留するなら `codex-decision-integrity`
 - X 固有の最新情報が必要なら `grok-x-research`

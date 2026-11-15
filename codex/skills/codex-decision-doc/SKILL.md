@@ -5,7 +5,7 @@ description: Write decision records that preserve rationale, inherited constrain
 
 # Codex Decision Doc
 
-Use this for ADRs, RFCs and design rationale. OpenSpec owns its artifacts; PRs and ordinary prose use `codex-writing`.
+Use this for ADRs, RFCs and design rationale. OpenSpec owns its artifacts; PRs and ordinary prose use `claude-writing`.
 
 ## Content Contract
 
@@ -19,4 +19,4 @@ Use the user's template or nearby project format. When none exists, include only
 - Ask for missing decision context; do not manufacture questions about states excluded by the contract.
 - Use exact values and contract text where needed. Tables compare common axes; Mermaid can express relationships, state or order. Use `codex-frontend-ui` for a derived interactive view only when useful, keeping this document as the source.
 
-Write in Japanese unless requested otherwise; preserve project headings. For a prose defect, use `codex-writing`'s editing contract. For decision phrasing examples, consult [style](references/style.md) as needed.
+Write in Japanese unless requested otherwise; preserve project headings. For a prose defect, use `claude-writing`'s editing contract. For decision phrasing examples, consult [style](references/style.md) as needed.

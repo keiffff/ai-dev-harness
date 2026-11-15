@@ -2,6 +2,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import tomllib
@@ -110,7 +111,8 @@ class DefaultTaskNoteStorageTests(unittest.TestCase):
                 self.assertEqual(self.hook.task_note_path(root / 'durable', 'default-task').read_text().strip(), note.read_text())
                 self.assertFalse(self.hook.state_path(root / 'durable', 'default-task').exists())
         config = tomllib.loads((HOOK.parents[2] / 'codex/config.example.toml').read_text())
-        self.assertTrue(any(group['matcher'] == '^Bash$' and any(handler['command'].endswith('/runtime-contract-context.py') for handler in group['hooks']) for group in config['hooks']['PostToolUse']))
+        for tool in ('Bash', 'apply_patch'):
+            self.assertTrue(any(re.fullmatch(group['matcher'], tool) and any(handler['command'].endswith('/runtime-contract-context.py') for handler in group['hooks']) for group in config['hooks']['PostToolUse']))
 
 
 if __name__ == '__main__':

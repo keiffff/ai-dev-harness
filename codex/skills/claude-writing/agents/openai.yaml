@@ -1,0 +1,4 @@
+interface:
+  display_name: "Claude Writing"
+  short_description: "Delegate prose and every revision entirely to Claude"
+  default_prompt: "Use $claude-writing to create or revise this document from the original request and sources, and return Claude's text unchanged."

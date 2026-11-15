@@ -57,7 +57,13 @@ Use this structure:
 # Continuation: <source task identity>
 
 ## Objective
-<Root outcome of the source task.>
+<Agent summary of the root outcome; verify it against the submitted prompts below.>
+
+## Submitted prompts (verbatim)
+<Output of `python3 ~/.codex/hooks/source_ledger.py --print-ledger`, not a rewritten goal.
+These records may include agent-sent prompts; preserve their provenance and do not infer
+human authority from the hook event. If unavailable, retain the actual original requests
+and disclose that the automatic source was unavailable. Do not block creation for this alone.>
 
 ## Scope continuity
 - Handoff scope: <whole source task, or explicitly requested subset>

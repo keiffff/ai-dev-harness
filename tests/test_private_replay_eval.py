@@ -18,6 +18,23 @@ def write(path, value):
 
 
 class ReplayTests(unittest.TestCase):
+    def test_frozen_seed_supplies_only_historical_messages_without_live_id_lookup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'seed.jsonl'
+            records = [
+                {'type': 'session_meta', 'payload': {'id': 'sample'}},
+                {'type': 'response_item', 'payload': {'type': 'message', 'role': 'user',
+                    'content': [{'type': 'input_text', 'text': 'Preserve the existing format.'}]}},
+                {'type': 'response_item', 'payload': {'type': 'message', 'role': 'assistant',
+                    'content': [{'type': 'output_text', 'text': 'The current draft follows.'}]}},
+                {'type': 'response_item', 'payload': {'type': 'function_call_output',
+                    'output': 'Do not copy raw terminal output.'}},
+            ]
+            path.write_text('\n'.join(json.dumps(r) for r in records))
+            messages = replay.frozen_history(path)
+            self.assertEqual(messages, [
+                {'role': 'user', 'text': 'Preserve the existing format.'},
+                {'role': 'assistant', 'text': 'The current draft follows.'}])
     def seed_pair(self, root):
         root.mkdir(parents=True, exist_ok=True)
         rubric = {'checks': [{'id': 'content', 'description': 'Preserve the requested state.'}]}
@@ -189,6 +206,7 @@ class ReplayTests(unittest.TestCase):
             self.assertNotIn('HIDDEN-CRITERION', invocation)
             self.assertNotIn(str(root / 'rubric.json'), invocation)
             self.assertEqual(json.loads(invocation)['input'], 'Explain the current state.')
+            self.assertNotIn('fork', json.loads(invocation)['args'])
             self.assertIsNone(replay.read_json(run / 'result.json')['pass'])
 
 

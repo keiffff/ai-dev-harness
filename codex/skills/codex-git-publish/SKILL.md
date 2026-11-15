@@ -28,9 +28,9 @@ When the Git directory is already known to sit outside the writable sandbox, use
 
 ## PR Body Delivery
 
-For a new or revised issue/PR body, including a draft-only delivery, use codex-writing's source workflow `--draft-file` check on the exact saved Markdown after the last edit, with the original request, final change and verification evidence. A generated body already checked by that workflow needs no duplicate call if unchanged. Reread its resulting literal edits and retained-qualification evidence against the PR Body criteria. For each qualification, identify the claim or reviewer decision that needs it. Save corrections before treating the body as final.
+For a new or revised issue/PR body, including a draft-only delivery, use `claude-writing`. Pass the original request, final diff and actual verification records. Claude alone composes, checks and revises the text; Codex does not provide a conclusion, selected edits or caveat requirements, and does not run another draft check after Claude returns.
 
-For a scoped edit, preserve unrequested content. Submit or deliver the checked file unchanged. If the text changes afterward, check the changed passages again. Keep body edits and the GitHub write in separate calls; an API write uses this same checked body.
+Submit or deliver the saved body unchanged. Keep Claude's separate sender notes outside the issue/PR copy. A user-requested revision goes back to Claude with the existing draft and original sources. An unchanged Claude-authored body needs no duplicate call. Keep composition and the GitHub write in separate calls; publication authority still follows the explicit current request.
 
 ## Operation-Specific Guidance
 

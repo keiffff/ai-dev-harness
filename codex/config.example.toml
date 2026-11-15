@@ -67,9 +67,26 @@ default_subagent_reasoning_effort = "medium"
 # compacts, or observes a changed contract on a later user turn. The hook stores
 # the last delivered context digest and this task's maintained outcome note.
 [[hooks.SessionStart]]
-matcher = "^(startup|resume|clear|compact)$"
+matcher = "^(startup|resume|clear|compact|fork)$"
 
 [[hooks.SessionStart.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-context.py"
+
+# The subagent event uses the parent's session id, so the hook can attach the
+# same original prompts without a model rewriting or selecting them.
+[[hooks.SubagentStart]]
+
+[[hooks.SubagentStart.hooks]]
+type = "command"
+command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-context.py"
+
+# Attach source data to task coordination and preserve checked writer ownership.
+# Publication, browser and cloud authority still follow their existing policies.
+[[hooks.PreToolUse]]
+matcher = "^(mcp__codex_app__(create_thread|send_message_to_thread|handoff_thread)|apply_patch)$"
+
+[[hooks.PreToolUse.hooks]]
 type = "command"
 command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-context.py"
 
@@ -80,10 +97,10 @@ type = "command"
 command = "/usr/bin/python3 /absolute/path/to/hooks/codex/runtime-contract-context.py"
 
 # Persist a sandbox-staged task note immediately after its registering command.
-# This handler emits no model context and does not decide whether work may stop.
+# Persist checked writer output custody through the same non-blocking handler.
 # Review and trust this new definition individually in Codex /hooks.
 [[hooks.PostToolUse]]
-matcher = "^Bash$"
+matcher = "^(Bash|apply_patch)$"
 
 [[hooks.PostToolUse.hooks]]
 type = "command"

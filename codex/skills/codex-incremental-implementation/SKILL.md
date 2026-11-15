@@ -35,4 +35,9 @@ Once the requested behavior and its selected checks are satisfied, advance to th
 
 A later observed defect or changed scope can reopen the affected work. Extra tests, benchmarks, comparison pages and measurement fixtures need the same concrete reason as other scope changes. Keep an optional improvement outside the completion conditions.
 
-Report the resulting behavior and the verification that supports it. State a missing observation when it changes the requested decision or next action. A production claim needs matching evidence; do not turn an unrequested production claim into additional work.
+For a code change, run `python3 ~/.codex/hooks/additions_report.py --root <verified checkout>`
+against the actual base before delivery. Use its changed-file and added-pattern observations
+to report consequential additions alongside the resulting behavior and verification. The
+script neither decides what was requested nor requires removal, approval or more tests.
+State a missing observation when it changes the requested decision or next action. A production
+claim needs matching evidence; do not turn an unrequested production claim into additional work.
