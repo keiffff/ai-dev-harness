@@ -5,7 +5,7 @@ description: Check API, schema, persisted-data and state contracts before design
 
 # Codex Interface Review
 
-Use these criteria for an interface decision or a changed contract. Main can apply them directly; an independent reviewer uses the same criteria when `codex-doubt-review` is warranted. A second agent solely for I/F review is not required.
+For an interface decision, distinguish externally required behavior from stronger guarantees introduced by the candidate. Compare approaches against the former before checking how each implements the latter. Main applies these criteria; a separate I/F agent is not required.
 
 ## Contract Criteria
 

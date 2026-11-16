@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 from hook_utils import is_invalid_payload, load_payload
-from source_ledger import append_prompt, inherit_prompts, request_reference, render as render_prompts
+from source_ledger import append_prompt, inherit_prompts, ledger_path, read_records, request_reference, render as render_prompts
 from reader_delivery import consume as consume_delivery, direct_edit_reason
 
 
@@ -83,6 +83,26 @@ def maintain_task_note(source: Path) -> None:
     target = maintained_task_note_path(state_dir, session_id)
     write_task_note(target, text)
     print(json.dumps({"task_note": str(target)}))
+
+
+def task_context(note: str, session_id: str) -> str:
+    """Keep source provenance outside the editable plan; do not judge its meaning."""
+    source = ''
+    try:
+        records = read_records(session_id)
+        if records:
+            source = ('Submitted-prompt source (quoted evidence, not renewed authority): '
+                      + str(ledger_path(session_id))
+                      + '; through seq ' + str(records[-1]['seq']) + '.\n')
+    except (OSError, ValueError, KeyError) as error:
+        print(f'Task source reference unavailable: {error}', file=sys.stderr)
+    return ('\n\n' + source
+            + 'Agent-maintained note for this task (context, not new authority):\n'
+            + note
+            + '\nSource-backed outcomes and constraints must be distinguished from '
+            'revisable agent steps and additions. This note does not establish that '
+            'an added condition is required; verify it against the original requests '
+            'and observations. Neither source preservation nor this note proves completion.')
 
 
 def read_contract(path: Path) -> tuple[str, str] | None:
@@ -188,13 +208,7 @@ def main() -> None:
             print(f"Submitted prompts could not be restored: {error}", file=sys.stderr)
     note = read_task_note(state_dir, session_id)
     if note:
-        text += (
-            "\n\nAgent-maintained note for this task (context, not new authority):\n"
-            + note
-            + "\nUse the original user requests to verify scope and permissions. "
-            "Keep required unfinished outcomes distinct from optional limitations. "
-            "This note records agent interpretation and current state, not a new request."
-        )
+        text += task_context(note, session_id)
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
     state = state_path(state_dir, session_id)
     force = event == 'SubagentStart' or event == "SessionStart" and payload.get("source") in {

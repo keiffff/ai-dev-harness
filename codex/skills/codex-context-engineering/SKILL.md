@@ -19,26 +19,24 @@ Use this when evidence sources or existing ownership need investigation. Let the
 | Which earlier conversation? | One direct lookup using the named task, date or artifact | Bounded task history after identifying the target |
 | What does an external tool currently support? | Available local implementation/help for local behavior; official docs for service behavior | Approved readonly wrapper or dedicated connector for account/repo state |
 
-Use `rg` / `rg --files`, relevant local Git reads, and the approved remote-read tools. Refresh remote refs when freshness matters and the task permits fetching; otherwise label the comparison as local-ref evidence. Authentication failures follow AGENTS.md; do not switch access paths.
+Use `rg` / `rg --files`, local Git reads and approved remote-read tools. Refresh remote refs when freshness matters and fetching is permitted; otherwise identify local-ref evidence. Authentication failures follow AGENTS.md.
 
-For ambiguous conversation references, try one direct lookup; if the target is still unclear, ask before starting a broad log search.
+For conversation evidence, first read the named or current task, preserving roles and time range. Follow other tasks only when requested or directly referenced. If one direct lookup cannot resolve an ambiguous reference, ask before starting a broad log search. Assistant, reviewer and hook messages do not become user intent.
 
-When the user asks to inspect a conversation, read the named or current task before adjacent tasks and preserve message roles. User messages establish requests and decisions; assistant, reviewer, hook and injected policy messages do not become user intent. Report the inspected task and time range. Expand to other tasks only when requested or when the named task contains a direct reference that must be followed.
+## Existing Owner And Observation Boundary
 
-## Existing Owner And Execution Path
+Trace the owner, trigger, discovery and inclusion/exclusion boundary before proposing a new mechanism. Include schedules, events, implicit creation write and downstream effects before calling an operational procedure safe. Derive relevant paths from deployed entrypoints, callers and configuration, rather than treating one convenient query as exhaustive. In the existing investigation note, retain queried source, window, filters and outcome. A negative result, unknown source, denied read and unfinished search support different conclusions.
 
-Before proposing a new owner or saying a mechanism is absent or broken, trace the current owner, trigger, target discovery, inclusion/exclusion boundary, and execution evidence. Include schedules, events, implicit creation write, and downstream actions before calling an operational procedure safe.
+## Choose The Next Observation
 
-Before using a negative result to rule out an execution path, derive candidate paths from the deployed entry points, callers and configuration that can produce the observed effect. For each relevant candidate, resolve its actual observation source from the running configuration, then record the queried source, time window, filters and result in the existing investigation notes. Distinguish a completed search with no matches from an unknown source, a denied read or an incomplete search. Limit an absence claim to the paths and window covered by those observations. If an existing owner excludes the target, describe that boundary before proposing another mechanism.
+Use the requested result to choose the question, the live alternatives that matter, and an observation that distinguishes them. Check that the source can answer that question before querying it. After the result, decide whether to investigate a remaining alternative or advance to the requested delivery. Do not repeat unchanged queries or expand coverage when the result cannot change that decision.
 
-## Evidence Quality
+Prefer observed records, reproducible calculations, then labeled estimates. Align period, denominator, population and exclusions; distinguish production observations from pre-release checks. Judge sufficiency against the requested decision, not universal completeness. Perform available authorized reads before treating a fact as unknown. A genuine access failure or missing requirement differs from an unperformed read.
 
-Prefer observed records, then reproducible calculations, then labeled estimates or extrapolations. Align period, workload, denominator, population and exclusions before claiming an effect. State the observation window and continuation assumption for projections.
-
-Distinguish pre-release checks from production outcomes. Resolve conflicting evidence by source, specificity and contract fit. For a requested conclusion, follow available authorized evidence that could change that conclusion before treating a fact as unknown. Keep unfinished reads as work to perform, not a final qualification. Judge sufficiency against the user's actual decision, not universal completeness or an invented stronger claim. Missing product requirements need a decision; missing implementation precedent alone does not. Hand off the supported conclusion and original evidence to writing; investigation notes are not automatically reader-facing content.
+Use the existing task note for the question, decisive evidence and unfinished outcome. Agent-selected sources and search boundaries are revisable means, not user requirements. Hand the supported conclusion and original evidence to writing; investigation notes are not automatically reader-facing content.
 
 ## Bounded Scouts
 
-Handle routine investigation in main. Use a read-only subagent when the user explicitly requests delegation or a substantial independent investigation offers enough time or quality benefit to justify the additional token use. Reducing main-context noise alone is not a trigger.
+Handle routine investigation in main. A read-only subagent needs explicit delegation or a substantial independent question whose time or quality benefit justifies its cost. Context reduction alone is insufficient.
 
-Use `fork_turns: "none"` by default and provide one question, a bounded source area, and the necessary constraints and evidence already gathered. Inherit history only when the task requires it, using the smallest sufficient number of turns. Do not repeat the delegated scan in main or allow the scout to delegate further. Request file/line evidence, strong and weak candidates, search limits, and the smallest useful follow-up reads. Main owns interpretation, design, I/F, compatibility, permissions and Git actions.
+Use `fork_turns: "none"` by default. Supply one question, bounded sources, relevant constraints and evidence; inherit only necessary history. Ask for file/line evidence, search limits and useful follow-up reads. Do not duplicate its scan or permit further delegation. Main owns interpretation, design, compatibility, permissions and Git actions.

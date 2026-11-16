@@ -132,7 +132,9 @@ def run_case(case_file, skills_root, output_dir, codex_bin, label, harness_root=
                 raise ValueError('Historical prompt events must occur verbatim in the audited input and end at its current request')
             fixture = run / 'prompt-events.json'
             fixture.write_text(json.dumps({'actor_input_sha256': hashlib.sha256(actor_input.encode()).hexdigest(),
-                                           'submitted_prompts': prompts}, ensure_ascii=False))
+                                           'submitted_prompts': prompts,
+                                           'history_messages': history + [{'role': 'user', 'text': request}]}, ensure_ascii=False))
+            env['CODEX_THREAD_HISTORY_DB'] = str(run/'history.sqlite')
             adapter = Path(__file__).with_name('replay_hook.py')
             command = ('/usr/bin/python3 ' + shlex.quote(str(adapter))
                        + ' --handler ' + shlex.quote(str(harness_root/'hooks/codex/runtime-contract-context.py'))
@@ -173,7 +175,7 @@ def run_case(case_file, skills_root, output_dir, codex_bin, label, harness_root=
                '-c', 'model_reasoning_effort=' + json.dumps(case['reasoning']),
                '-c', 'skills.config=[' + ','.join(disabled) + ']',
                '-c', 'developer_instructions=' + json.dumps(scope),
-               '--approve-for-me', '--skip-git-repo-check', '-C', str(project),
+               '--approve-for-me', '--skip-git-repo-check', '-C', str(project), '--add-dir', str(run),
                '--json', '-o', str(run / 'answer.txt'), '-']
     if vetted_hooks:
         command.insert(1, '--dangerously-bypass-hook-trust')
@@ -195,6 +197,64 @@ def run_case(case_file, skills_root, output_dir, codex_bin, label, harness_root=
     (run / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2))
     print('END ' + str(run), flush=True)
     return run
+
+
+def prevention_assessment(run, assessment, rubric, passed):
+    """Count observed scope preservation, not shorter instructions or fewer checks."""
+    role = rubric.get('prevention_role')
+    if role is None:
+        return None
+    if role not in ('opportunity', 'required_protection_control'):
+        raise ValueError('Unknown prevention role')
+    observation = assessment.get('prevention')
+    if not isinstance(observation, dict):
+        raise ValueError('Prevention cases need an evidence-bound behavior assessment')
+    outcome = observation.get('outcome')
+    outcomes = {'prevented', 'withdrawn_before_action', 'repaired_after_action',
+                'not_prevented', 'unknown', 'required_protection_kept'}
+    if outcome not in outcomes or type(observation.get('completed')) is not bool:
+        raise ValueError('Invalid prevention outcome or completion observation')
+    if outcome == 'required_protection_kept' and role != 'required_protection_control':
+        raise ValueError('A control is not an unnecessary-work prevention success')
+    trace = run / 'trace.jsonl'
+    if (not trace.is_file() or observation.get('trace_sha256') != digest(trace)
+            or not observation.get('reason') or not observation.get('evidence')):
+        raise ValueError('Prevention assessment must bind the actual execution trace')
+    artifacts = read_json(run/'result.json')['artifacts']
+    for evidence in observation['evidence']:
+        file = evidence.get('file', '')
+        path = Path(file)
+        if path.is_absolute() or '..' in path.parts or file not in {*artifacts, 'trace.jsonl'}:
+            raise ValueError('Prevention evidence must be a recorded output or bound trace')
+        if not evidence.get('quote') or evidence['quote'] not in (run/path).read_text():
+            raise ValueError('Prevention evidence quote does not occur in the output')
+    complete = passed is True and observation['completed']
+    return {'role': role, 'outcome': outcome, 'completed': complete,
+            'primary_success': (complete and outcome in ('prevented', 'withdrawn_before_action')) if role == 'opportunity' else None,
+            'control_pass': (complete and outcome == 'required_protection_kept') if role == 'required_protection_control' else None,
+            'reason': observation['reason'], 'evidence': observation['evidence'],
+            'trace_sha256': observation['trace_sha256']}
+
+
+def prevention_totals(reports):
+    observed = [r for r in reports if r['after'].get('prevention') is not None]
+    if not observed:
+        return None
+    opportunities = [r for r in observed if r['after']['prevention']['role'] == 'opportunity']
+    controls = [r for r in observed if r['after']['prevention']['role'] == 'required_protection_control']
+    successful = [r['case'] for r in opportunities if r['after']['prevention']['primary_success']]
+    unresolved = [r['case'] for r in opportunities if not r['after']['prevention']['primary_success']]
+    failed_controls = [r['case'] for r in controls if not r['after']['prevention']['control_pass']]
+    return {'opportunities': len(opportunities), 'successes': len(successful),
+            'successful_cases': successful,
+            'rate': len(successful)/len(opportunities) if opportunities else None,
+            'baseline_failures_reproduced': [r['case'] for r in opportunities
+                if r['before'].get('prevention', {}).get('outcome') in ('not_prevented', 'repaired_after_action')],
+            'late_repairs': [r['case'] for r in opportunities if r['after']['prevention']['outcome'] == 'repaired_after_action'],
+            'unresolved': unresolved, 'failed_controls': failed_controls,
+            'adoption_ready': not unresolved and not failed_controls,
+            'controls': {r['case']: r['after']['prevention']['control_pass'] for r in controls},
+            'basis': 'Declared cases, original-purpose criteria and evidence-bound action judgments. No success credit for speed, stopping, missing work or a repair after implementation.'}
 
 
 def assessed(run, assessment_file, rubric):
@@ -231,6 +291,7 @@ def assessed(run, assessment_file, rubric):
     else:
         passed = True
     return {'pass': passed, 'checks': checks, 'seconds': result['seconds'],
+            'prevention': prevention_assessment(run, assessment, rubric, passed),
             'skill_snapshot_unchanged': snapshot_unchanged,
             'native_usage': result['native_usage'],
             'command_executions': result['command_executions'],
@@ -289,7 +350,11 @@ def suite(case_list, plan_file):
     regressions = [r['case'] for r in reports if r['before']['pass'] is True and r['after']['pass'] is not True]
     unresolved = [r['case'] for r in reports if r['after']['pass'] is not True]
     improvements = [r['case'] for r in reports if r['before']['pass'] is False and r['after']['pass'] is True]
+    prevention = prevention_totals(reports)
+    if prevention:
+        unresolved = sorted(set(unresolved + prevention['unresolved'] + prevention['failed_controls']))
     return {'case_list_sha256': digest(case_list), 'comparisons': reports,
+            'prevention': prevention,
             'regressions': regressions, 'unresolved': unresolved, 'improvements': improvements,
             'adoption': 'not_ready' if unresolved else 'no_regression_observed',
             'summed_execution_seconds': {side: sum(r[side]['seconds'] for r in reports) for side in ('before', 'after')},

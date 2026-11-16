@@ -100,6 +100,25 @@ def prepare(plan_file, receipt_file):
         json.dump(receipt, handle, ensure_ascii=False, indent=2)
 
 
+def research_observations(events):
+    """Public documentation lookup is research, not an arbitrary MCP capability."""
+    actions = [e['item'] for e in events if e.get('type') == 'item.completed']
+    documentation = [a for a in actions if a.get('type') == 'mcp_tool_call'
+                     and a.get('server') == 'context7'
+                     and a.get('tool') in ('resolve-library-id', 'query-docs')]
+    return {
+        'web_actions': [a.get('action') for a in actions if a.get('type') == 'web_search'],
+        'documentation_actions': [{k: a.get(k) for k in ('server', 'tool', 'arguments')}
+                                  for a in documentation if a.get('tool') == 'query-docs'
+                                  and not a.get('error') and a.get('result')
+                                  and not a['result'].get('isError')],
+        'unexpected_actions': [a['type'] for a in actions if a.get('type') not in
+                               ('web_search', 'agent_message', 'reasoning', 'error')
+                               and a not in documentation],
+        'turn_failed': any(e.get('type') == 'turn.failed' for e in events),
+    }
+
+
 def discover(receipt_file, work_dir, codex_bin, model, reasoning, evidence_list):
     receipt = read(receipt_file)
     plan_file = Path(receipt["plan"])
@@ -134,6 +153,7 @@ def discover(receipt_file, work_dir, codex_bin, model, reasoning, evidence_list)
     goal_check = obj({k: string for k in ("id", "condition", "expected", "requirement")})
     entry = obj({"id": string, "options": {"type": "array", "items": option},
                  "goal_checks": {"type": "array", "items": goal_check},
+                 "mechanism_checks": {"type": "array", "items": goal_check},
                  "limits": string})
     schema = obj({"changes": {"type": "array", "items": entry}})
     instruction = (
@@ -146,8 +166,11 @@ def discover(receipt_file, work_dir, codex_bin, model, reasoning, evidence_list)
         "Identify applicable built-in capabilities as well as relevant existing patterns, their browser/version "
         "or deployment constraints, and differences in behavior. Do not invent alternatives or require a change. "
         "Return evidenced candidates, URLs and specific uncertainty in Japanese. Empty options are allowed "
-        "when research finds no relevant alternative. Also derive goal_checks: representative normal-operation "
-        "conditions and expected observable results directly from the supplied requirement text, before seeing code. "
+        "when research finds no relevant alternative. Derive goal_checks as user-facing outcomes and established "
+        "external constraints, before seeing code. Put guarantees tied to the author's chosen mechanism in "
+        "mechanism_checks instead. A simpler alternative may satisfy the purpose without those extra guarantees. "
+        "Compare existing mechanisms against the outcomes, not against every promise of the submitted design. "
+        "For both kinds, give representative normal-operation conditions and expected observable results. "
         "Quote the supporting original requirement exactly into requirement. Retain quantities, units, "
         "equality/direction and completion triggers in expected; avoid vague claims that behavior is merely reflected. "
         "Treat author claims conditionally: "
@@ -169,26 +192,32 @@ def discover(receipt_file, work_dir, codex_bin, model, reasoning, evidence_list)
     with (work_dir / "trace.jsonl").open("x") as out, (work_dir / "stderr.txt").open("x") as err:
         process = subprocess.run(command, input=json.dumps(packet, ensure_ascii=False), text=True, stdout=out, stderr=err)
     events = [json.loads(line) for line in (work_dir / "trace.jsonl").read_text().splitlines() if line.strip()]
-    actions = [e["item"] for e in events if e.get("type") == "item.completed"]
     receipt_out = {"plan_sha256": receipt["plan_sha256"], "process_exit": process.returncode,
-                   "web_actions": [a.get("action") for a in actions if a.get("type") == "web_search"],
-                   "unexpected_actions": [a["type"] for a in actions if a.get("type") not in
-                                          ("web_search", "agent_message", "reasoning", "error")],
-                   "turn_failed": any(e.get("type") == "turn.failed" for e in events),
+                   **research_observations(events),
                    "input_sha256": digest(work_dir / "input.json")}
     (work_dir / "execution.json").write_text(json.dumps(receipt_out, ensure_ascii=False, indent=2))
     if process.returncode and "failed to initialize in-process app-server client: Operation not permitted" in (work_dir / "stderr.txt").read_text():
         raise ValueError("Native client initialization failed before research. Run this same discover producer through "
                          "the execution tool's normal permission flow; retain the child's read-only sandbox, model "
                          "and credentials. Preserve this failed attempt and use a new private research directory.")
-    if process.returncode or receipt_out["turn_failed"] or receipt_out["unexpected_actions"] or not receipt_out["web_actions"]:
+    return complete_discovery(work_dir, receipt_out, changes, original_request, descriptions)
+
+
+def complete_discovery(work_dir, receipt_out, changes, original_request, descriptions):
+    """Validate a completed research run without repeating its model request."""
+    if (receipt_out['process_exit'] or receipt_out["turn_failed"] or receipt_out["unexpected_actions"]
+            or not (receipt_out["web_actions"] or receipt_out["documentation_actions"])):
         raise ValueError("Independent discovery did not complete within its research scope; inspect its execution record")
     result = read(work_dir / "answer.json")
     if indexed(result["changes"]).keys() != indexed(changes).keys():
         raise ValueError("Discovery must cover the requested mechanisms")
     for item in result["changes"]:
         requirements = {r["text"] for r in indexed(changes)[item["id"]]["requirements"]}
-        for check in indexed(item["goal_checks"]).values():
+        checks = indexed(item["goal_checks"])
+        mechanisms = indexed(item.get('mechanism_checks', []))
+        if checks.keys() & mechanisms.keys():
+            raise ValueError('Keep outcome and mechanism check identities separate')
+        for check in [*checks.values(), *mechanisms.values()]:
             quote = text(check["requirement"])
             if (quote not in requirements and quote not in original_request
                     and not any(quote in description for description in descriptions[item["id"]])):
@@ -403,6 +432,16 @@ def render(receipt_file, assessment_file, discovery_file=None, advice_file=None)
                 text(outcome["reason"])
                 if outcome["status"] != "unknown":
                     evidence(outcome["evidence"], assessment_file.parent)
+            mechanisms = indexed(discovered[key].get('mechanism_checks', []))
+            mechanism_results = indexed(result.get('mechanism_check_assessment', []))
+            if mechanisms.keys() != mechanism_results.keys():
+                raise ValueError('Assess proposed-mechanism promises separately from required outcomes')
+            for outcome in mechanism_results.values():
+                if outcome['status'] not in ('met', 'not_met', 'unknown', 'not_applicable'):
+                    raise ValueError('Unknown mechanism check result')
+                text(outcome['reason'])
+                if outcome['status'] in ('met', 'not_met'):
+                    evidence(outcome['evidence'], assessment_file.parent)
         pending = [o for oid, o in objections.items() if o["change"] == key
                    and o["material"] and dispositions[oid]["status"] == "unresolved"]
         options = result["options"]

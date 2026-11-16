@@ -74,6 +74,46 @@ class RuntimeTaskNoteTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse((root / 'state').exists())
 
+    def test_original_prompt_reference_is_restored_outside_agent_note(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, note, env = self.prepare(directory)
+            env['CODEX_SOURCE_LEDGER_DIR'] = str(root / 'sources')
+            note.write_text('Agent plan: require a new benchmark before delivery.\n')
+            self.maintain(env, note)
+            payload = {'session_id': 'task-a', 'hook_event_name': 'UserPromptSubmit',
+                       'prompt': 'Add the diagnostic field; preserve existing behavior.'}
+            first = subprocess.run(['python3', '-B', str(HOOK)], input=json.dumps(payload),
+                                   env=env, text=True, capture_output=True)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            context = json.loads(first.stdout)['hookSpecificOutput']['additionalContext']
+            source = root / 'sources' / (hashlib.sha256(b'task-a').hexdigest()+'.jsonl')
+            self.assertIn(str(source), context)
+            self.assertEqual(json.loads(source.read_text())['text'], payload['prompt'])
+            self.assertIn(note.read_text().strip(), context)
+            self.assertLess(context.index(str(source)), context.index(note.read_text().strip()))
+            compacted = self.context(env, event='SessionStart', source='compact')
+            self.assertIn(str(source), compacted)
+            self.assertIn(payload['prompt'], compacted)
+            self.assertNotIn('new benchmark', source.read_text())
+
+    def test_source_reference_tracks_new_submission_without_rewriting_plan(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, note, env = self.prepare(directory)
+            env['CODEX_SOURCE_LEDGER_DIR'] = str(root / 'sources')
+            self.maintain(env, note)
+            contexts = []
+            for prompt in ('Prepare a draft.', 'Stop; do not edit files.'):
+                process = subprocess.run(['python3', '-B', str(HOOK)],
+                    input=json.dumps({'session_id': 'task-a', 'hook_event_name': 'UserPromptSubmit', 'prompt': prompt}),
+                    env=env, text=True, capture_output=True)
+                self.assertEqual(process.returncode, 0, process.stderr)
+                contexts.append(json.loads(process.stdout)['hookSpecificOutput']['additionalContext'])
+            self.assertIn('through seq 1', contexts[0])
+            self.assertIn('through seq 2', contexts[1])
+            self.assertEqual(note.read_text(), 'Goal: repair normal generation.\nUnfinished: execute the normal entry.\n')
+            other = self.context(env, session='task-b')
+            self.assertNotIn(str(root / 'sources'), other)
+
 
 if __name__ == '__main__':
     unittest.main()

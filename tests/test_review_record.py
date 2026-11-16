@@ -181,7 +181,7 @@ class ReviewRecordTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "compared options"):
             self.render()
 
-    def research(self, with_web=True):
+    def research(self, with_web=True, mechanism_checks=None):
         self.plan["changes"][0]["mechanisms"] = ["File API"]
         self.plan["implementation"] = "implementation and prior conclusion must not be sent"
         self.save(self.plan_file, self.plan)
@@ -193,7 +193,8 @@ class ReviewRecordTests(unittest.TestCase):
             self.save(answer, {"changes": [{"id": "upload", "options": [{"name": "native size",
                 "capability": "reads bytes", "source": "https://example.test/spec", "compatibility": "supported",
                 "caveat": "check the consumer"}], "goal_checks": [{"id": "unit", "condition": "サイズを表示する",
-                    "expected": "バイト単位の値になる", "requirement": "単位はバイト"}], "limits": "not a runtime test"}]})
+                    "expected": "バイト単位の値になる", "requirement": "単位はバイト"}],
+                "mechanism_checks": mechanism_checks or [], "limits": "not a runtime test"}]})
             if with_web:
                 kwargs["stdout"].write(json.dumps({"type": "item.completed", "item": {
                     "type": "web_search", "action": {"type": "open_page", "url": "https://example.test/spec"}}}) + "\n")
@@ -305,6 +306,38 @@ class ReviewRecordTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "every source-derived expected outcome"):
             review.render(self.receipt, self.assessment, discovery)
 
+    def test_candidate_specific_promise_does_not_gate_an_equivalent_alternative(self):
+        discovery = self.research(mechanism_checks=[{"id": "custom-conversion",
+            "condition": "独自変換を使う場合", "expected": "独自変換を検証する",
+            "requirement": "The size display uses bytes."}])
+        result = self.result["changes"][0]
+        result["discovery_assessment"] = [{"name": "native size", "reason": "標準機能で同じ表示になる"}]
+        result["goal_check_assessment"] = [{"id": "unit", "status": "met",
+            "actual": "バイト単位で表示", "reason": "標準機能が要件を満たす", "evidence": self.ref}]
+        result["mechanism_check_assessment"] = [{"id": "custom-conversion", "status": "not_applicable",
+            "reason": "選択した標準機能は独自変換を使わない"}]
+        self.save(self.assessment, self.result)
+        output = review.render(self.receipt, self.assessment, discovery)
+        self.assertIn("修正が必要な点：0件", output)
+        self.assertNotIn("独自変換を検証する", output)
+
+        result["goal_check_assessment"][0].update(status="not_met", actual="別の単位")
+        self.save(self.assessment, self.result)
+        with self.assertRaisesRegex(ValueError, "goal mismatch"):
+            review.render(self.receipt, self.assessment, discovery)
+
+    def test_mechanism_classification_cannot_silently_drop_a_recorded_promise(self):
+        discovery = self.research(mechanism_checks=[{"id": "candidate-promise",
+            "condition": "候補方式を使う場合", "expected": "候補固有の条件",
+            "requirement": "The size display uses bytes."}])
+        result = self.result["changes"][0]
+        result["discovery_assessment"] = [{"name": "native size", "reason": "標準機能"}]
+        result["goal_check_assessment"] = [{"id": "unit", "status": "met",
+            "actual": "バイト単位", "reason": "要件と一致", "evidence": self.ref}]
+        self.save(self.assessment, self.result)
+        with self.assertRaisesRegex(ValueError, "mechanism promises separately"):
+            review.render(self.receipt, self.assessment, discovery)
+
     def test_goal_mismatch_is_visible_even_if_the_recommendation_sounds_clean(self):
         discovery = self.research()
         self.result["changes"][0]["discovery_assessment"] = [{"name": "native size", "reason": "標準機能で足りる"}]
@@ -350,6 +383,32 @@ class ReviewRecordTests(unittest.TestCase):
         self.result["changes"][0]["options"][1]["evidence"] = []
         with self.assertRaisesRegex(ValueError, "Evidence is missing"):
             self.render()
+
+
+class ResearchObservationTests(unittest.TestCase):
+    def event(self, server, tool, result=None, error=None):
+        return {'type':'item.completed','item':{'type':'mcp_tool_call','server':server,
+            'tool':tool,'arguments':{'libraryId':'/example/library'},'result':result,'error':error}}
+
+    def test_public_documentation_reads_are_valid_without_allowing_arbitrary_mcp(self):
+        events=[self.event('context7','resolve-library-id',{'content':[{'type':'text','text':'library'}]}),
+                self.event('context7','query-docs',{'content':[{'type':'text','text':'Official option reference.'}]})]
+        result=review.research_observations(events)
+        self.assertEqual(result['unexpected_actions'],[])
+        self.assertEqual(len(result['documentation_actions']),1)
+        self.assertEqual(result['documentation_actions'][0]['tool'],'query-docs')
+        other=review.research_observations([self.event('workspace','read-private-document'),
+                                          self.event('context7','execute-code')])
+        self.assertEqual(other['unexpected_actions'],['mcp_tool_call','mcp_tool_call'])
+        self.assertEqual(other['documentation_actions'],[])
+
+    def test_resolution_and_failed_lookup_do_not_establish_documentation_research(self):
+        events=[self.event('context7','resolve-library-id',{'content':[{'type':'text','text':'library'}]}),
+                self.event('context7','query-docs',error={'message':'unavailable'}),
+                self.event('context7','query-docs',{'isError':True,'content':[]})]
+        result=review.research_observations(events)
+        self.assertEqual(result['unexpected_actions'],[])
+        self.assertEqual(result['documentation_actions'],[])
 
 
 if __name__ == "__main__":

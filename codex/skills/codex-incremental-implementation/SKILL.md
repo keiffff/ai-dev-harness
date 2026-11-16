@@ -1,43 +1,30 @@
 ---
 name: codex-incremental-implementation
-description: Implement multi-file changes through existing owners, choose focused checks from changed behavior, then complete the requested delivery.
+description: Implement multi-file changes through existing owners, choose proportionate checks, and complete the requested delivery.
 ---
 
 # Codex Incremental Implementation
 
-Restore the existing task note and results before selecting the next unfinished step below. Completed implementation and checks for unchanged code remain complete; resume at delivery when they are satisfied. Keep scope and results in that same note. AGENTS.md owns authority and continuity.
+## Choose The Work
 
-## 1. Bound The Change And Delivery
+Restore the original request, completed work and remaining delivery from the existing task note. Separate requested outcomes and constraints from agent-selected steps. A performance or safety caution constrains the solution; it does not create a separate proof, benchmark or test-suite deliverable.
 
-Read the original request and relevant entrypoint. Identify the behavior to add or repair, the existing behavior to preserve, and the requested final delivery. A request to preserve performance or user operations constrains the implementation; it does not by itself request a benchmark, performance guarantee or new test suite.
+Trace the entrypoint, existing owner, consumers and accepted contracts. Prefer using or repairing an existing mechanism before adding responsibility, state, helpers or compatibility paths. Compare an alternative when it could materially simplify the solution; routine edits do not need an alternatives report.
 
-Trace the existing owner through data access, transformation, output and relevant tests. Start with the smallest change there. Add a helper, state, option or shared interface only when the requested behavior needs a responsibility that the existing owner cannot handle. Reuse existing lifecycle and error handling.
+When expanding the work, connect the addition to an observed failure or accepted requirement, the consequence of leaving it out, and the decision its result would change. Weigh that consequence against waiting time, implementation and operating cost, and reversibility. Keep optional improvements outside completion conditions. Use the task note for consequential additions, not a new planning document or approval step.
 
-## 2. Choose Verification Before Adding Tests
+## Implement And Check
 
-For each changed operation, identify the concrete failure the change could introduce and the existing check that can expose it. Use the existing check first. Add a test only when the change introduces observable behavior or a concrete regression that existing coverage cannot check. Locate it at the owning boundary.
+Make the change at the existing owner. Select the existing check that can expose a concrete regression; add a test only for observable behavior not covered there. Preserve accepted contract tests and diagnose failures before changing expectations.
 
-Decide this from the actual diff and accepted contracts. New log fields, helper branches and mocks do not independently require tests. Preserve accepted contract tests; inspect a failure before changing its expectation.
+For diagnostic additions, reuse available values and the existing emission boundary. Check added I/O, awaited or repeated work, sensitive output and exceptions at that boundary; unchanged downstream behavior is not new test work merely because it is logged.
 
-For an additive observation, inspect whether it adds awaited work, repeated processing, additional I/O, sensitive output, or an exception that could interrupt the primary operation. Keep any needed check focused on the changed boundary. Existing decoding, storage or UI behavior does not become new test work solely because its result is now logged.
+Run missing or invalidated checks and reuse successful results for unchanged code. Let each observation choose the next action: repair the demonstrated fault, obtain the observation that distinguishes remaining explanations, or advance to delivery. Repeating a check needs changed inputs or a concrete unresolved risk. A failed check of the evaluation setup is not a product failure.
 
-## 3. Implement And Run The Selected Checks
+During execution, assess progress toward the requested result, not merely whether tools are running. If setup or verification dominates without producing usable results, inspect the dependency that is delaying delivery and change the plan where the observations justify it. Consider duplicate work, I/O and execution granularity across the whole path; do not optimize only the main operation.
 
-Keep the patch tied to the requested behavior and the identified failure paths. Omit adjacent cleanup, speculative defenses and hypothetical compatibility. A reproduction example does not establish a general contract.
+## Deliver
 
-For telemetry, use the existing emission boundary and already available values. Lower layers may attach unique context and rethrow; the owner captures the event. Keep collection out of repeated or critical processing unless the requested observation requires it. Protect the primary operation and sensitive data at that boundary.
+Compare the actual behavior and artifacts with the original outcomes, including relevant consumers or exclusions that the work list might omit. Completion of a selected list or passing tests alone does not establish the whole request is complete. Finish the remaining authorized delivery; preparing its prose does not reopen satisfied checks.
 
-Run selected checks whose results are missing or invalidated by the current change. Carry forward recorded successful checks on unchanged code. If a check fails, localize the failure and repair its cause, then repeat the affected check. Broaden checks only for a changed operation, an observed failure, or a concrete unresolved risk shown by the patch. Record that reason before starting the extra work. A caution in the request or an imaginable failure alone does not supply it.
-
-## 4. Finish The Requested Delivery
-
-Once the requested behavior and its selected checks are satisfied, advance to the remaining delivery in the task note. For an authorized PR request, continue with codex-git-publish through its saved-body check and the necessary commit, push and PR creation. A draft-only delivery reaches that same body check. Preparing that delivery does not restart implementation or verification.
-
-A later observed defect or changed scope can reopen the affected work. Extra tests, benchmarks, comparison pages and measurement fixtures need the same concrete reason as other scope changes. Keep an optional improvement outside the completion conditions.
-
-For a code change, run `python3 ~/.codex/hooks/additions_report.py --root <verified checkout>`
-against the actual base before delivery. Use its changed-file and added-pattern observations
-to report consequential additions alongside the resulting behavior and verification. The
-script neither decides what was requested nor requires removal, approval or more tests.
-State a missing observation when it changes the requested decision or next action. A production
-claim needs matching evidence; do not turn an unrequested production claim into additional work.
+For a code change, run `python3 ~/.codex/hooks/additions_report.py --root <verified checkout>` against the actual base. It observes added patterns, not necessity or user authority. Use observations to explain consequential additions. Report a missing observation only when it changes the requested decision or next action; do not create an unrequested stronger claim to investigate.

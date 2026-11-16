@@ -12,15 +12,13 @@ Require reasoning from the supplied prompt only: no repository inspection, tools
 
 ## Strategic Challenge
 
-Within the same review response, ask Claude to first frame the problem from the original requests, constraints and observations, then assess Codex's proposal against that framing. Treat the proposal as a hypothesis, not the premise of the review.
+Within the same review response, ask Claude to frame the problem from the original requests, constraints and observations, then assess the proposal as a hypothesis. Keep agent-added work and completion conditions separate from those originals, with the observations said to require them. Challenge whether those additions change the requested purpose or cost more than the consequence they address. Use an existing strategic review at a consequential direction or scope decision; do not add a mandatory call for routine steps or wait until implementation to question the framing.
 
-Focus on whether the work solves the right problem, treats a symptom while leaving the cause unresolved, or shifts cost and responsibility outside the local change. For consequential new mechanisms, compare keeping/repairing them with reducing responsibility or using an existing supported mechanism. Check overdefense, duplicated state/ownership and unsupported future-proofing against present requirements. Concrete recurring maintenance or operating cost can justify a design concern without a runtime failure; a required change still needs evidence and a feasible alternative preserving the purpose, permissions, compatibility and recovery behavior.
+Assess whether the proposal solves the right problem or shifts its cost elsewhere. For consequential mechanisms, compare repair, reduced responsibility and an existing supported alternative. Examine overdefense, duplicated ownership and future-proofing against present requirements; recurring maintenance or operating cost can matter without a runtime failure. A required change needs evidence and a feasible alternative preserving purpose, authority, compatibility and recovery.
 
-Treat newly added tests as part of the candidate implementation when evaluating fit to the stated purpose. Existing unchanged code can also be connected to a new role by this change; trace that connection before dismissing an incomplete fix as pre-existing behavior. Keep new regressions, incomplete fixes and unrelated old issues distinct.
+New tests are part of the candidate, not proof that its added requirements are valid. Trace unchanged code taking a new role; distinguish new regressions, incomplete fixes and unrelated old defects. Preserve complexity justified by a contract or evidenced safety boundary. Do not force criticism or invent objectives. Name the missing fact when it would change the recommendation.
 
-Retain complexity justified by an external contract or evidenced safety boundary. Do not force criticism or removal; identify the exact missing fact when the governing requirement or alternative is unresolved. Challenge unsupported assumptions and exclusions without overriding explicit user decisions or inventing objectives, restrictions or additional defensive machinery.
-
-Ask for the recommended direction and its rationale, material alternatives and trade-offs, hidden operational costs, and evidence that would change the recommendation. Distinguish supported findings from uncertainty. Do not require criticism or alternatives when the existing direction is supported.
+Return the recommended direction, material alternatives and trade-offs, consequential objections, and evidence that would change the recommendation. Distinguish supported findings from uncertainty.
 
 ## Adoption
 

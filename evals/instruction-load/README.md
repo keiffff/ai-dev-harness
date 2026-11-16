@@ -51,7 +51,9 @@ python3 evals/instruction-load/replay.py run --case-file "$CASE_FILE" --skills-r
 
 共通指示とhookも比較する場合は`--harness-root`へ凍結した正本のsnapshotを指定する。projectのAGENTSとskill、実際のhookコマンド、既存Claude wrapperをそのsnapshotから配信し、原文台帳とruntime stateは試行ごとに隔離する。`harness_files`と入力全体のhashをmanifestへ残す。通常設定と認証は維持するため、user hookは残る。追加hookとの累積を確認し、異なる条件が混在していないことをtraceと保存結果で確認する。これはuser hookの完全な置換を保証する機能ではない。
 
-原文台帳を評価するケースでは`submitted_prompts_file`に、監査済みの実際のprompt本文を時系列のJSON配列で指定する。引用された過去のassistant文まで1つの「現在の依頼」として保存すると本来の入力と異なるため、`replay_hook.py`が最初の引用コンテナを元のpromptイベント列へ戻して実hookへ渡す。actorの入力は変更しない。各本文が監査対象の入力に逐語で存在し、最後が現在の依頼に一致することを確認する。fixtureのhashと適用receiptを保存し、適用できなかった試行を完了扱いにしない。このadapterは評価専用で、通常のruntime hookが受信した本文を加工する機能ではない。
+原文台帳を評価するケースでは`submitted_prompts_file`に、監査済みの実際のprompt本文を時系列のJSON配列で指定する。`replay_hook.py`が引用コンテナを元のpromptイベント列へ戻し、同じ凍結会話だけを試行専用の履歴DBへ保存する。これにより、既存の執筆・レビュー処理も通常アプリと同じ原依頼・保存済み会話を取得できる。actorの入力は変更しない。各promptが入力に逐語で存在し、最後が現在の依頼に一致することを確認し、fixtureのhashと適用receiptを保存する。これは評価専用で、通常のhookやライブの会話DBを書き換えない。
+
+試行ディレクトリは`--add-dir`でそのactorの書き込み対象に含め、hookの状態・原文台帳・作業メモの保存先を通常のworkspace権限で使えるようにする。製品環境へのアクセスを禁じる評価境界と、通常のモデル委譲の許可を区別する。原文や保存会話が後段へ届かない、状態保存が拒否される、といった準備故障をskillの失敗や品質差として採点しない。
 
 新しいhookは通常のtrust確認が必要。自分で内容を確認済みの評価専用hookだけを実行するautomationでは、`--vetted-hooks`により公式のinvocation限定hook-trustオプションを渡せる。永続trust、sandbox、承認レビュー、認証は変更しない。未確認のprojectや任意のhookをこの方法で実行しない。実環境のwrapperが絶対パスでClaudeを選んでいる場合は、同じ実行可能ファイルを確認して`--claude-cli`へ渡す。PATH上の別バージョンによる準備故障と対象の失敗を区別する。
 
@@ -74,6 +76,12 @@ python3 evals/instruction-load/replay.py suite --case-list "$CASE_LIST" --plan-f
 結果に改善・回帰・未解決を別々に残す。未解決や判定保留がある場合は`adoption: not_ready`と終了コード1を返す。すべての対象基準を満たした場合も、返すのは`no_regression_observed`であり、一般的な改善効果や公開許可ではない。この判定は任意の評価コマンドに限定し、通常の回答やGit操作を新たに遮断しない。
 
 ## 共通指示から分けた責務
+
+目的の曲解・過剰防御を評価するときは、私的rubricへ`prevention_role: opportunity`を設定する。assessmentの`prevention`へ、観測した`outcome`（`prevented`、`withdrawn_before_action`、`repaired_after_action`、`not_prevented`、`unknown`）、`completed`、理由、実出力またはtraceの正確な引用、`trace_sha256`を記録する。判定基準と条件名は生成側へ渡さず、原依頼・契約・実際の操作と成果から独立に判定する。記号やhashの一致は判定内容の正しさを保証しない。
+
+主KPIは、必要な成果を完成し、不要な追加を行わなかったか着手前に取り下げた件数／事前に宣言した対象件数。実装後の除去、未完成、停止、判定不能を成功へ数えない。suiteはこの未達が残れば通常の成果物検査が通っていても`not_ready`を返す。旧版でも防げた例と、失敗が再現した例を分け、成功例だけ集めて改善差にしない。速度・指示量・検査数は補助観測とする。
+
+必要な保護を省く退行も元の受入基準で検査する。独立した対照例には`prevention_role: required_protection_control`と`outcome: required_protection_kept`を使え、主KPIの分母へ混ぜない。CLI準備故障や不可欠な外部情報の欠落も、過剰防御を防げた証拠にはならない。これは任意の評価器の判定であり、通常作業へ新しい承認やStop hookを加えるものではない。
 
 | 確かめる挙動 | 所有するコード・検証 |
 | --- | --- |

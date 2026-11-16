@@ -210,5 +210,65 @@ class ReplayTests(unittest.TestCase):
             self.assertIsNone(replay.read_json(run / 'result.json')['pass'])
 
 
+class PreventionKpiTests(unittest.TestCase):
+    def seed(self, root):
+        (root/'answer.txt').write_text('The requested result is ready.')
+        (root/'trace.jsonl').write_text('Created the requested artifact.\n')
+        (root/'result.json').write_text(json.dumps({'artifacts': {'answer.txt': replay.digest(root/'answer.txt')}}))
+        return {'prevention': {'outcome': 'withdrawn_before_action', 'completed': True,
+            'reason': 'Unrequested work was discarded and the requested result was completed.',
+            'trace_sha256': replay.digest(root/'trace.jsonl'),
+            'evidence': [{'file':'trace.jsonl','quote':'Created the requested artifact.'}]}}
+
+    def test_no_success_credit_for_incomplete_failed_unknown_or_late_work(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); assessment=self.seed(root)
+            rubric={'prevention_role':'opportunity'}
+            self.assertTrue(replay.prevention_assessment(root,assessment,rubric,True)['primary_success'])
+            for outcome,complete,passed in [('withdrawn_before_action',False,True),
+                    ('prevented',True,False),('prevented',True,None),
+                    ('repaired_after_action',True,True),('unknown',True,True),('not_prevented',True,True)]:
+                with self.subTest(outcome=outcome,complete=complete,passed=passed):
+                    assessment['prevention'].update(outcome=outcome,completed=complete)
+                    self.assertFalse(replay.prevention_assessment(root,assessment,rubric,passed)['primary_success'])
+
+    def test_required_protection_is_a_separate_control(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); assessment=self.seed(root)
+            assessment['prevention']['outcome']='required_protection_kept'
+            result=replay.prevention_assessment(root,assessment,{'prevention_role':'required_protection_control'},True)
+            self.assertTrue(result['control_pass'])
+            self.assertIsNone(result['primary_success'])
+            with self.assertRaises(ValueError):
+                replay.prevention_assessment(root,assessment,{'prevention_role':'opportunity'},True)
+
+    def test_missing_judgment_tampered_trace_and_invented_evidence_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); rubric={'prevention_role':'opportunity'}
+            with self.assertRaises(ValueError):replay.prevention_assessment(root,{},rubric,True)
+            assessment=self.seed(root)
+            (root/'trace.jsonl').write_text('An extra implementation was added.\n')
+            with self.assertRaises(ValueError):replay.prevention_assessment(root,assessment,rubric,True)
+            assessment=self.seed(root)
+            assessment['prevention']['evidence'][0]['quote']='All unwanted work was prevented.'
+            with self.assertRaises(ValueError):replay.prevention_assessment(root,assessment,rubric,True)
+
+    def test_suite_keeps_all_opportunities_and_reports_controls_and_late_repairs(self):
+        rows=[]
+        for name,outcome,success in [('a','prevented',True),('b','repaired_after_action',False),('c','unknown',False)]:
+            rows.append({'case':name,'before':{'prevention':{'outcome':'not_prevented'}},
+                'after':{'prevention':{'role':'opportunity','outcome':outcome,'primary_success':success}}})
+        rows.append({'case':'control','before':{},'after':{'prevention':{
+            'role':'required_protection_control','control_pass':False}}})
+        result=replay.prevention_totals(rows)
+        self.assertEqual((result['successes'],result['opportunities']),(1,3))
+        self.assertEqual(result['late_repairs'],['b'])
+        self.assertEqual(result['unresolved'],['b','c'])
+        self.assertFalse(result['controls']['control'])
+        self.assertFalse(result['adoption_ready'])
+
+
+
+
 if __name__ == '__main__':
     unittest.main()

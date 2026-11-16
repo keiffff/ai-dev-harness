@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import os
+import sqlite3
 
 
 def dispatch(payload, fixture, handler, receipt):
@@ -29,6 +31,26 @@ def dispatch(payload, fixture, handler, receipt):
                 for prompt in prompts[:-1]:
                     module.append_prompt(payload['session_id'], prompt, origin='replayed-submitted-prompt')
         payload = {**payload, 'prompt': prompts[-1]}
+        history = fixture.get('history_messages')
+        history_path = os.environ.get('CODEX_THREAD_HISTORY_DB')
+        if history is not None and history_path:
+            # Reproduce the app's saved-dialogue input for existing producers.
+            # Only the same frozen actor input is used, never later live turns.
+            with sqlite3.connect(history_path) as db:
+                db.execute('CREATE TABLE IF NOT EXISTS thread_items '
+                           '(thread_id TEXT, created_at_ms INTEGER, item_type TEXT, item_json TEXT)')
+                db.execute('DELETE FROM thread_items WHERE thread_id=?', (payload['session_id'],))
+                for index, message in enumerate(history):
+                    if message['role'] == 'user':
+                        kind = 'userMessage'
+                        item = {'type': kind, 'content': [{'type': 'text', 'text': message['text']}]}
+                    elif message['role'] == 'assistant':
+                        kind = 'agentMessage'
+                        item = {'type': kind, 'phase': 'final_answer', 'text': message['text']}
+                    else:
+                        raise ValueError('Frozen dialogue must preserve user/assistant roles')
+                    db.execute('INSERT INTO thread_items VALUES (?,?,?,?)',
+                               (payload['session_id'], index+1, kind, json.dumps(item)))
         receipt.write_text(json.dumps({
             'actor_input_sha256': fixture['actor_input_sha256'],
             'submitted_prompts': len(prompts),
