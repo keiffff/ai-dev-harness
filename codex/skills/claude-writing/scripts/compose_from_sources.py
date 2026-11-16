@@ -6,7 +6,6 @@ import json
 import os
 from pathlib import Path
 import re
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -103,59 +102,9 @@ def stage_writer_delivery(output, body, inputs, draft=None):
 
 def prior_response(inputs):
     """Carry completed dialogue covered by captured prompts, without a recap."""
-    session = os.environ.get('CODEX_THREAD_ID')
-    if not session or inputs['request_origin'] != 'saved_submitted_prompt':
-        return None
-    path = Path(os.environ.get('CODEX_WRITING_HISTORY_DB',
-                               str(Path.home()/'.codex/thread_history_1.sqlite')))
-    if not path.is_file():
-        return None
     ledger = source_module('source_ledger')
-    def exported(text):
-        return ledger.transport_text(text)[0] if ledger else text
-    try:
-        with sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True) as db:
-            cutoff = None
-            for created, raw in db.execute(
-                "SELECT created_at_ms,item_json FROM thread_items WHERE thread_id=? "
-                "AND item_type='userMessage' ORDER BY created_at_ms DESC", (session,)):
-                item = json.loads(raw)
-                if not isinstance(item,dict):
-                    continue
-                text = '\n'.join(p.get('text','') for p in item.get('content',[])
-                                 if isinstance(p,dict) and p.get('type')=='text')
-                if exported(text).strip() == inputs['current_request'].strip():
-                    cutoff = created
-                    break
-            if cutoff is None:
-                return None
-            prompts = {exported(r['text']).strip() for r in ledger.read_records(session)} if ledger else set()
-            conversation = []
-            covered = False
-            preceding = None
-            for kind, raw in db.execute(
-                "SELECT item_type,item_json FROM thread_items WHERE thread_id=? "
-                "AND item_type IN ('userMessage','agentMessage') AND created_at_ms<? "
-                "ORDER BY created_at_ms", (session,cutoff)):
-                item = json.loads(raw)
-                if not isinstance(item,dict):
-                    continue
-                if kind=='userMessage':
-                    text = exported('\n'.join(p.get('text','') for p in item.get('content',[])
-                                    if isinstance(p,dict) and p.get('type')=='text'))
-                    covered = text.strip() in prompts
-                    if covered:
-                        conversation.append({'role':'user','text':text,'item_id':item.get('id')})
-                elif item.get('phase')=='final_answer' and item.get('text'):
-                    preceding = {'role':'assistant','text':exported(item['text']), 'item_id':item.get('id')}
-                    if covered:
-                        conversation.append(preceding)
-            if conversation:
-                return {'origin':'saved_conversation','turns':conversation}
-            if preceding:
-                return {'origin':'saved_conversation','turns':[preceding]}
-    except (OSError, sqlite3.Error, ValueError, TypeError) as error:
-        print('Saved prior response unavailable: '+type(error).__name__, file=sys.stderr)
+    if ledger and inputs['request_origin'] == 'saved_submitted_prompt':
+        return ledger.completed_context(inputs['current_request'])
     return None
 
 

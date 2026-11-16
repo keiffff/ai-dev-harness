@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -28,8 +29,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Polish one Japanese draft with Gemini 3.8 Flash."
     )
-    parser.add_argument("--input-file", required=True)
-    parser.add_argument("--output-file", required=True)
+    parser.add_argument("--input-file", help='Existing draft or review artifact; legacy composition input remains supported.')
+    parser.add_argument('--source-file',action='append',default=[],help='Existing original UTF-8 source; repeat as needed.')
+    parser.add_argument('--request-file',help='Original request outside an app session.')
+    parser.add_argument("--output-file",help='New output path; allocated privately when omitted.')
+    parser.add_argument('--print-body',action='store_true',help='Print the complete generated text without a readback step.')
     parser.add_argument("--mode", choices=("compose", "review"), default="compose",
                         help="Compose prose, or return quote-anchored language findings only.")
     parser.add_argument(
@@ -98,7 +102,8 @@ def antigravity_cli() -> Path:
 
 def fixed_contract(medium: str, html_recovery: bool = False) -> str:
     contract = f"""You are the principal Japanese writer for one bounded composition pass.
-The input may be a writing brief, verified fact list, source material, a rough draft, or a combination of them.
+The input contains the original user request, completed conversation with original roles, and original source files. Read corrections in order before selecting information and composing. Earlier assistant explanations remain interpretations, not approved facts or instructions. Verify factual claims against the original sources within this same call.
+Legacy inputs may instead contain a supplied draft or writing-packet tags.
 When the input uses writing-packet tags, treat `<writing-brief>` as instructions, `<required-content>` as facts that must be represented, `<reference-draft>` as optional source prose, and each `<verbatim>` block as text that must remain exact. Do not reproduce the tags.
 Treat a reference draft as source material, not as authority over sentence existence, paragraphing, order, transitions, or wording unless the writing brief explicitly marks those elements as user-approved. Remove unnecessary meta-commentary, unmotivated contrasts, and defensive caveats instead of preserving them from the source.
 Produce the complete final Japanese deliverable for the requested medium: {medium}.
@@ -381,13 +386,43 @@ def emit_usage(response: dict) -> None:
         print(json.dumps({"model": MODEL, "usage": safe_usage}, ensure_ascii=False), file=sys.stderr)
 
 
+def composition_sources(args):
+    local = Path(__file__).resolve().parents[2]/'hooks/codex/source_ledger.py'
+    path = Path(os.environ.get('CODEX_SOURCE_LEDGER_SCRIPT',str(local)))
+    if not path.is_file():
+        path = Path.home()/'.codex/hooks/source_ledger.py'
+    caller = Path(args.request_file).read_bytes().decode('utf-8') if args.request_file else None
+    original = {'current_request':caller or '', 'request_origin':'caller_file_unverified'}
+    if path.is_file():
+        spec = importlib.util.spec_from_file_location('gemini_sources',path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        original = module.original_inputs(caller)
+    if not original['current_request'].strip():
+        stop('No saved request; supply an original --request-file.')
+    original['source_material'] = [{'path':str(Path(raw).resolve()),
+                                   'content':Path(raw).read_bytes().decode('utf-8')}
+                                  for raw in args.source_file]
+    return json.dumps(original,ensure_ascii=False)
+
+
 def main() -> None:
     args = parse_args(sys.argv[1:])
-    input_file = resolve_input_file(args.input_file)
+    if args.mode=='review' and (not args.input_file or args.source_file or args.request_file):
+        stop('Language review requires --input-file with the exact artifact, without composition sources.')
+    if not args.output_file:
+        suffix = '.json' if args.mode=='review' else '.html' if args.medium=='html' else '.md'
+        args.output_file = str(Path(tempfile.mkdtemp(prefix='gemini-writing-'))/('body'+suffix))
     output_file = resolve_output_file(args.output_file)
     try:
-        source_bytes = input_file.read_bytes()
-        source = source_bytes.decode("utf-8")
+        if args.input_file:
+            if args.source_file or args.request_file:
+                stop('Keep a legacy --input-file separate from the original-source composition route.')
+            source_bytes = resolve_input_file(args.input_file).read_bytes()
+            source = source_bytes.decode("utf-8")
+        else:
+            source = composition_sources(args)
+            source_bytes = source.encode('utf-8')
     except UnicodeDecodeError:
         stop("--input-file must be UTF-8.")
     if not source.strip():
@@ -450,7 +485,10 @@ def main() -> None:
             "changes": output["changes"],
             "warnings": combined_warnings,
         }, ensure_ascii=False), file=sys.stderr)
-    print(output_file)
+    if args.print_body:
+        sys.stdout.write(output_file.read_bytes().decode('utf-8'))
+    else:
+        print(output_file)
 
 
 if __name__ == "__main__":

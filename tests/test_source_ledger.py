@@ -18,6 +18,19 @@ spec.loader.exec_module(ledger)
 
 
 class SourceLedgerTests(unittest.TestCase):
+    def test_complete_role_preserved_packet_does_not_repeat_the_submitted_context(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ,
+                CODEX_SOURCE_LEDGER_DIR=directory,CODEX_THREAD_ID='task'):
+            ledger.append_prompt('task','Earlier request.')
+            ledger.append_prompt('task','Current request.')
+            packet={'current_request':'Current request.',
+                    'request_source_ref':ledger.current_submission()['reference'],
+                    'saved_conversation':{'turns':[{'role':'user','text':'Earlier request.'}]}}
+            prompt='Producer contract.\n\n'+json.dumps(packet)
+            self.assertEqual(ledger.attach_context(prompt),prompt)
+            packet.pop('saved_conversation')
+            self.assertIn('<submitted-prompts',ledger.attach_context(json.dumps(packet)))
+
     def test_verbatim_storage_permissions_and_task_isolation(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, CODEX_SOURCE_LEDGER_DIR=directory):
             original = '元の文章\n  空白も保持\n'

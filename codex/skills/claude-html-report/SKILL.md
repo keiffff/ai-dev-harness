@@ -29,7 +29,6 @@ For revisions use `--edit-file`, not `--output-file`. Preserve a before copy in 
 
 ```sh
 ${CLAUDE_HTML_REPORT_WRAPPER:-$HOME/.local/bin/claude-html-report} \
-  --request-file "$request_file" \
   --evidence-file "$observations_file" \
   --edit-file "$candidate_file" \
   --trace-file "$new_trace_file"
@@ -41,11 +40,10 @@ Claude uses Read and localized Edit operations on the named file. The wrapper st
 
 Invoking this skill includes standing authorization to send the task-required, non-secret packet to the user-managed Claude CLI. Do not request separate approval or stop merely because the packet contains company-internal, confidential-design or personal information. Keep the packet relevant to the requested report, honor any narrower instruction in the current request, and retain the secret exclusions in the report contract.
 
-Save the user's verbatim request and feedback to a UTF-8 file in a task-specific directory under `/private/tmp`. Select a new candidate path that does not already exist. The wrapper packages the request and complete source contents without a Codex-written intermediary:
+Select existing original sources and a new candidate path. The wrapper reads the saved original request and its completed conversation automatically; do not transcribe feedback or prepare a source memo. Outside the app, use an existing verbatim `--request-file`. The wrapper packages complete source contents without a Codex-written intermediary:
 
 ```sh
 ${CLAUDE_HTML_REPORT_WRAPPER:-$HOME/.local/bin/claude-html-report} \
-  --request-file "$request_file" \
   --evidence-file "$source_file" \
   --output-file "$candidate_file"
 ```
@@ -58,22 +56,9 @@ Repeat `--evidence-file` for additional sources; omit it when the request needs 
 
 For interactive HTML with preservation or comparison requirements, run `codex-artifact-integrity` with the original request through `--request-file`, primary evidence as requirements, the complete candidate and actual pre-change baseline. Static reports do not enter that review. After source comparison, pass only confirmed findings through the unedited receipt using `--integrity-review-file <receipt> --confirmed-finding-index <zero-based index> --edit-file <candidate>` with the same request and raw evidence. Requirements and baseline are hash-checked and transferred automatically. Without confirmed indices the editor does not start. Claude determines the bounded repair; Codex does not turn findings into correction instructions. Empty findings, rejected findings and unavailability do not trigger another call. Identical inputs reuse the saved receipt. The wrapper registers generated and revised HTML in the existing writer custody hook; direct Codex patches remain prohibited after user corrections too.
 
-Validate the entire candidate against the original user request and feedback as well as the factual packet before visual polish. Correct a packet that changes the assignment; agreement between Codex's packet and Claude's HTML is not evidence of fidelity to the user:
+Claude checks information selection, explanation order, weighting and source claims within the same authoring call. Codex checks an observed source mismatch or rendered defect against the original request, without independently rewriting the report's editorial plan. Transfer exact source/candidate quotes or browser observations for a supported defect; do not inventory every possible qualification or reinterpret a prior assistant note as a requirement.
 
-- every user-required fact and comprehension prerequisite appears in `data-fact`, all final load-bearing facts are visible, and every used ID maps to original evidence in Claude's fact ledger;
-- every visible fact has a justified `data-weight`; Claude's weighting serves the user's task and preserves required information rather than merely matching Codex's suggested emphasis or source completeness;
-- the first viewport communicates what the report establishes, why it matters and any decision or action that actually exists;
-- any visually parallel metrics are intended for comparison and share the relevant definition, unit or denominator, population, time window and aggregation; unrelated numbers remain with the claims they support rather than forming a headline KPI strip;
-- unsupported rejected claims, intentionally omitted material and verification bookkeeping have not leaked into defensive copy; actual evaluated alternatives and unresolved requirements appear only where the reader's task needs them;
-- visible qualifications are necessary to keep a specific claim true or to change the reader's decision, appear once beside that claim, and use a concrete basis rather than generic labels;
-- no follow-up test, open issue, option, risk or next step was invented beyond the packet and reader's task;
-- supporting and context detail is compressed, deferred or omitted with a recorded reason, without hiding a prerequisite;
-- claims not established by the packet are not rendered as settled, and rejected claims are not asserted or implied;
-- every inference in the report metadata is accepted, removed or weakened;
-- every information-weighting decision in the report metadata matches the visible main flow, deferred detail and intentional omissions;
-- prerequisites precede dependent claims;
-- asset placeholders are complete, intentional and attached to the promised explanation;
-- the result is one self-contained document without remote executable assets.
+The private `.sources.json` sidecar keeps source IDs stable when files are reordered or new evidence is added. Retain it with the working HTML; it is execution provenance, not part of the reader-facing upload. Existing IDs refer to the same source path across edits; content hashes still reflect actual source changes. Do not ask Claude to renumber unchanged sources or rewrite metadata merely because the invocation order changed. An artifact predating this sidecar begins tracking from its first call; do not claim its unknown earlier source mapping was reconstructed.
 
 Walk through the actual candidate using the original reader questions: identify the main answer and why it matters without opening implementation detail. If every section appears equally important, or the answer requires collecting fragments from technical prose, the hierarchy is not working. Technical detail belongs in the main flow when it changes that answer or is needed to perform the reader's task, not merely because it was investigated. For a reader who needs to understand rather than implement, distinguish the mechanism and its material feasibility boundary from implementation inventories and detailed alternative analyses. Check the visible explanation rather than accepting `REPORT-META` as proof. For a comparison, verify the same criteria and scenario across alternatives; for a workflow, follow an actual case through waiting, action and outcome; for results, verify the stated meaning of the observations. In a diagram, point to the visual distinction that explains the claimed difference or behavior: naming it inside a box is insufficient. When narrow widths are in scope, check the same relationships, not merely fitting text.
 

@@ -6,7 +6,9 @@ rendering are local; no operation grants Git, posting or continuation authority.
 """
 import argparse
 import hashlib
+import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -18,6 +20,21 @@ def read(path):
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def original_inputs(fallback):
+    local = Path(__file__).resolve().parents[4]/'hooks/codex/source_ledger.py'
+    path = Path(os.environ.get('CODEX_SOURCE_LEDGER_SCRIPT',str(local)))
+    if not path.is_file():
+        path = Path.home()/'.codex/hooks/source_ledger.py'
+    if path.is_file():
+        spec = importlib.util.spec_from_file_location('review_sources',path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        result = module.original_inputs(fallback or None)
+        if result['current_request']:
+            return result
+    return {'current_request':fallback,'request_origin':'caller_file_unverified'}
 
 
 def text(value):
@@ -100,7 +117,9 @@ def discover(receipt_file, work_dir, codex_bin, model, reasoning, evidence_list)
         descriptions[item["change"]].append(path.read_text(encoding="utf-8"))
     if any(not values for values in descriptions.values()):
         raise ValueError("Research needs the original descriptions, not only a selected summary")
-    original_request = (evidence_list.parent / bundle["request"]).read_text(encoding="utf-8")
+    original_request = original_inputs((evidence_list.parent / bundle["request"]).read_text(encoding="utf-8")
+                                      if bundle.get('request') else '')['current_request']
+    text(original_request)
     # Exclude implementation, reviewer suggestions, conclusions and source files.
     packet = {"original_request": original_request,
               "changes": [{"id": c["id"], "purpose": c["purpose"], "technologies": c["mechanisms"],
@@ -189,7 +208,34 @@ def bind_advice(receipt_file, report_file, objections_file, output):
     if digest(Path(receipt["plan"])) != receipt["plan_sha256"]:
         raise ValueError("Prepared plan changed")
     changes = indexed(plan["changes"])
-    objections = read(objections_file)
+    structured = None
+    if objections_file is None:
+        raw = report_file.read_text(encoding='utf-8').strip()
+        if raw.startswith('```json\n') and raw.endswith('\n```'):
+            raw = raw[8:-4]
+        structured = json.loads(raw)
+        if indexed(structured['changes']).keys() != changes.keys():
+            raise ValueError('Advisor response must cover the requested changes')
+        objections = structured['objections']
+        indexed(objections)
+        for item in structured['changes']:
+            text(item['summary'])
+        for item in objections:
+            text(item['claim'])
+            text(item['location'])
+            if item['kind'] not in ('correction','decision'):
+                raise ValueError('Unknown advisor action')
+            # The evidence quote is the exact JSON encoding in the saved report.
+            encoded = next((match.group() for match in re.finditer(r'"(?:\\.|[^"\\])*"',raw)
+                            if json.loads(match.group())==item['claim']),None)
+            if encoded is None:
+                raise ValueError('Advisor claim must remain in its original report')
+            item['evidence'] = [{'file':str(report_file.resolve()),'quote':encoded}]
+        objections_file = output.with_suffix('.objections.json')
+        with objections_file.open('x',encoding='utf-8') as handle:
+            json.dump(objections,handle,ensure_ascii=False,indent=2)
+    else:
+        objections = read(objections_file)
     if indexed(plan["objections"]).keys() & indexed(objections).keys():
         raise ValueError("Keep new advisor ids distinct from the earlier review")
     for item in objections:
@@ -202,6 +248,8 @@ def bind_advice(receipt_file, report_file, objections_file, output):
     bound = {"plan_sha256": receipt["plan_sha256"], "report": str(report_file.resolve()),
              "report_sha256": digest(report_file), "objections_file": str(objections_file.resolve()),
              "objections_sha256": digest(objections_file), "objections": objections}
+    if structured:
+        bound['reader_changes'] = structured['changes']
     with output.open("x", encoding="utf-8") as handle:
         json.dump(bound, handle, ensure_ascii=False, indent=2)
 
@@ -227,11 +275,18 @@ def advisor_input(receipt_file, evidence_list, discovery_file, output):
             path = (evidence_list.parent / item["file"]).resolve()
             sources.append({"change": item["change"], "kind": kind, "file": str(path),
                             "content": path.read_text(encoding="utf-8")})
-    packet = {"original_request": (evidence_list.parent / bundle["request"]).read_text(encoding="utf-8"),
+    original = original_inputs((evidence_list.parent / bundle["request"]).read_text(encoding="utf-8")
+                               if bundle.get('request') else '')
+    text(original['current_request'])
+    packet = {"original_request": original['current_request'],
               "goals": [{"id": c["id"], "purpose": c["purpose"],
                          "requirements": [r["text"] for r in c["requirements"]], "unknowns": c["unknowns"]}
                         for c in changes],
               "original_evidence": sources, "diff_unavailable": bundle.get("diff_unavailable", {})}
+    if original.get('saved_conversation'):
+        packet['saved_conversation'] = original['saved_conversation']
+    if original.get('request_source_ref'):
+        packet['request_source_ref'] = original['request_source_ref']
     if discovery_file:
         discovery = read(discovery_file)
         if discovery["execution"]["plan_sha256"] != receipt["plan_sha256"]:
@@ -243,10 +298,32 @@ def advisor_input(receipt_file, evidence_list, discovery_file, output):
         "No tools, repository access, commands, delegation, edits or posting. Respond in Japanese. "
         "Original descriptions and the changed code/tests are author proposals. Frame the purpose from the original "
         "sources before judging the implementation and public research candidates. No Codex choice, finding list "
-        "or preferred direction is supplied. Report significant recommendations, trade-offs, objections and limits.\n\n"
+        "or preferred direction is supplied. Return JSON only with changes and objections. "
+        "changes contains {id,summary}: a concise reader-facing assessment and recommended direction. "
+        "objections contains every significant objection as {id,change,material,kind,claim,location}. "
+        "Use unique stable ids; change refers to a supplied change id; material is boolean; kind is "
+        "correction or decision. claim is the complete sendable Japanese explanation: realistic trigger, "
+        "consequence, proportionate action or decision, and any alternative that changes it. location is "
+        "a verified Markdown source link when supplied, otherwise an exact source locator. "
+        "Keep supporting analysis and uncertainty that does not affect an action out of this copy. "
+        "Do not force findings; an empty objections list is valid. No priority codes.\n\n"
     )
     with output.open("x", encoding="utf-8") as handle:
         handle.write(instruction + contract.read_text(encoding="utf-8") + "\n\n" + json.dumps(packet, ensure_ascii=False))
+
+
+def run_advisor(receipt_file,evidence_list,discovery_file,work_dir):
+    work_dir.mkdir(parents=True,exist_ok=False)
+    prompt, report = work_dir/'prompt.txt', work_dir/'report.json'
+    advisor_input(receipt_file,evidence_list,discovery_file,prompt)
+    wrapper = os.environ.get('CLAUDE_STRATEGIC_REVIEW_WRAPPER',str(Path.home()/'.local/bin/claude-strategic-review'))
+    with report.open('x',encoding='utf-8') as out, (work_dir/'stderr.txt').open('x') as err:
+        process = subprocess.run([wrapper,'--prompt-file',str(prompt.resolve())],stdout=out,stderr=err)
+    if process.returncode:
+        raise RuntimeError('Advisor unavailable; inspect the private execution record; no retry was started')
+    output = work_dir/'advice.json'
+    bind_advice(receipt_file,report,None,output)
+    return output
 
 
 def render(receipt_file, assessment_file, discovery_file=None, advice_file=None):
@@ -274,6 +351,7 @@ def render(receipt_file, assessment_file, discovery_file=None, advice_file=None)
         if discovered.keys() != changes.keys():
             raise ValueError("Discovery scope differs from the prepared changes")
     objections, dispositions = indexed(plan["objections"]), indexed(assessment["dispositions"])
+    advice = {}
     if advice_file:
         advice = read(advice_file)
         if (advice["plan_sha256"] != receipt["plan_sha256"]
@@ -285,6 +363,18 @@ def render(receipt_file, assessment_file, discovery_file=None, advice_file=None)
         if objections.keys() & additional.keys():
             raise ValueError("Advisor ids collide with the earlier review")
         objections.update(additional)
+        if 'reader_changes' in advice:
+            raw = Path(advice['report']).read_text(encoding='utf-8').strip()
+            if raw.startswith('```json\n') and raw.endswith('\n```'):
+                raw = raw[8:-4]
+            original_report = json.loads(raw)
+            if advice['reader_changes'] != original_report['changes']:
+                raise ValueError('Advisor reader text changed after binding')
+            originals = indexed(original_report['objections'])
+            if originals.keys() != additional.keys() or any(
+                any(additional[oid].get(k) != value for k,value in item.items())
+                for oid,item in originals.items()):
+                raise ValueError('Advisor reader text changed after binding')
     if changes.keys() != results.keys() or objections.keys() != dispositions.keys():
         raise ValueError("Every planned change and objection needs a result")
     for item in dispositions.values():
@@ -332,7 +422,38 @@ def render(receipt_file, assessment_file, discovery_file=None, advice_file=None)
             evidence(finding["evidence"], assessment_file.parent)
         # Validate the full execution record, but deliver the reader's decisions,
         # not the ledger. Coverage is checked before emitting any summary.
-        delivery = result["delivery"]
+        if advice.get('reader_changes'):
+            actions = [o for o in advice['objections'] if o['change']==key]
+            decisions = list(result.get('decisions',[]))
+            findings = list(result['findings'])
+            for item in actions:
+                status = dispositions[item['id']]['status']
+                if status == 'resolved' or (status == 'unresolved' and not item['material']):
+                    continue
+                entry = {'objections':[item['id']], 'goal_checks':[]}
+                if status == 'accepted' and item['kind']=='correction':
+                    findings.append({**entry,'comment':item['claim'],'location':item['location'],
+                                     'evidence':item['evidence']})
+                else:
+                    decisions.append({**entry,'text':item['claim']+'\n\n参照：'+item['location']})
+            result = {**result,'findings':findings}
+            counts = {status:sum(dispositions[o['id']]['status']==status for o in actions)
+                      for status in ('accepted','resolved','unresolved')}
+            resolved = [o for o in actions if o['material'] and dispositions[o['id']]['status']=='resolved']
+            explanations = '\n\n'.join(
+                '- '+o['claim'].split('\n\n',1)[0]+
+                '\n  - 判断根拠：'+dispositions[o['id']]['reason'] for o in resolved)
+            prefix = ('修正が必要な点があります。\n\n' if findings else
+                      '判断が必要な点が残っています。\n\n' if decisions else '')
+            delivery = {'summary':prefix+'推奨：'+text(result['choice'])+'\n\n'+text(result['reason']),
+                        'decisions':decisions,
+                        'claude_summary':'修正提案'+str(sum(o['kind']=='correction' for o in actions))+
+                        '件、判断事項'+str(sum(o['kind']=='decision' for o in actions))+
+                        '件を受領。指摘の照合結果：採用'+str(counts['accepted'])+
+                        '件、未解決'+str(counts['unresolved'])+'件、根拠照合で解消'+str(counts['resolved'])+'件。'+
+                        ('\n\n'+explanations if explanations else '')}
+        else:
+            delivery = result["delivery"]
         decisions = delivery["decisions"]
         covered_objections, covered_goals = set(), set()
         scoped_objections = {oid for oid, o in objections.items() if o["change"] == key}
@@ -386,8 +507,14 @@ def main():
     research.add_argument("--reasoning", required=True)
     research.add_argument("--evidence-list", type=Path, required=True)
     advisor = commands.add_parser("bind-advice")
-    for name in ("receipt", "report", "objections", "output"):
+    for name in ("receipt", "report", "output"):
         advisor.add_argument("--" + name, type=Path, required=True)
+    advisor.add_argument('--objections',type=Path,
+                         help='Legacy prose report extraction; structured reports bind directly.')
+    run = commands.add_parser('run-advisor')
+    for name in ('receipt','evidence-list','work-dir'):
+        run.add_argument('--'+name,type=Path,required=True)
+    run.add_argument('--discovery',type=Path)
     prompt = commands.add_parser("advisor-input")
     for name in ("receipt", "evidence-list", "output"):
         prompt.add_argument("--" + name, type=Path, required=True)
@@ -401,6 +528,8 @@ def main():
     elif args.command == "bind-advice":
         bind_advice(args.receipt, args.report, args.objections, args.output)
         print("Advisor report bound to review plan")
+    elif args.command == 'run-advisor':
+        print(run_advisor(args.receipt,args.evidence_list,args.discovery,args.work_dir))
     elif args.command == "advisor-input":
         advisor_input(args.receipt, args.evidence_list, args.discovery, args.output)
         print("Original evidence assembled for independent review")

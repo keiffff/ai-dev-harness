@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import datetime
 import fcntl
 import hashlib
@@ -10,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sqlite3
 import sys
 
 
@@ -176,12 +178,90 @@ def current_submission() -> dict | None:
             'reference': hashlib.sha256(json.dumps(record, ensure_ascii=False, sort_keys=True).encode()).hexdigest()}
 
 
+def completed_context(request: str) -> dict | None:
+    """Export captured dialogue before an exact request; never an agent recap."""
+    session = os.environ.get('CODEX_THREAD_ID')
+    path = Path(os.environ.get('CODEX_THREAD_HISTORY_DB', os.environ.get(
+        'CODEX_WRITING_HISTORY_DB', str(Path.home()/'.codex/thread_history_1.sqlite'))))
+    if not session or not path.is_file():
+        return None
+    try:
+        with closing(sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True)) as db:
+            cutoff = None
+            for created, raw in db.execute(
+                "SELECT created_at_ms,item_json FROM thread_items WHERE thread_id=? "
+                "AND item_type='userMessage' ORDER BY created_at_ms DESC", (session,)):
+                item = json.loads(raw)
+                if not isinstance(item, dict):
+                    continue
+                value = '\n'.join(p.get('text','') for p in item.get('content',[])
+                                  if isinstance(p,dict) and p.get('type')=='text')
+                if transport_text(value)[0].strip() == request.strip():
+                    cutoff = created
+                    break
+            if cutoff is None:
+                return None
+            prompts = {transport_text(r['text'])[0].strip() for r in read_records(session)}
+            turns, covered, preceding = [], False, None
+            for kind, raw in db.execute(
+                "SELECT item_type,item_json FROM thread_items WHERE thread_id=? "
+                "AND item_type IN ('userMessage','agentMessage') AND created_at_ms<? "
+                "ORDER BY created_at_ms", (session,cutoff)):
+                item = json.loads(raw)
+                if not isinstance(item,dict):
+                    continue
+                if kind == 'userMessage':
+                    value = transport_text('\n'.join(p.get('text','') for p in item.get('content',[])
+                                           if isinstance(p,dict) and p.get('type')=='text'))[0]
+                    covered = value.strip() in prompts
+                    if covered:
+                        turns.append({'role':'user','text':value,'item_id':item.get('id')})
+                elif item.get('phase') == 'final_answer' and item.get('text'):
+                    preceding = {'role':'assistant','text':transport_text(item['text'])[0],
+                                 'item_id':item.get('id')}
+                    if covered:
+                        turns.append(preceding)
+            if turns or preceding:
+                return {'origin':'saved_conversation','turns':turns or [preceding]}
+    except (OSError, sqlite3.Error, ValueError, TypeError) as error:
+        print('Saved conversation unavailable: '+type(error).__name__, file=sys.stderr)
+    return None
+
+
+def original_inputs(caller_text: str | None = None) -> dict:
+    """Resolve original inputs once for a producer, without a rewritten brief."""
+    submission = current_submission() if caller_text is None else None
+    result = {'current_request': submission['text'] if submission else caller_text or '',
+              'request_origin': 'saved_submitted_prompt' if submission else 'caller_file_unverified'}
+    if submission:
+        result['request_source_ref'] = submission['reference']
+        context = completed_context(submission['text'])
+        if context:
+            result['saved_conversation'] = context
+    return result
+
+
 def request_reference(session: str) -> str | None:
     records = read_records(session)
     return hashlib.sha256(json.dumps(records[-1], ensure_ascii=False, sort_keys=True).encode()).hexdigest() if records else None
 
 
 def attach_context(prompt: str) -> str:
+    # Producers can already carry every captured user message together with the
+    # role-preserved dialogue. Avoid appending that same context a second time.
+    try:
+        packet = json.loads(prompt.rsplit('\n\n',1)[-1])
+        submission = current_submission()
+        if isinstance(packet,dict) and submission and packet.get('request_source_ref') == submission['reference']:
+            provided = {packet.get('current_request',packet.get('original_request','')).strip()}
+            context = packet.get('saved_conversation') or {}
+            provided.update(turn['text'].strip() for turn in context.get('turns',[]) if turn.get('role')=='user')
+            originals = {transport_text(r['text'])[0].strip()
+                         for r in read_records(os.environ.get('CODEX_THREAD_ID',''))}
+            if originals <= provided:
+                return prompt
+    except (ValueError,TypeError,KeyError):
+        pass
     source = current_context()
     if not source or source in prompt:
         return prompt

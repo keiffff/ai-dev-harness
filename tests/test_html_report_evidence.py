@@ -15,6 +15,24 @@ WRAPPER = ROOT / "wrappers/bin/claude-html-report.example"
 
 
 class HtmlReportEvidenceTests(unittest.TestCase):
+    def test_source_ids_survive_reordering_addition_and_content_updates(self):
+        wrapper = runpy.run_path(str(WRAPPER))
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            request, first, second, extra, analysis = [root/n for n in ('request.txt','first.txt','second.txt','extra.txt','analysis.txt')]
+            for path in (request,first,second,extra,analysis):
+                path.write_text(path.stem)
+            artifact=root/'result.html'
+            before=json.loads(wrapper['build_packet'](request,[str(first),str(second)],[str(analysis)],artifact))
+            first.write_text('Updated original measurement.')
+            after=json.loads(wrapper['build_packet'](request,[str(extra),str(second),str(first)],[str(extra),str(analysis)],artifact))
+            old={r['path']:r for r in before['evidence']+before['analysis']}
+            for row in after['evidence']+after['analysis']:
+                if row['path'] in old and row['id'][0]==old[row['path']]['id'][0]:
+                    self.assertEqual(row['id'],old[row['path']]['id'])
+            self.assertNotEqual(old[str(first.resolve())]['sha256'],after['evidence'][-1]['sha256'])
+            self.assertFalse(artifact.exists())
+
     def test_total_timeout_is_opt_in_and_has_no_fifteen_minute_ceiling(self):
         wrapper = runpy.run_path(str(WRAPPER))
         with patch.dict(os.environ, {}, clear=True):

@@ -136,7 +136,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         description="Generate one bounded standalone HTML report through Claude."
     )
     parser.add_argument(
-        "--request-file", "--prompt-file", dest="prompt_file", required=True,
+        "--request-file", "--prompt-file", dest="prompt_file",
         help="File containing the user's verbatim request and feedback.",
     )
     parser.add_argument(
@@ -159,6 +159,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def resolve_prompt_file(raw: str) -> Path:
+    if raw is None:
+        return None
     prompt_file = Path(raw).expanduser()
     if not prompt_file.is_file():
         stop("--prompt-file requires an existing regular file.")
@@ -213,14 +215,38 @@ def language_review_record(raw: str, artifact: bytes) -> dict:
     return record
 
 
-def build_packet(request_file: Path, evidence_files: list[str], analysis_files: list[str] | None = None) -> str:
-    request = source_record(request_file, "U1", "--request-file")
+def original_inputs(caller=None):
+    local = Path(__file__).resolve().parents[2] / 'hooks/codex/source_ledger.py'
+    source = Path(os.environ.get('CODEX_SOURCE_LEDGER_SCRIPT', str(local)))
+    if not source.is_file():
+        source = Path.home()/'.codex/hooks/source_ledger.py'
+    if source.is_file():
+        spec = importlib.util.spec_from_file_location('html_sources', source)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.original_inputs(caller)
+    return {'current_request':caller or '', 'request_origin':'caller_file_unverified'}
+
+
+def build_packet(request_file: Path | None, evidence_files: list[str], analysis_files: list[str] | None = None,
+                 artifact: Path | None = None) -> str:
+    context = original_inputs() if request_file is None else None
+    request = (source_record(request_file, "U1", "--request-file") if request_file else
+               {'id':'U1', 'path':'saved_submitted_prompt',
+                'content':context['current_request'],
+                'sha256':hashlib.sha256(context['current_request'].encode()).hexdigest()})
     if not request["content"].strip():
-        stop("--prompt-file / --request-file must not be empty.")
-    evidence = [
-        source_record(Path(raw).expanduser(), f"E{index}", "--evidence-file")
-        for index, raw in enumerate(evidence_files, 1)
-    ]
+        stop("No saved request; supply an original --request-file.")
+    registry_file = Path(str(artifact)+'.sources.json') if artifact else None
+    registry = json.loads(registry_file.read_text()) if registry_file and registry_file.exists() else {}
+    def indexed_source(raw, prefix, flag):
+        path = Path(raw).expanduser().resolve()
+        namespace = registry.setdefault(prefix, {})
+        key = str(path)
+        if key not in namespace:
+            namespace[key] = prefix+str(len(namespace)+1)
+        return source_record(path, namespace[key], flag)
+    evidence = [indexed_source(raw, 'E', '--evidence-file') for raw in evidence_files]
     for record in evidence:
         try:
             data = json.loads(record["content"])
@@ -237,9 +263,12 @@ def build_packet(request_file: Path, evidence_files: list[str], analysis_files: 
             if isinstance(data, dict) and data.get("kind") == "gemini-japanese-composition":
                 stop("Gemini composition is not primary evidence. Use language review for report proofreading; prior analysis belongs in --analysis-file.")
     packet = {"request": request, "evidence": evidence}
+    if context and context.get('saved_conversation'):
+        packet['saved_conversation'] = context['saved_conversation']
     if analysis_files:
-        packet["analysis"] = [source_record(Path(raw).expanduser(), f"A{index}", "--analysis-file")
-                              for index, raw in enumerate(analysis_files, 1)]
+        packet["analysis"] = [indexed_source(raw, 'A', '--analysis-file') for raw in analysis_files]
+    if registry_file:
+        registry_file.write_text(json.dumps(registry, ensure_ascii=False, indent=2), encoding='utf-8')
     return json.dumps(packet, ensure_ascii=False)
 
 
@@ -492,7 +521,7 @@ def edit_existing(args: argparse.Namespace, prompt_file: Path) -> None:
         stop("--trace-file requires a new file in an existing directory.")
     before = artifact.read_bytes()
     before.decode("utf-8")
-    packet = json.loads(build_packet(prompt_file, args.evidence_file, args.analysis_file))
+    packet = json.loads(build_packet(prompt_file, args.evidence_file, args.analysis_file, artifact))
     if args.integrity_review_file:
         review = integrity_review_record(args.integrity_review_file, before, packet["request"]["content"])
         findings = review.get("concrete_review", {}).get("findings", [])
@@ -635,7 +664,7 @@ def main() -> None:
         stop("--integrity-review-file is for --edit-file.")
     output_file = resolve_output_file(args.output_file)
 
-    packet = build_packet(prompt_file, args.evidence_file, args.analysis_file)
+    packet = build_packet(prompt_file, args.evidence_file, args.analysis_file, output_file)
 
     claude_cli = resolve_claude_cli()
     require_safe_mode(claude_cli)

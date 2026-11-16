@@ -63,6 +63,74 @@ class ReviewRecordTests(unittest.TestCase):
         self.assertFalse(output.startswith("````"))
         self.assertFalse((self.root / "review.md").exists())
 
+    def structured_report(self):
+        self.plan['objections']=[]
+        self.save(self.plan_file,self.plan)
+        self.receipt=self.root/'structured-receipt.json'
+        review.prepare(self.plan_file,self.receipt)
+        self.result['dispositions']=[
+            {'id':'unit','status':'accepted','reason':'単位の不一致を照合した','evidence':self.ref},
+            {'id':'scope','status':'unresolved','reason':'指定対象が二つある','evidence':[]}]
+        self.result['changes'][0].pop('delivery')
+        return {'changes':[{'id':'upload','summary':'標準設定を使う方針は妥当です。'}],
+                'objections':[
+                    {'id':'unit','change':'upload','material':True,'kind':'correction',
+                     'claim':'単位をバイトへ揃えてください。\n表示と保存値が一致しません。',
+                     'location':'[表示処理](/synthetic/display.py:12)'},
+                    {'id':'scope','change':'upload','material':True,'kind':'decision',
+                     'claim':'二つの表示先のどちらを対象にするか決めてください。',
+                     'location':'source.txt'}]}
+
+    def test_structured_advice_binds_every_claim_without_extraction_and_renders_unchanged(self):
+        report=self.structured_report()
+        raw,bound=self.root/'report.json',self.root/'advice.json'
+        self.save(raw,report)
+        review.bind_advice(self.receipt,raw,None,bound)
+        self.save(self.assessment,self.result)
+        output=review.render(self.receipt,self.assessment,advice_file=bound)
+        for item in report['objections']:
+            self.assertIn(item['claim'],output)
+        self.assertIn('修正が必要な点：1件',output)
+        self.assertIn('判断・確認してほしい点：1件',output)
+        self.assertEqual(len(review.read(bound)['objections']),2)
+
+    def test_structured_reader_text_cannot_be_rewritten_after_binding(self):
+        report=self.structured_report()
+        raw,bound=self.root/'report.json',self.root/'advice.json'
+        self.save(raw,report)
+        review.bind_advice(self.receipt,raw,None,bound)
+        edited=review.read(bound)
+        edited['reader_changes'][0]['summary']='Different conclusion.'
+        self.save(bound,edited)
+        self.save(self.assessment,self.result)
+        with self.assertRaisesRegex(ValueError,'reader text changed'):
+            review.render(self.receipt,self.assessment,advice_file=bound)
+
+    def test_resolved_material_claims_keep_the_objection_and_counterevidence_judgment_visible(self):
+        report=self.structured_report()
+        raw,bound=self.root/'report.json',self.root/'advice.json'
+        self.save(raw,report)
+        review.bind_advice(self.receipt,raw,None,bound)
+        for item in self.result['dispositions']:
+            item.update(status='resolved',reason='既存の単位契約を照合して解消した。',evidence=self.ref)
+        self.save(self.assessment,self.result)
+        output=review.render(self.receipt,self.assessment,advice_file=bound)
+        self.assertIn(report['objections'][0]['claim'].split('\n\n',1)[0],output)
+        self.assertIn('既存の単位契約を照合して解消した。',output)
+
+    def test_run_advisor_uses_one_call_and_automatically_binds_its_report(self):
+        report=self.structured_report()
+        self.save(self.evidence_list,{'request':'request.txt',
+            'descriptions':[{'change':'upload','file':'description.txt'}],
+            'diffs':[],'sources':[],'diff_unavailable':{'upload':'No implementation diff supplied.'}})
+        def call(*args,**kwargs):
+            json.dump(report,kwargs['stdout'],ensure_ascii=False)
+            return SimpleNamespace(returncode=0)
+        with patch.object(review.subprocess,'run',side_effect=call) as launch:
+            bound=review.run_advisor(self.receipt,self.evidence_list,None,self.root/'advisor')
+        self.assertEqual(launch.call_count,1)
+        self.assertEqual(review.read(bound)['objections'][0]['claim'],report['objections'][0]['claim'])
+
     def test_missing_lookup_result_is_not_completion(self):
         self.result["changes"][0]["lookup_results"] = []
         with self.assertRaisesRegex(ValueError, "planned lookup"):

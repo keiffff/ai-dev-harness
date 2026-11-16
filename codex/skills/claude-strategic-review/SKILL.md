@@ -5,13 +5,13 @@ description: Challenge problem framing and strategic direction with Claude again
 
 # Claude Strategic Review
 
-Use when the problem framing or overall direction needs an external challenge, not merely an implementation-conformance review. Claude examines whether the proposed work addresses the user's actual objective before evaluating how to implement it. Codex owns implementation, debugging, prose and final judgment.
+Use when the problem framing or overall direction needs an external challenge, not merely an implementation-conformance review. Claude examines whether the proposed work addresses the user's actual objective before evaluating how to implement it. Codex owns implementation, debugging and evidence-based adoption; the producing skill owns reader-facing prose.
 
 Read [reviewer contract](references/reviewer-contract.md) for independent framing, prompt scope, standing authorization, adoption and user-visible reporting. Use this default Claude route unless Fable is explicitly requested.
 
 ## Execution
 
-Write the review prompt to a UTF-8 file under `/private/tmp`, then pass only its path:
+For code reviews, use `codex-code-review`'s `run-advisor` to assemble the originals, call this wrapper and bind every returned objection automatically. Do not transcribe the request or extract a separate objection list. For other strategic questions, pass an existing original prompt with the raw evidence and distinguish any proposed approach from those originals:
 
 ```sh
 ${CLAUDE_STRATEGIC_REVIEW_WRAPPER:-$HOME/.local/bin/claude-strategic-review} --prompt-file "$prompt_file"
