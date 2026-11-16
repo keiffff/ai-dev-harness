@@ -18,7 +18,9 @@ Use the user's supplied voice, otherwise plain form. Polite narration in quoted 
 | Progress update | Completed work and its visible result, then remaining work and its actual dependency. No internal inventory. |
 | Verification request | Intended time/environment, changed behavior, supplied reproduction actions and expected visible result. Keep other recovery work separate. |
 
-## PR and Issue Bodies
+## PR Titles and PR / Issue Bodies
+
+When a PR title is requested, use the same language as the PR's prose and established repository convention, unless the user specifies otherwise. A Japanese PR needs a Japanese title; an English PR keeps an English title. Preserve technical identifiers in their original form. English commit-message conventions and English source code do not make the PR title English. If the context supplies an external ticket identifier for this change that has no GitHub linkage, include that exact identifier in the title using the established format. Do not add GitHub issue or PR numbers, identifiers for tickets already linked to GitHub, or unrelated identifiers. Do not invent a missing ticket identifier.
 
 Use the final change and purpose as sources, filling a repository template when supplied. Group by resulting behavior, not edit chronology. Write complete natural Japanese sentences in です・ます form unless another convention is supplied; headings, identifiers and concise table cells may be labels. Explain which component reads, selects, stores or changes which object and the resulting behavior. Retain technical identifiers, meaningful comparisons and rationale. Make the document understandable without this conversation.
 

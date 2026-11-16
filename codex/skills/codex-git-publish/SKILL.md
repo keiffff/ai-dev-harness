@@ -14,7 +14,7 @@ Use the current user-visible worktree. This skill defines the publication proced
 - Read-only Git commands are allowed when relevant.
 - Perform PR/issue operations only when the latest user request explicitly asks for the affected operation and target. Review, advice and drafting alone do not authorize posting or editing a PR or issue. Do not infer PR/issue creation from a commit/push request. Only an explicit PR creation request includes its necessary branch preparation, commit and push; other PR/issue requests, review and drafting do not. A PR request does not authorize an issue write, or vice versa.
 - Do not carry one-off Git or PR/issue mutation authorization into a later user turn. User-configured repository standing permission remains effective until revoked or changed; it never replaces the latest commit/push request.
-- Use English commit messages.
+- Use English commit messages. This applies only to commits; PR titles follow the PR's prose language and the repository's established convention. Use Japanese for a Japanese PR and English for an English PR, unless the user specifies otherwise. Do not reuse an English commit subject as the PR title merely because it is available.
 
 ## Wrapper Boundary
 
