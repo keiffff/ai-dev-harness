@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import sqlite3
 from pathlib import Path
 import subprocess
 import sys
@@ -146,6 +147,128 @@ class ClaudeWritingTests(unittest.TestCase):
         self.assertEqual(len(self.packet()['source_material']),2)
         writing.run(self.request,[],self.root/'alone',self.root/'work-alone')
         self.assertEqual(len(self.calls.read_text().splitlines()),2)
+
+    def test_saved_request_needs_no_caller_request_file(self):
+        spec = importlib.util.spec_from_file_location('ledger',ROOT/'hooks/codex/source_ledger.py')
+        ledger = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ledger)
+        with patch.dict(os.environ,CODEX_THREAD_ID='task',CODEX_SOURCE_LEDGER_DIR=str(self.root/'ledger'),
+                        CODEX_SOURCE_LEDGER_SCRIPT=str(ROOT/'hooks/codex/source_ledger.py')):
+            ledger.append_prompt('task','Explain the observed operation.')
+            result = writing.run(None,[self.source],self.root/'body.md',self.root/'work')
+        self.assertEqual(self.packet()['current_request'],'Explain the observed operation.')
+        self.assertIsNone(result['request_file_sha256'])
+        self.assertGreaterEqual(result['seconds'],result['preparation_seconds']+result['writer_seconds'])
+        self.assertEqual(len(self.calls.read_text().splitlines()),1)
+
+    def test_missing_request_stops_before_writer(self):
+        with self.assertRaisesRegex(ValueError,'No saved submitted request'):
+            writing.run(None,[self.source],self.root/'body.md',self.root/'work')
+        self.assertFalse(self.calls.exists())
+
+    def test_fast_cli_allocates_paths_and_prints_body_without_notes_mixed_into_it(self):
+        spec = importlib.util.spec_from_file_location('ledger',ROOT/'hooks/codex/source_ledger.py')
+        ledger = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ledger)
+        body,notes = 'Observed result.\r\n\r\n- Preserved detail.  \r\n','Sender-only context.'
+        self.response.write_text(json.dumps({'status':'ready','body':body,'delivery_notes':notes}))
+        env={**os.environ,'CODEX_THREAD_ID':'task','CODEX_SOURCE_LEDGER_DIR':str(self.root/'ledger'),
+             'CODEX_SOURCE_LEDGER_SCRIPT':str(ROOT/'hooks/codex/source_ledger.py'),'TMPDIR':str(self.root)}
+        with patch.dict(os.environ,env):
+            ledger.append_prompt('task','Summarize the observed result.')
+        process=subprocess.run([sys.executable,str(SCRIPT),'--medium','slack',
+            '--source-file',str(self.source),'--print-body'],env=env,capture_output=True)
+        self.assertEqual(process.returncode,0,process.stderr.decode())
+        self.assertEqual(process.stdout,body.encode())
+        self.assertIn(notes.encode(),process.stderr)
+        manifests=list(self.root.rglob('manifest.json'))
+        self.assertEqual(len(manifests),1)
+        receipt=json.loads(manifests[0].read_text())
+        self.assertEqual(Path(receipt['output']).read_bytes(),body.encode())
+        self.assertEqual(receipt['request_origin'],'saved_submitted_prompt')
+        self.assertEqual(len(self.calls.read_text().splitlines()),1)
+
+    def test_print_body_returns_an_evidence_question_without_a_partial_body(self):
+        question='Which of the two supplied observations is current?'
+        self.response.write_text(json.dumps({'status':'needs_evidence','body':'','delivery_notes':question}))
+        process=subprocess.run([sys.executable,str(SCRIPT),'--request-file',str(self.request),
+            '--print-body','--work-dir',str(self.root/'work')],capture_output=True)
+        self.assertEqual(process.returncode,0,process.stderr.decode())
+        self.assertEqual(process.stdout,question.encode())
+        self.assertFalse((self.root/'work/body.md').exists())
+        self.assertEqual(len(self.calls.read_text().splitlines()),1)
+
+    def test_prior_completed_response_is_carried_without_future_or_commentary(self):
+        spec = importlib.util.spec_from_file_location('ledger',ROOT/'hooks/codex/source_ledger.py')
+        ledger = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ledger)
+        history=self.root/'history.sqlite'
+        previous='Earlier observed mechanism.\nThis is an assistant explanation, not a new request.'
+        rows=[('other',2,'agentMessage',{'phase':'final_answer','text':'OTHER TASK'}),
+              ('task',1,'agentMessage',{'id':'prior','phase':'final_answer','text':previous}),
+              ('task',2,'agentMessage',{'phase':'commentary','text':'COMMENTARY'}),
+              ('task',3,'userMessage',{'content':[{'type':'text','text':'Summarize that response.'}]}),
+              ('task',4,'agentMessage',{'phase':'final_answer','text':'FUTURE CORRECTION'})]
+        with sqlite3.connect(history) as db:
+            db.execute('CREATE TABLE thread_items(thread_id TEXT,created_at_ms INTEGER,item_type TEXT,item_json TEXT)')
+            db.executemany('INSERT INTO thread_items VALUES (?,?,?,?)',
+                           [(a,b,c,json.dumps(d)) for a,b,c,d in rows])
+        with patch.dict(os.environ,CODEX_THREAD_ID='task',CODEX_SOURCE_LEDGER_DIR=str(self.root/'ledger'),
+                        CODEX_SOURCE_LEDGER_SCRIPT=str(ROOT/'hooks/codex/source_ledger.py'),
+                        CODEX_WRITING_HISTORY_DB=str(history)):
+            ledger.append_prompt('task','Summarize that response.')
+            result=writing.run(None,[self.source],self.root/'body.md',self.root/'work')
+        packet=self.packet()
+        self.assertEqual(packet['saved_conversation']['turns'][-1]['text'],previous)
+        self.assertEqual(packet['saved_conversation']['turns'][-1]['role'],'assistant')
+        self.assertTrue(result['prior_response_attached'])
+        for text in ['OTHER TASK','COMMENTARY','FUTURE CORRECTION']:
+            self.assertNotIn(text,json.dumps(packet))
+        self.assertEqual(len(self.calls.read_text().splitlines()),1)
+
+    def test_unmatched_saved_request_does_not_attach_an_unrelated_response(self):
+        history=self.root/'history.sqlite'
+        with sqlite3.connect(history) as db:
+            db.execute('CREATE TABLE thread_items(thread_id TEXT,created_at_ms INTEGER,item_type TEXT,item_json TEXT)')
+            db.execute('INSERT INTO thread_items VALUES (?,?,?,?)',('task',1,'agentMessage',
+                json.dumps({'phase':'final_answer','text':'UNRELATED'})))
+        with patch.dict(os.environ,CODEX_THREAD_ID='task',CODEX_WRITING_HISTORY_DB=str(history)):
+            self.assertIsNone(writing.prior_response({'request_origin':'saved_submitted_prompt','current_request':'Different request.'}))
+
+    def test_captured_dialogue_keeps_earlier_corrections_with_original_roles(self):
+        spec=importlib.util.spec_from_file_location('dialogue_ledger',ROOT/'hooks/codex/source_ledger.py')
+        ledger=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ledger)
+        history=self.root/'dialogue.sqlite'
+        rows=[('userMessage',{'content':[{'type':'text','text':'Check the observation.'}]}),
+              ('agentMessage',{'phase':'final_answer','text':'The earlier explanation was incorrect.'}),
+              ('userMessage',{'content':[{'type':'text','text':'Explain the mechanism.'}]}),
+              ('agentMessage',{'phase':'final_answer','text':'Here is the mechanism.'}),
+              ('userMessage',{'content':[{'type':'text','text':'Write a reply.'}]}),
+              ('agentMessage',{'phase':'final_answer','text':'LATER DRAFT'})]
+        with sqlite3.connect(history) as db:
+            db.execute('CREATE TABLE thread_items(thread_id TEXT,created_at_ms INTEGER,item_type TEXT,item_json TEXT)')
+            db.executemany('INSERT INTO thread_items VALUES (?,?,?,?)',
+                [('task',i,kind,json.dumps(item)) for i,(kind,item) in enumerate(rows)])
+        with patch.dict(os.environ,CODEX_THREAD_ID='task',CODEX_SOURCE_LEDGER_DIR=str(self.root/'dialogue-ledger'),
+                        CODEX_SOURCE_LEDGER_SCRIPT=str(ROOT/'hooks/codex/source_ledger.py'),
+                        CODEX_WRITING_HISTORY_DB=str(history)):
+            for text in ['Check the observation.','Explain the mechanism.','Write a reply.']:
+                ledger.append_prompt('task',text)
+            context=writing.prior_response({'request_origin':'saved_submitted_prompt','current_request':'Write a reply.'})
+        self.assertEqual([r['role'] for r in context['turns']],['user','assistant','user','assistant'])
+        self.assertIn('incorrect',context['turns'][1]['text'])
+        self.assertNotIn('LATER DRAFT',json.dumps(context))
+
+    def test_combined_tool_output_presents_body_before_sender_notes(self):
+        body='The sendable reply.\n'
+        notes='Separate sender-only context.'
+        self.response.write_text(json.dumps({'status':'ready','body':body,'delivery_notes':notes}))
+        process=subprocess.run([sys.executable,str(SCRIPT),'--request-file',str(self.request),
+            '--work-dir',str(self.root/'work'),'--print-body'],stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        self.assertEqual(process.returncode,0,process.stdout.decode())
+        self.assertTrue(process.stdout.startswith(body.encode()))
+        self.assertGreater(process.stdout.index(notes.encode()),len(body.encode()))
 
 
 if __name__ == '__main__':
