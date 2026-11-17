@@ -574,6 +574,32 @@ class WrapperTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.splitlines(), args)
 
+    def test_successful_pr_creation_registers_origin_without_hiding_success_or_repeating_write(self):
+        script = ROOT / 'wrappers/bin/gh-user-approved.example'
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fake = root / GH
+            fake.write_text('#!/bin/sh\nprintf "write\\n" >> "$CI_TEST_CALLS"\nprintf "https://github.com/example/project/pull/7\\n"\n')
+            fake.chmod(0o755)
+            recorder = root/'register.py'
+            recorder.write_text('import json,os,sys\nfrom pathlib import Path\n'
+                                'Path(os.environ["CI_TEST_BIND"]).write_text(json.dumps(sys.argv[1:]))\n'
+                                'sys.exit(int(os.environ.get("CI_TEST_EXIT", "0")))\n')
+            env = dict(os.environ, PATH=tmp+os.pathsep+os.environ.get('PATH',''),
+                       CODEX_CI_EVENTS_SCRIPT=str(recorder), CODEX_THREAD_ID='fixture-thread',
+                       CI_TEST_CALLS=str(root/'calls'), CI_TEST_BIND=str(root/'binding'))
+            for exit_code in ('0', '1'):
+                env['CI_TEST_EXIT'] = exit_code
+                result = subprocess.run([str(script),'--confirm-user-requested','pr','create'],
+                                        env=env,cwd=root,text=True,capture_output=True)
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertEqual(result.stdout,'https://github.com/example/project/pull/7\n')
+                args = json.loads((root/'binding').read_text())
+                self.assertEqual(args[:5],['bind','--pr-url','https://github.com/example/project/pull/7','--thread','fixture-thread'])
+                if exit_code=='1':
+                    self.assertIn('PR was created',result.stderr)
+            self.assertEqual((root/'calls').read_text().splitlines(),['write','write'])
+
     def test_github_pr_and_issue_operations_require_confirmation_and_reject_other_command_families(self):
         script = ROOT / 'wrappers' / 'bin' / 'gh-user-approved.example'
         for args in (
