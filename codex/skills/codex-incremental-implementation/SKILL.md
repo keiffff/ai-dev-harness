@@ -21,6 +21,8 @@ For diagnostic additions, reuse available values and the existing emission bound
 
 Run missing or invalidated checks and reuse successful results for unchanged code. Let each observation choose the next action: repair the demonstrated fault, obtain the observation that distinguishes remaining explanations, or advance to delivery. Repeating a check needs changed inputs or a concrete unresolved risk. A failed check of the evaluation setup is not a product failure.
 
+When the requested work must continue after an external job or deployment finishes, register that exact wait with `python3 ~/.codex/ci-events/bridge.py wait-run` or `wait-deploy`; launch a requested detached local command through `run-local`. Pass the owning `CODEX_THREAD_ID`, original request file and already requested next action. See [continuation commands](../../ci/README.md). End the turn instead of repeatedly polling with the model. Do not register unrelated follow-ups. Resume the original work when its event arrives, then use `finish` with the actual result; queue delivery alone does not complete it.
+
 During execution, assess progress toward the requested result, not merely whether tools are running. If setup or verification dominates without producing usable results, inspect the dependency that is delaying delivery and change the plan where the observations justify it. Consider duplicate work, I/O and execution granularity across the whole path; do not optimize only the main operation.
 
 ## Deliver

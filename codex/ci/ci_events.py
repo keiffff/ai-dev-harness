@@ -12,7 +12,11 @@ import sqlite3
 import subprocess
 import sys
 import time
+from types import SimpleNamespace
 from urllib.parse import urlparse
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import continuations
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'hooks/codex'))
 from source_ledger import transport_text
@@ -42,6 +46,7 @@ def database(root):
             key TEXT PRIMARY KEY, failures INTEGER NOT NULL,
             notified INTEGER NOT NULL, detail TEXT NOT NULL);
     ''')
+    continuations.schema(db)
     try:
         with db:
             yield db
@@ -230,6 +235,13 @@ def open_chat(thread):
         raise MonitorError('通知は保存済みですが、元のCodexチャットを開けません。アプリの状態を確認してください。', retryable=True)
 
 
+def queue_message(codex, thread, cwd, prompt):
+    result = subprocess.run([str(codex), 'queue', '--thread', thread, '--message', prompt],
+                            cwd=cwd, capture_output=True, text=True)
+    if result.returncode:
+        raise MonitorError('Codexへの配送結果を確認できません。重複送信を避けて再送を止めています。元チャットとCLI設定を確認してください。', retryable=False)
+
+
 def dispatch(root, codex, alert_after=3):
     """Queue once in Codex's native thread queue. Never create a replacement chat."""
     results = []
@@ -269,17 +281,10 @@ def dispatch(root, codex, alert_after=3):
                 with os.fdopen(os.open(log_file, os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0o600), 'w') as stream:
                     stream.write(sanitized)
                 item['log_file'] = str(log_file.resolve())
-                result = subprocess.run([str(codex), 'queue', '--thread', row['thread'],
-                                         '--message', event_prompt(row, item)],
-                                        cwd=row['cwd'], capture_output=True, text=True)
-                if result.returncode:
-                    detail = 'Codexへの配送結果を確認できません。重複送信を避けて再送を止めています。元チャットとCLI設定を確認してください。'
-                else:
-                    # Load the owning desktop chat instead of resuming it in a
-                    # second app-server process while it might still be active.
-                    accepted = True
-                    open_chat(row['thread'])
-                    status, detail = 'queued', 'Native queue accepted the event and the desktop chat was opened; completion is separate.'
+                queue_message(codex, row['thread'], row['cwd'], event_prompt(row, item))
+                accepted = True
+                open_chat(row['thread'])
+                status, detail = 'queued', 'Native queue accepted the event and the desktop chat was opened; completion is separate.'
         except MonitorError as exc:
             retryable = exc.retryable
             status = ('queued_not_opened' if accepted else 'pending') if retryable else 'failed'
@@ -301,6 +306,9 @@ def watch_cycle(root, codex, alert_after):
     try:
         collection = collect(root)
         deliveries = dispatch(root, codex, alert_after)
+        extra = continuations.cycle(SimpleNamespace(**globals()), root, codex, alert_after)
+        collection['accepted'] += extra['accepted']
+        deliveries.extend(extra['deliveries'])
         recovered(root, 'source')
         return {'collection': collection, 'deliveries': deliveries}
     except Exception as exc:
@@ -332,7 +340,12 @@ def main():
     watcher.add_argument('--alert-after', type=int, default=3, help='Notify once after this many consecutive transient failures; keep retrying.')
     for sub in (watcher, subs.add_parser('dispatch', help='Deliver pending failures once to the native desktop chat queue.')):
         sub.add_argument('--codex-bin', default='codex')
+    continuations.arguments(subs)
     args = parser.parse_args()
+    if args.command in continuations.COMMANDS:
+        result = continuations.command(sys.modules[__name__], args)
+        print(json.dumps(result, ensure_ascii=False))
+        return
     if args.command == 'bind':
         result = bind(args.state_dir, args.pr_url, args.thread, args.cwd)
     elif args.command == 'watch':
@@ -347,6 +360,7 @@ def main():
             time.sleep(args.interval)
     elif args.command == 'dispatch':
         result = dispatch(args.state_dir, args.codex_bin)
+        result.extend(continuations.dispatch(sys.modules[__name__], args.state_dir, args.codex_bin, 3))
     else:
         with database(args.state_dir) as db:
             if args.command == 'unbind':
@@ -355,6 +369,7 @@ def main():
                 result = {'unbound': True}
             else:
                 result = {'bindings': [dict(r) for r in db.execute('SELECT * FROM bindings')],
+                          'continuations': [dict(r) for r in db.execute('SELECT id,kind,status,result,thread,detail FROM waits')],
                           'health': [dict(r) for r in db.execute('SELECT * FROM health')],
                           'deliveries': [dict(r) for r in db.execute(
                               'SELECT event_key,repo,number,sha,status,detail FROM deliveries')]}
