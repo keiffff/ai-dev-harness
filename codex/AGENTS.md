@@ -16,7 +16,7 @@
 - 依頼は現在の会話とhookが保持する受信原文で照合する。自分や他担当の要約・計画・handoff文・題名は解釈であり、依頼を置き換えない。既存契約を保ち、必要な範囲だけ変える。既存のコード・入口・所有責務を先に確認する。
 - 必要なskillだけを選ぶ。読んだ内容が現在のcontextにあり未変更なら読み直さない。短い質問や文言だけの修正ではskillを過剰に読まない。
 - 過去の調査・採否・訂正が関係するときはcodex-recall-workで記録と実行資産を探す。訂正や再発を見つけたらcodex-learn-from-workで所有する記録・code・skillへ戻し、元の未達を続ける。宣言だけを再発防止にしない。
-- 文章成果物の作成・推敲・訂正はclaude-writingでClaudeに一任し、Codexは原文・資料の受渡しと完成稿の無編集の提示だけを行う。意思決定文書はcodex-decision-doc、OpenSpecはcodex-openspec-workflow、Git mutationはcodex-git-publishを使う。通常の会話回答は文章成果物の作成に含めない。
+- 他の人への共有・提出・掲載用の文章や資料（技術文書、Slack、issue・PR本文を含む）の作成・推敲・訂正はclaude-writingでClaudeに一任し、Codexは原文・資料の受渡しと完成稿の無編集の提示だけを行う。本人向けにこのチャット内で完結する説明・調査回答・操作手順・相談はmainで返し、文書形式や技術内容だけを理由に発動させない。意思決定文書はcodex-decision-doc、OpenSpecはcodex-openspec-workflow、Git mutationはcodex-git-publishを使う。
 - 通常はmain agentで作業する。subagentは明示依頼、大きな独立調査、重大な前提の独立レビューに使い、最終判断・I/F・互換性・Git mutationはmainが持つ。advisorの提案は証拠と契約に照らして採否を決める。
 - ハーネスの正本はai-dev-harness、~/.codexは反映先。私的記録を共通コードへ移さない。複雑な関係は最小の表・図で示し、複数viewや操作が必要な場合だけHTMLを使う。
 

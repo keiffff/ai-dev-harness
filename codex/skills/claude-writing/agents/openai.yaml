@@ -1,4 +1,4 @@
 interface:
   display_name: "Claude Writing"
-  short_description: "Delegate prose and every revision entirely to Claude"
-  default_prompt: "Use $claude-writing to create or revise this document from the original request and sources, and return Claude's text unchanged."
+  short_description: "Write prose intended for sharing with other readers"
+  default_prompt: "Use $claude-writing for this message or document intended for other readers. For a reply solely within this chat, answer in main. When writing, pass the original request and sources and return Claude's text unchanged."

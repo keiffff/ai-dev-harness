@@ -1,11 +1,15 @@
 ---
 name: claude-writing
-description: Slack報告・確認依頼、issue・PR本文などの文章成果物の作成・推敲・訂正をClaudeに一任する。短い文面の校正も含み、通常の会話回答は除く。
+description: 他の人への共有・提出・掲載用の文章や資料をClaudeで作成・推敲・訂正する。技術文書、Slack文面、issue・PR本文、短い校正も対象。本人向けにチャット内で完結する説明・調査回答・操作手順・相談は対象外。
 ---
 
 # Claude Writing
 
-Claude alone owns reader-facing prose: information selection, structure, composition, source checking and every editorial revision. Codex transports original requests, source files and tool records, then delivers the saved result unchanged. Ordinary conversation stays in main; HTML uses `claude-html-report`, review findings use `codex-code-review`, and decision records retain `codex-decision-doc`'s content contract.
+Use this skill for prose intended for other readers: sharing, submission, publication or maintained documentation, including technical documents, Slack messages and issue/PR bodies. Short polishing requests belong here when that intended use applies. Judge the audience and destination from the request and conversation, not the prose's length, technical content, Markdown format or the words 'report' and 'steps'.
+
+Explanations, investigation answers, comparisons, operating steps and discussion solely for the user in this chat stay in main. A supplied ticket or technical source does not make the reply a document for others. If the user later asks to turn the answer into a message or document for sharing, invoke the skill then; do not prepare that derivative in advance.
+
+Within this scope, Claude alone owns information selection, structure, composition, source checking and every editorial revision. Codex transports original requests, source files and tool records, then delivers the saved result unchanged. Keep existing specialist routes: HTML uses `claude-html-report`, review findings use `codex-code-review`, and decision records retain `codex-decision-doc`'s content contract.
 
 ## Transfer, Write, Deliver
 
