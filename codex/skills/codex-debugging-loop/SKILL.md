@@ -40,7 +40,7 @@ Do not retry, switch providers, install or update tools, change configuration, o
 
 ## Fix And Verify
 
-Capture the failing command/scenario, important output and relevant state. Find the responsible layer, make the supported fix, then rerun the narrow reproduction. Add a meaningful behavioral regression check when needed; broaden only for a specific remaining risk.
+Capture the failing command/scenario, output and state as the before observation in the implementation skill's operation map. Find the responsible layer, fix it, then rerun that entry and the ordinary neighboring operation affected by the same change. Reuse this record rather than creating a second regression checklist; broaden only for a specific remaining risk.
 
 For a failing existing test, identify its protected contract before changing expectations. If two attempted fixes fail the same verification, return to localization rather than repeating speculative edits. Escalate to the user only for a missing decision, unavailable evidence or authority.
 
