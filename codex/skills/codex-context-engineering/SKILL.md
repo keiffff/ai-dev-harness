@@ -7,6 +7,12 @@ description: Find repository evidence, existing owners and relevant local work h
 
 Use this when evidence sources or existing ownership need investigation. Let the request set the output: facts, interpretation, or recommendations.
 
+## Project-Specific Procedures
+
+Before selecting project procedures or rebuilding verification, read relevant SKILL.md files from the current checkout's external project-skill index in runtime context. Only the index is automatic; load bodies as needed. To resolve it directly, use `python3 ~/.codex/hooks/project_skills.py list --cwd <verified-checkout>`; read a listed entry with `read --cwd <verified-checkout> --skill <listed-id>`. An empty or unavailable index is not permission to use another project's entries.
+
+Private skills stay outside the checkout. Register a project's existing files once with `register --cwd <verified-checkout> --skill-file <absolute-SKILL.md>` (repeat `--skill-file` for its complete set). The private registry defaults to `~/.local/share/agent-work-memory/knowledge/project-skills/registry.json` and keys that set by the canonical Git common directory, shared across its worktrees. Registration replaces that project's set and preserves other projects. This supplements the native skill catalog; it does not install each entry globally.
+
 ## Evidence Sources
 
 | Question | Start here | Follow only as needed |

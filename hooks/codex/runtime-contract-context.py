@@ -13,6 +13,7 @@ from pathlib import Path
 from hook_utils import is_invalid_payload, load_payload
 from source_ledger import append_prompt, inherit_prompts, ledger_path, read_records, request_reference, render as render_prompts
 from reader_delivery import consume as consume_delivery, direct_edit_reason
+from project_skills import render_context as project_skills_context
 
 
 DEFAULT_CONTRACT = Path(__file__).with_name("runtime-contract.md")
@@ -199,6 +200,10 @@ def main() -> None:
     if contract is None:
         return
     text, digest = contract
+    external_skills = project_skills_context(payload.get('cwd'))
+    if external_skills:
+        text += '\n\n' + external_skills
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
     source = ''
     if event in {"SessionStart", "SubagentStart"}:
         try:
