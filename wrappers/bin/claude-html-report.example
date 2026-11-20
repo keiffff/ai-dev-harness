@@ -300,6 +300,32 @@ def timeout_seconds() -> int:
     return value
 
 
+def freeze_claude_cli(cli: str) -> str:
+    candidate = Path(cli).expanduser().absolute()
+    mise_data = Path(os.environ.get("MISE_DATA_DIR", str(Path.home() / ".local/share/mise"))).expanduser()
+    if candidate.parent.resolve() == (mise_data / "shims").resolve():
+        mise = shutil.which("mise")
+        if not mise:
+            stop("Cannot resolve the selected Claude mise shim: mise command was not found.", 1)
+        try:
+            result = subprocess.run(
+                [mise, "exec", "--", sys.executable, "-c",
+                 "import shutil,sys; print(shutil.which(sys.argv[1]) or '')", candidate.name],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            stop(f"Failed to resolve the selected Claude mise shim: {error}", 1)
+        resolved = Path(result.stdout.strip())
+        if (result.returncode != 0 or not resolved.is_absolute()
+                or resolved.parent.resolve() == (mise_data / "shims").resolve()):
+            stop("Could not resolve the active Claude executable from the selected mise shim; no other installation was tried.", 1)
+        candidate = resolved
+    if not candidate.is_file() or not os.access(candidate, os.X_OK):
+        stop(f"Selected Claude CLI is not executable: {candidate}", 1)
+    return str(candidate.resolve())
+
+
 def resolve_claude_cli() -> str:
     configured = os.environ.get("CLAUDE_HTML_REPORT_CLI")
     if configured:
@@ -308,12 +334,12 @@ def resolve_claude_cli() -> str:
             stop("CLAUDE_HTML_REPORT_CLI must be an absolute path.")
         if not candidate.is_file() or not os.access(candidate, os.X_OK):
             stop(f"CLAUDE_HTML_REPORT_CLI is not executable: {candidate}", 1)
-        return str(candidate)
+        return freeze_claude_cli(str(candidate))
 
     resolved = shutil.which(DEFAULT_CLAUDE_CLI)
     if not resolved:
         stop("claude command was not found.", 1)
-    return resolved
+    return freeze_claude_cli(resolved)
 
 
 def require_safe_mode(claude_cli: str) -> None:

@@ -12,7 +12,7 @@ HTML = '<!doctype html><html><style>body{color:#123456}</style><body><p data-fac
 
 
 class DirectEditTests(unittest.TestCase):
-    def run_edit(self, mode="edit"):
+    def run_edit(self, mode="edit", mise_shim=False):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         root = Path(temp.name)
@@ -42,6 +42,33 @@ print(json.dumps({{'type':'result','is_error':False,'result':'not an HTML respon
 raise SystemExit(1 if mode=='fail' else 0)
 ''')
         fake.chmod(0o755)
+        cli = fake
+        shim_env = {}
+        if mise_shim:
+            data_dir = root / "mise"
+            shim = data_dir / "shims" / "claude"
+            shim.parent.mkdir(parents=True)
+            shim.write_text(f'''#!{sys.executable}
+import sys
+if '--help' in sys.argv:
+    print('--safe-mode'); raise SystemExit(0)
+print("error: unknown option '--safe-mode'", file=sys.stderr)
+raise SystemExit(1)
+''')
+            shim.chmod(0o755)
+            mise = root / "mise-bin" / "mise"
+            mise.parent.mkdir()
+            mise.write_text(f'''#!{sys.executable}
+import os, sys
+if sys.argv[1:3] != ['exec', '--']:
+    raise SystemExit(2)
+os.environ['PATH'] = {str(root)!r} + os.pathsep + os.environ['PATH']
+os.execvpe(sys.argv[3], sys.argv[3:], os.environ)
+''')
+            mise.chmod(0o755)
+            cli = shim
+            shim_env = {"MISE_DATA_DIR": str(data_dir),
+                        "PATH": str(mise.parent) + os.pathsep + os.environ["PATH"]}
         capture = root / "capture.json"
         trace = root / "trace.json"
         result = subprocess.run(
@@ -49,8 +76,8 @@ raise SystemExit(1 if mode=='fail' else 0)
              "--evidence-file", str(evidence), "--edit-file", str(artifact),
              "--trace-file", str(trace)],
             env={**os.environ, "CLAUDE_CODE_OAUTH_TOKEN": "synthetic-token",
-                 "CLAUDE_HTML_REPORT_CLI": str(fake), "CAPTURE": str(capture),
-                 "FAKE_MODE": mode}, text=True, capture_output=True,
+                 "CLAUDE_HTML_REPORT_CLI": str(cli), "CAPTURE": str(capture),
+                 "FAKE_MODE": mode, **shim_env}, text=True, capture_output=True,
         )
         return result, artifact, sibling, capture, trace
 
@@ -79,6 +106,14 @@ raise SystemExit(1 if mode=='fail' else 0)
         self.assertTrue(audit["changed"])
         self.assertEqual(audit["tool_calls"][0]["tool"], "Edit")
         self.assertNotIn("not an HTML response", artifact.read_text())
+
+    def test_mise_shim_cannot_change_cli_after_edit_cwd_changes(self):
+        result, artifact, sibling, capture, trace = self.run_edit(mise_shim=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(artifact.read_text(), HTML.replace("10件", "12件"))
+        self.assertEqual(sibling.read_text(), "unchanged")
+        self.assertEqual(json.loads(capture.read_text())["cwd_files"], [])
+        self.assertTrue(json.loads(trace.read_text())["changed"])
 
     def test_stdout_is_never_adopted_as_the_artifact(self):
         result, artifact, _, _, trace = self.run_edit("stdout_only")
