@@ -195,7 +195,8 @@ class ReplayTests(unittest.TestCase):
             stub = root / 'codex-stub'
             stub.write_text('#!' + sys.executable + '\nimport json,pathlib,sys\n'
                 'pathlib.Path("invocation.json").write_text(json.dumps({"args":sys.argv,"input":sys.stdin.read()}))\n'
-                'pathlib.Path(sys.argv[sys.argv.index("-o")+1]).write_text("Pending.")\n')
+                'pathlib.Path(sys.argv[sys.argv.index("-o")+1]).write_text("Pending.")\n'
+                'print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"Pending."}}))\n')
             stub.chmod(0o700)
             write(root / 'case.json', {'id': 'sample', 'request_file': 'request.txt',
                 'scope_file': 'scope.txt', 'seed_file': 'seed.jsonl', 'rubric_file': 'rubric.json',
@@ -208,6 +209,12 @@ class ReplayTests(unittest.TestCase):
             self.assertEqual(json.loads(invocation)['input'], 'Explain the current state.')
             self.assertNotIn('fork', json.loads(invocation)['args'])
             self.assertIsNone(replay.read_json(run / 'result.json')['pass'])
+            events = [json.loads(line) for line in (run / 'event-timing.jsonl').read_text().splitlines()]
+            self.assertEqual([e['trace_line'] for e in events], [1])
+            self.assertGreaterEqual(events[0]['seconds'], 0)
+            self.assertLessEqual(events[0]['seconds'], replay.read_json(run / 'result.json')['seconds'])
+            trace_event = json.loads((run / 'trace.jsonl').read_text())
+            self.assertEqual(trace_event['item']['text'], 'Pending.')
 
 
 class PreventionKpiTests(unittest.TestCase):

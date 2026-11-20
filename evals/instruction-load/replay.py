@@ -182,8 +182,20 @@ def run_case(case_file, skills_root, output_dir, codex_bin, label, harness_root=
     command[2:2] = hook_config
     print('START ' + str(run), flush=True)
     began = time.perf_counter()
-    with (run / 'trace.jsonl').open('x') as out, (run / 'stderr.txt').open('x') as err:
-        actor = subprocess.run(command, input=actor_input, text=True, cwd=project, stdout=out, stderr=err, env=env)
+    with (run / 'trace.jsonl').open('x') as out, (run / 'stderr.txt').open('x') as err, \
+            (run / 'event-timing.jsonl').open('x') as timing:
+        actor = subprocess.Popen(command, text=True, cwd=project, stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE, stderr=err, env=env)
+        actor.stdin.write(actor_input)
+        actor.stdin.close()
+        for line_number, line in enumerate(actor.stdout, 1):
+            out.write(line)
+            timing.write(json.dumps({'trace_line': line_number,
+                                     'seconds': time.perf_counter() - began}) + '\n')
+            out.flush()
+            timing.flush()
+        actor.stdout.close()
+        actor.wait()
     answer = (run / 'answer.txt').read_text() if (run / 'answer.txt').is_file() else ''
     result = {'process_exit': actor.returncode, 'seconds': time.perf_counter() - began,
               'execution_status': 'native_error' if actor.returncode else 'completed' if answer.strip() else 'answer_missing',

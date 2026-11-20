@@ -7,6 +7,24 @@ description: Find repository evidence, existing owners and relevant local work h
 
 Use this when evidence sources or existing ownership need investigation. Let the request set the output: facts, interpretation, or recommendations.
 
+## Execute Toward The Next Useful Result
+
+Choose the path from the original request and current situation, without asking the user to label urgency or running a separate routing agent:
+
+| Situation | Execution path | Delivery boundary |
+| --- | --- | --- |
+| Bounded question, status or known operation | Read the nearest authoritative record; perform independent necessary reads together | Answer or complete the operation once its question is resolved; no broad investigation |
+| Incident alert, service failure or blocked work | First read status, affected scope and recovery records together → send the operational first response → investigate the cause | Continue the original investigation after that response; do not turn it into a final answer |
+| Requested analysis, comparison or design | Trace the relevant owners and compare explanations or alternatives against the requested decision | Complete the requested breadth and supporting evidence; an early observation does not replace the analysis |
+
+The incident path has two separate deliveries. The first says the observed state, affected scope and immediate next action (including that recovery is already recorded). Send it as a substantive chat update before further causal correlation, repository exploration or supplementary checks. An announcement that you are investigating is not this delivery. Then follow the evidence to finish the requested diagnosis; do not claim a cause from timing alone. If the first records lack a needed observation, obtain that observation rather than declaring the whole task blocked.
+
+For each remaining question, choose a source that can distinguish the live alternatives. After reading it, either act, deliver, or obtain the observation that changes the decision. Do not repeat unchanged queries or expand coverage merely because more sources exist. Batch independent reads, reuse their results, and narrow subsequent reads from what they show.
+
+Prefer observed records, reproducible calculations, then labeled estimates. Align period, denominator, population and exclusions. Perform available authorized reads before treating a fact as unknown; denied access differs from an unperformed read. Report established facts and actionable hypotheses at their supported strength, without waiting to prove every other explanation false.
+
+Use the existing task note for decisive evidence, the next useful result and remaining delivery. Sources and search boundaries are revisable means, not requirements. Hand original evidence to writing only when reader-facing composition is requested; routine findings for this chat do not require a separate document or writer.
+
 ## Project-Specific Procedures
 
 Before selecting project procedures or rebuilding verification, read relevant SKILL.md files from the current checkout's external project-skill index in runtime context. Only the index is automatic; load bodies as needed. To resolve it directly, use `python3 ~/.codex/hooks/project_skills.py list --cwd <verified-checkout>`; read a listed entry with `read --cwd <verified-checkout> --skill <listed-id>`. An empty or unavailable index is not permission to use another project's entries.
@@ -32,14 +50,6 @@ For conversation evidence, first read the named or current task, preserving role
 ## Existing Owner And Observation Boundary
 
 Trace the owner, trigger, discovery and inclusion/exclusion boundary before proposing a new mechanism. Include schedules, events, implicit creation write and downstream effects before calling an operational procedure safe. Derive relevant paths from deployed entrypoints, callers and configuration, rather than treating one convenient query as exhaustive. In the existing investigation note, retain queried source, window, filters and outcome. A negative result, unknown source, denied read and unfinished search support different conclusions.
-
-## Choose The Next Observation
-
-Use the requested result to choose the question, the live alternatives that matter, and an observation that distinguishes them. Check that the source can answer that question before querying it. After the result, decide whether to investigate a remaining alternative or advance to the requested delivery. Do not repeat unchanged queries or expand coverage when the result cannot change that decision.
-
-Prefer observed records, reproducible calculations, then labeled estimates. Align period, denominator, population and exclusions; distinguish production observations from pre-release checks. Judge sufficiency against the requested decision, not universal completeness. Perform available authorized reads before treating a fact as unknown. A genuine access failure or missing requirement differs from an unperformed read.
-
-Use the existing task note for the question, decisive evidence and unfinished outcome. Agent-selected sources and search boundaries are revisable means, not user requirements. Hand the supported conclusion and original evidence to writing; investigation notes are not automatically reader-facing content.
 
 ## Bounded Scouts
 

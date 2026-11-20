@@ -16,11 +16,11 @@ Preserve the failure evidence and localize the failing path before changing it. 
 
 A successful fallback does not verify the primary path. Record their outcomes separately and identify the provider/path actually exercised.
 
-## Two-Stage Failure Diagnosis
+## Response, Diagnosis And Repair
 
-First identify only the immediate stopping layer shown by the observation. Do not present that layer as a root cause or treat it as permission to apply a remedy.
+For an incident alert or service failure, use two delivery stages: status/impact/recovery reads together → operational first response in chat → causal investigation and final diagnosis. The first response gives the observed state, affected scope and next action, including recorded recovery. Send it before further causal correlation or supplementary checks; an investigation announcement does not count. Continue the original investigation after it. Do not require complete causal proof to report established impact or a supported recovery option. A bounded local failure can instead go directly from reproduction to repair and verification. An explicitly requested deep diagnosis retains its requested scope.
 
-Before acting on a causal or remediation claim, match it to the observation that supports it. When plausible alternative explanations remain, obtain the smallest additional observation that distinguishes them; do not invent an alternative merely to fill a checklist. If observations disagree or the known paths cannot explain the effect, revisit omitted paths and source/configuration mismatches with `codex-context-engineering` before assigning an external cause. Distinguish unavailable evidence from a negative result. Each further diagnostic should change the causal judgment or the next repair; uncertainty alone is not a new approval gate.
+Distinguish the observed stopping layer from the root cause. Before a causal or remediation claim, match it to supporting evidence; use the smallest observation that separates remaining plausible explanations. Do not invent alternatives for a checklist. If observations disagree, revisit omitted paths and source/configuration mismatches before assigning an external cause. An empty result, denied read and unperformed read are different evidence. Select the next diagnostic only when its result can change the diagnosis or action.
 
 When the root cause or remedy is not stated directly by deterministic evidence, write the non-secret observed evidence and the exact proposed claim to separate UTF-8 files, then run one check before reporting or acting on that claim:
 
