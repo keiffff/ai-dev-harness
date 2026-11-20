@@ -62,7 +62,7 @@ raise SystemExit(1)
 import os, sys
 if sys.argv[1:3] != ['exec', '--']:
     raise SystemExit(2)
-os.environ['PATH'] = {str(root)!r} + os.pathsep + os.environ['PATH']
+os.environ['PATH'] = {str(shim.parent)!r} + os.pathsep + {str(root)!r} + os.pathsep + os.environ['PATH']
 os.execvpe(sys.argv[3], sys.argv[3:], os.environ)
 ''')
             mise.chmod(0o755)

@@ -310,7 +310,10 @@ def freeze_claude_cli(cli: str) -> str:
         try:
             result = subprocess.run(
                 [mise, "exec", "--", sys.executable, "-c",
-                 "import shutil,sys; print(shutil.which(sys.argv[1]) or '')", candidate.name],
+                 "import os,shutil,sys; from pathlib import Path; "
+                 "paths=[p for p in os.get_exec_path() if Path(p).resolve()!=Path(sys.argv[2]).resolve()]; "
+                 "print(shutil.which(sys.argv[1], path=os.pathsep.join(paths)) or '')",
+                 candidate.name, str(candidate.parent)],
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 timeout=10, check=False,
             )
