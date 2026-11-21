@@ -251,7 +251,10 @@ class OperationalSkillGateTests(unittest.TestCase):
             ROOT / "codex" / "skills" / "codex-context-engineering" / "SKILL.md"
         ).read_text()
 
-        self.assertIn("広いログ調査へ進む前にANDON", agents)
+        self.assertIn("絞ったログを先に確認する", agents)
+        self.assertIn("広いログ調査が必要で対象を絞れない場合だけ", agents)
+        self.assertIn("判断に必要な点をANDONで確認する", agents)
+        self.assertIn("回答なしでできる調査・準備は続ける", agents)
         self.assertIn("one direct lookup", context)
         self.assertIn("before starting a broad log search", context)
 
