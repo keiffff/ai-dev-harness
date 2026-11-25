@@ -186,9 +186,11 @@ class ThreadHandoffSkillTests(unittest.TestCase):
         content = handoff_instructions()
 
         self.assertIn("Create exactly one destination", content)
-        self.assertIn('`model: "gpt-6.1-sol"`', content)
+        self.assertIn("use the model requested for this handoff", content)
+        self.assertIn("resolve the current user default on the destination host", content)
+        self.assertIn("omit `model` so the destination uses its own default", content)
+        self.assertNotRegex(content, r'`model: "[^"]+"`')
         self.assertIn('`thinking: "medium"`', content)
-        self.assertIn("do not rely on task or global defaults", content)
         self.assertIn(
             "put the complete continuation packet, its `Post-verification mode`, "
             "`HANDOFF_READY`, and the "
