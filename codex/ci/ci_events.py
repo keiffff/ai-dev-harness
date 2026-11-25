@@ -229,6 +229,24 @@ def event_prompt(binding, item):
                          'checkout': binding['cwd'], 'branch': binding['branch'], 'event': event}, ensure_ascii=False))
 
 
+def failure_notice(binding, item):
+    return ('CI failure notification for the PR previously bound to this chat. '
+            'The bound checkout does not match the failed PR head or could not be verified. '
+            'This is a notification only. Relay the PR and run link in this chat and end this turn. '
+            'Do not run tools, investigate, change any checkout, rerun CI, or update the PR.\n'
+            +json.dumps({'repository': binding['repo'], 'pull_request': binding['number'],
+                         'sha': item['sha'], 'url': item['url']}, ensure_ascii=False))
+
+
+def checkout_matches(row):
+    try:
+        return (git(row['cwd'], 'branch', '--show-current') == row['branch'] and
+                git(row['cwd'], 'remote', 'get-url', 'origin') == row['remote'] and
+                git(row['cwd'], 'rev-parse', 'HEAD') == row['sha'])
+    except (OSError, subprocess.CalledProcessError):
+        return False
+
+
 def open_chat(thread):
     result = subprocess.run(['open', '-g', 'codex://threads/'+thread], capture_output=True, text=True)
     if result.returncode:
@@ -247,7 +265,8 @@ def dispatch(root, codex, alert_after=3):
     results = []
     with database(root) as db:
         entries = db.execute('SELECT d.*, b.thread,b.cwd,b.branch,b.remote FROM deliveries d '
-                             'JOIN bindings b USING(repo,number) WHERE d.status IN ("pending","queued_not_opened") AND b.active=1').fetchall()
+                             'JOIN bindings b USING(repo,number) WHERE d.status IN '
+                             '("pending","queued_not_opened","notice_queued_not_opened") AND b.active=1').fetchall()
     for entry in entries:
         row = dict(entry)
         key = (row['event_key'], row['repo'], row['number'])
@@ -258,46 +277,54 @@ def dispatch(root, codex, alert_after=3):
         if not claimed:
             continue
         status, detail, retryable = 'failed', '', False
-        accepted = row['status'] == 'queued_not_opened'
+        accepted = row['status'] in ('queued_not_opened', 'notice_queued_not_opened')
+        notice_only = row['status'] == 'notice_queued_not_opened'
         try:
             pr = pr_state(row['repo'], row['number']) if not accepted else None
             if accepted:
                 open_chat(row['thread'])
-                status, detail = 'queued', 'Saved event is available in the original desktop chat.'
+                status = 'notified' if notice_only else 'queued'
+                detail = 'Saved event is available in the original desktop chat.'
             elif pr['state'] != 'OPEN' or pr['headRefOid'] != row['sha']:
                 status = 'stale'
-            elif (git(row['cwd'], 'branch', '--show-current') != row['branch'] or
-                  git(row['cwd'], 'remote', 'get-url', 'origin') != row['remote'] or
-                  git(row['cwd'], 'rev-parse', 'HEAD') != row['sha']):
-                status, detail = 'checkout_changed', 'The bound checkout no longer matches the failed PR head.'
             else:
                 item = json.loads(row['payload'])
-                log = gh_output('run', 'view', str(item['id']), '--repo', row['repo'],
-                                '--attempt', str(item['attempt']), '--log-failed')
-                evidence_dir = root/'evidence'
-                evidence_dir.mkdir(exist_ok=True, mode=0o700)
-                log_file = evidence_dir/(hashlib.sha256(repr(key).encode()).hexdigest()+'.log')
-                sanitized, _ = transport_text(log)
-                with os.fdopen(os.open(log_file, os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0o600), 'w') as stream:
-                    stream.write(sanitized)
-                item['log_file'] = str(log_file.resolve())
-                queue_message(codex, row['thread'], row['cwd'], event_prompt(row, item))
+                notice_only = not checkout_matches(row)
+                if notice_only:
+                    queue_message(codex, row['thread'], root, failure_notice(row, item))
+                else:
+                    log = gh_output('run', 'view', str(item['id']), '--repo', row['repo'],
+                                    '--attempt', str(item['attempt']), '--log-failed')
+                    evidence_dir = root/'evidence'
+                    evidence_dir.mkdir(exist_ok=True, mode=0o700)
+                    log_file = evidence_dir/(hashlib.sha256(repr(key).encode()).hexdigest()+'.log')
+                    sanitized, _ = transport_text(log)
+                    with os.fdopen(os.open(log_file, os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0o600), 'w') as stream:
+                        stream.write(sanitized)
+                    item['log_file'] = str(log_file.resolve())
+                    queue_message(codex, row['thread'], row['cwd'], event_prompt(row, item))
                 accepted = True
                 open_chat(row['thread'])
-                status, detail = 'queued', 'Native queue accepted the event and the desktop chat was opened; completion is separate.'
+                if notice_only:
+                    status, detail = 'notified', 'Failure notice delivered without starting checkout work.'
+                else:
+                    status, detail = 'queued', 'Native queue accepted the event and the desktop chat was opened; completion is separate.'
         except MonitorError as exc:
             retryable = exc.retryable
-            status = ('queued_not_opened' if accepted else 'pending') if retryable else 'failed'
+            if retryable and accepted:
+                status = 'notice_queued_not_opened' if notice_only else 'queued_not_opened'
+            else:
+                status = 'pending' if retryable else 'failed'
             detail = str(exc)
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
             detail = type(exc).__name__+': CI通知を配送できません。ローカルのCLI・checkout設定を確認してください。'
         with database(root) as db:
             db.execute('UPDATE deliveries SET status=?,detail=? WHERE event_key=? AND repo=? AND number=?',
                        (status, detail, *key))
-        if status in ('pending', 'queued_not_opened', 'failed', 'checkout_changed'):
+        if status in ('pending', 'queued_not_opened', 'notice_queued_not_opened', 'failed'):
             report_problem(root, alert_key, detail, alert_after if retryable else 1)
         else:
-            recovered(root, alert_key, announce=status == 'queued')
+            recovered(root, alert_key, announce=status in ('queued', 'notified'))
         results.append({'repo': row['repo'], 'number': row['number'], 'status': status, 'detail': detail})
     return results
 
