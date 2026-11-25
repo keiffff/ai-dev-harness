@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read CI failures from GitHub and deliver them to the originating Codex chat."""
+"""Read CI events and PR milestones and deliver them to the originating Codex chat."""
 
 import argparse
 from contextlib import contextmanager
@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import continuations
+import milestones
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'hooks/codex'))
 from source_ledger import transport_text
@@ -47,6 +48,7 @@ def database(root):
             notified INTEGER NOT NULL, detail TEXT NOT NULL);
     ''')
     continuations.schema(db)
+    milestones.schema(db)
     try:
         with db:
             yield db
@@ -125,7 +127,8 @@ def git(cwd, *args):
 
 def pr_state(repo, number):
     return gh('pr', 'view', str(number), '--repo', repo,
-              '--json', 'headRefOid,headRefName,state,headRepository,headRepositoryOwner')
+              '--json', 'headRefOid,headRefName,state,headRepository,headRepositoryOwner,'
+              'isDraft,mergeable,mergeStateStatus,baseRefName,mergeCommit,mergedAt')
 
 
 def remote_repository(url):
@@ -188,11 +191,14 @@ def failure(event, body):
 def collect(root):
     """Only outgoing authenticated reads; never expose an inbound endpoint."""
     inserted = 0
+    config = milestones.sources(root)
     with database(root) as db:
         bindings = db.execute('SELECT * FROM bindings WHERE active=1').fetchall()
     for binding in bindings:
         repo, number = binding['repo'], binding['number']
         pr = pr_state(repo, number)
+        with database(root) as db:
+            inserted += milestones.observe_pr(db, binding, pr, config)
         if pr['state'] != 'OPEN':
             with database(root) as db:
                 db.execute('UPDATE bindings SET active=0 WHERE repo=? AND number=?', (repo, number))
@@ -211,6 +217,7 @@ def collect(root):
                 result = db.execute('INSERT OR IGNORE INTO deliveries(event_key,repo,number,sha,payload) VALUES (?,?,?,?,?)',
                                     (item['key'], repo, number, item['sha'], json.dumps(item)))
                 inserted += result.rowcount
+    inserted += milestones.collect_deployments(SimpleNamespace(gh=gh, gh_output=gh_output, database=database), root, config)
     return {'accepted': inserted}
 
 
@@ -247,12 +254,6 @@ def checkout_matches(row):
         return False
 
 
-def open_chat(thread):
-    result = subprocess.run(['open', '-g', 'codex://threads/'+thread], capture_output=True, text=True)
-    if result.returncode:
-        raise MonitorError('通知は保存済みですが、元のCodexチャットを開けません。アプリの状態を確認してください。', retryable=True)
-
-
 def queue_message(codex, thread, cwd, prompt):
     result = subprocess.run([str(codex), 'queue', '--thread', thread, '--message', prompt],
                             cwd=cwd, capture_output=True, text=True)
@@ -261,12 +262,14 @@ def queue_message(codex, thread, cwd, prompt):
 
 
 def dispatch(root, codex, alert_after=3):
-    """Queue once in Codex's native thread queue. Never create a replacement chat."""
+    """Queue in the original chat and announce without navigating the app."""
     results = []
     with database(root) as db:
         entries = db.execute('SELECT d.*, b.thread,b.cwd,b.branch,b.remote FROM deliveries d '
                              'JOIN bindings b USING(repo,number) WHERE d.status IN '
-                             '("pending","queued_not_opened","notice_queued_not_opened") AND b.active=1').fetchall()
+                             '("pending","queued_not_opened","notice_queued_not_opened") '
+                             'AND (b.active=1 OR d.event_key LIKE "deployment_complete:%" '
+                             'OR d.status IN ("queued_not_opened","notice_queued_not_opened"))').fetchall()
     for entry in entries:
         row = dict(entry)
         key = (row['event_key'], row['repo'], row['number'])
@@ -280,51 +283,51 @@ def dispatch(root, codex, alert_after=3):
         accepted = row['status'] in ('queued_not_opened', 'notice_queued_not_opened')
         notice_only = row['status'] == 'notice_queued_not_opened'
         try:
-            pr = pr_state(row['repo'], row['number']) if not accepted else None
-            if accepted:
-                open_chat(row['thread'])
-                status = 'notified' if notice_only else 'queued'
-                detail = 'Saved event is available in the original desktop chat.'
-            elif pr['state'] != 'OPEN' or pr['headRefOid'] != row['sha']:
+            item = json.loads(row['payload'])
+            kind = item['kind']
+            pr = pr_state(row['repo'], row['number']) if not accepted and kind != 'deployment_complete' else None
+            if pr is not None and (pr['state'] != 'OPEN' or pr['headRefOid'] != row['sha']):
                 status = 'stale'
+            elif pr is not None and kind == 'merge_ready' and not milestones.merge_ready(pr):
+                with database(root) as db:
+                    db.execute('UPDATE deliveries SET status="pending" WHERE event_key=? AND repo=? AND number=?', key)
+                continue
             else:
-                item = json.loads(row['payload'])
-                notice_only = not checkout_matches(row)
-                if notice_only:
-                    queue_message(codex, row['thread'], root, failure_notice(row, item))
-                else:
-                    log = gh_output('run', 'view', str(item['id']), '--repo', row['repo'],
-                                    '--attempt', str(item['attempt']), '--log-failed')
-                    evidence_dir = root/'evidence'
-                    evidence_dir.mkdir(exist_ok=True, mode=0o700)
-                    log_file = evidence_dir/(hashlib.sha256(repr(key).encode()).hexdigest()+'.log')
-                    sanitized, _ = transport_text(log)
-                    with os.fdopen(os.open(log_file, os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0o600), 'w') as stream:
-                        stream.write(sanitized)
-                    item['log_file'] = str(log_file.resolve())
-                    queue_message(codex, row['thread'], row['cwd'], event_prompt(row, item))
-                accepted = True
-                open_chat(row['thread'])
-                if notice_only:
-                    status, detail = 'notified', 'Failure notice delivered without starting checkout work.'
-                else:
-                    status, detail = 'queued', 'Native queue accepted the event and the desktop chat was opened; completion is separate.'
+                if not accepted:
+                    if kind in ('merge_ready', 'deployment_complete'):
+                        notice_only = True
+                        queue_message(codex, row['thread'], root, milestones.notice(row, item))
+                    elif not checkout_matches(row):
+                        notice_only = True
+                        queue_message(codex, row['thread'], root, failure_notice(row, item))
+                    else:
+                        log = gh_output('run', 'view', str(item['id']), '--repo', row['repo'],
+                                        '--attempt', str(item['attempt']), '--log-failed')
+                        evidence_dir = root/'evidence'
+                        evidence_dir.mkdir(exist_ok=True, mode=0o700)
+                        log_file = evidence_dir/(hashlib.sha256(repr(key).encode()).hexdigest()+'.log')
+                        sanitized, _ = transport_text(log)
+                        with os.fdopen(os.open(log_file, os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0o600), 'w') as stream:
+                            stream.write(sanitized)
+                        item['log_file'] = str(log_file.resolve())
+                        queue_message(codex, row['thread'], row['cwd'], event_prompt(row, item))
+                status = 'notified' if notice_only else 'queued'
+                detail = 'Saved to the original chat queue without opening it.'
         except MonitorError as exc:
             retryable = exc.retryable
-            if retryable and accepted:
-                status = 'notice_queued_not_opened' if notice_only else 'queued_not_opened'
-            else:
-                status = 'pending' if retryable else 'failed'
+            status = 'pending' if retryable else 'failed'
             detail = str(exc)
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
             detail = type(exc).__name__+': CI通知を配送できません。ローカルのCLI・checkout設定を確認してください。'
         with database(root) as db:
             db.execute('UPDATE deliveries SET status=?,detail=? WHERE event_key=? AND repo=? AND number=?',
                        (status, detail, *key))
-        if status in ('pending', 'queued_not_opened', 'notice_queued_not_opened', 'failed'):
+        if status in ('pending', 'failed'):
             report_problem(root, alert_key, detail, alert_after if retryable else 1)
         else:
             recovered(root, alert_key, announce=status in ('queued', 'notified'))
+            if status in ('queued', 'notified'):
+                notify(f'PR #{row["number"]} · {milestones.message(item)} 元のCodexチャットに保存しました。')
         results.append({'repo': row['repo'], 'number': row['number'], 'status': status, 'detail': detail})
     return results
 
@@ -392,6 +395,7 @@ def main():
         with database(args.state_dir) as db:
             if args.command == 'unbind':
                 db.execute('DELETE FROM deliveries WHERE repo=? AND number=?', (args.repo, args.number))
+                db.execute('DELETE FROM deployment_watches WHERE repo=? AND number=?', (args.repo, args.number))
                 db.execute('DELETE FROM bindings WHERE repo=? AND number=?', (args.repo, args.number))
                 result = {'unbound': True}
             else:

@@ -188,11 +188,9 @@ def dispatch(ci, root, codex, alert_after):
                 with os.fdopen(os.open(target, os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0o600), 'w') as stream:
                     stream.write(evidence)
                 ci.queue_message(codex, row['thread'], row['cwd'], prompt(root, row, checkout_changed))
-                accepted = True
-            ci.open_chat(row['thread'])
             status = 'queued'
         except ci.MonitorError as exc:
-            status = 'queued_not_opened' if accepted else ('ready' if exc.retryable else 'failed')
+            status = 'ready' if exc.retryable else 'failed'
             detail = str(exc)
             ci.report_problem(root, key, detail, alert_after if exc.retryable else 1)
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
@@ -202,6 +200,7 @@ def dispatch(ci, root, codex, alert_after):
             db.execute("UPDATE waits SET status=?,detail=? WHERE id=? AND status='dispatching'", (status, detail, row['id']))
         if status == 'queued':
             ci.recovered(root, key)
+            ci.notify('監視中の処理の結果を、元のCodexチャットに保存しました。')
         results.append({'wait_id': row['id'], 'status': status})
     return results
 

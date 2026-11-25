@@ -42,10 +42,11 @@ class ContinuationsTests(unittest.TestCase):
             with patch.object(ci, 'gh', return_value={**self.run, 'conclusion': result}):
                 self.assertEqual(c.collect(ci, self.root), 1)
                 self.assertEqual(c.collect(ci, self.root), 0)
-            with patch.object(ci, 'queue_message') as queue, patch.object(ci, 'open_chat'):
+            with patch.object(ci, 'queue_message') as queue, patch.object(ci, 'notify') as banner:
                 self.assertEqual(c.dispatch(ci, self.root, 'codex', 3)[0]['status'], 'queued')
                 self.assertEqual(c.dispatch(ci, self.root, 'codex', 3), [])
                 queue.assert_called_once()
+                banner.assert_called_once()
             self.assertEqual(self.row(ident)['result'], result)
             self.assertEqual(self.row(ident)['status'], 'queued')
 
@@ -93,14 +94,15 @@ class ContinuationsTests(unittest.TestCase):
             self.assertEqual(c.collect(ci, self.root), 0)
         self.assertEqual(self.row(ident)['status'], 'waiting')
 
-    def test_app_open_retry_does_not_duplicate_queue_and_finish_needs_owning_chat(self):
+    def test_legacy_pending_open_does_not_duplicate_queue_and_finish_needs_owning_chat(self):
         ident = self.register()
         c.ready(ci, self.root, ident, 'success', {'exit_code': 0})
-        with patch.object(ci, 'queue_message') as queue, patch.object(ci, 'notify'), \
-                patch.object(ci, 'open_chat', side_effect=[ci.MonitorError('app unavailable', retryable=True), None]):
-            self.assertEqual(c.dispatch(ci, self.root, 'codex', 3)[0]['status'], 'queued_not_opened')
+        with ci.database(self.root) as db:
+            db.execute("UPDATE waits SET status='queued_not_opened' WHERE id=?", (ident,))
+        with patch.object(ci, 'queue_message') as queue, patch.object(ci, 'notify') as banner:
             self.assertEqual(c.dispatch(ci, self.root, 'codex', 3)[0]['status'], 'queued')
-            queue.assert_called_once()
+            queue.assert_not_called()
+            banner.assert_called_once()
         result_file = self.root/'result.txt'
         result_file.write_text('Read the output and reported its result.')
         args = argparse.Namespace(command='finish', state_dir=self.root, id=ident, result_file=result_file)
@@ -118,7 +120,7 @@ class ContinuationsTests(unittest.TestCase):
             cfg['checkout'] = {'head': self.sha, 'branch': 'work', 'remote': 'example'}
             db.execute('UPDATE waits SET config=? WHERE id=?', (json.dumps(cfg), ident))
         c.ready(ci, self.root, ident, 'success', {})
-        with patch.object(ci, 'git', return_value='changed'), patch.object(ci, 'queue_message') as queue, patch.object(ci, 'open_chat'):
+        with patch.object(ci, 'git', return_value='changed'), patch.object(ci, 'queue_message') as queue, patch.object(ci, 'notify'):
             c.dispatch(ci, self.root, 'codex', 3)
             prompt = queue.call_args.args[-1]
         self.assertIn('"checkout_changed": true', prompt)
@@ -128,11 +130,10 @@ class ContinuationsTests(unittest.TestCase):
         ident = self.register()
         c.ready(ci, self.root, ident, 'success', {})
         with patch.object(ci, 'queue_message', side_effect=ci.MonitorError('uncertain', retryable=False)) as queue, \
-                patch.object(ci, 'notify'), patch.object(ci, 'open_chat') as opened:
+                patch.object(ci, 'notify'):
             self.assertEqual(c.dispatch(ci, self.root, 'codex', 3)[0]['status'], 'failed')
             self.assertEqual(c.dispatch(ci, self.root, 'codex', 3), [])
             queue.assert_called_once()
-            opened.assert_not_called()
         c.command(ci, argparse.Namespace(state_dir=self.root, command='cancel-wait', id=ident))
         self.assertEqual(c.dispatch(ci, self.root, 'codex', 3), [])
 
