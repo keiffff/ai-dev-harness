@@ -395,6 +395,8 @@ class WrapperTests(unittest.TestCase):
             if fake_name == AWS:
                 env['XDG_CACHE_HOME'] = tmp
                 aws_reference_fixture(Path(tmp))
+            if fake_name == GH:
+                env['CODEX_CI_EVENTS_HOME'] = tmp
             return subprocess.run([str(script), *args], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, check=False)
 
     def test_aws_readonly_classifies_reads_and_blocks_secret_retrieval(self):

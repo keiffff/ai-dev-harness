@@ -18,6 +18,21 @@ fi
 # Opt-in CI routing records the chat that actually created this PR. Failure to
 # register must not hide a successful GitHub write or repeat PR creation.
 ci_events_script="${CODEX_CI_EVENTS_SCRIPT:-$HOME/.codex/ci-events/bridge.py}"
+if [[ "$1" == pr && "$2" == merge && -f "${CODEX_CI_EVENTS_HOME:-$HOME/.codex/ci-events}/publication-sources.json" ]]; then
+  shift 2
+  verified=$(/usr/bin/python3 "$ci_events_script" verify-merge -- "$@")
+  if [[ -n "$verified" ]]; then
+    fields=("${(@f)verified}")
+    merge_args=("$@")
+    if (( fields[1] )); then
+      merge_args[fields[1]]="${fields[2]}"
+    else
+      merge_args=("${fields[2]}" "${merge_args[@]}")
+    fi
+    exec gh pr merge --match-head-commit "${fields[3]}" "${merge_args[@]}"
+  fi
+  exec gh pr merge "$@"
+fi
 if [[ "${1:-}" == "pr" && "${2:-}" == "create" && -f "$ci_events_script" && -n "${CODEX_THREAD_ID:-}" ]]; then
   pr_output=$(gh "$@")
   print -r -- "$pr_output"

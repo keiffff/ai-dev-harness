@@ -28,3 +28,11 @@ The monitor notifies the bound chat once per PR head when GitHub reports an open
 For repositories with deployment reporting in a workflow job's log, the local state directory can contain a `deployment-sources.json` map keyed by lowercase repository slug. Each entry provides the PR base `branch`, Actions `workflow` filename, exact deployment `job` name, and `sha_pattern` with one capture group for the deployed full SHA. An optional `environment` sets the displayed name. The monitor watches PRs it sees merge into that branch. A successful deployment job must identify the deployed SHA, and the PR's merge commit must be that SHA or an ancestor. The workflow's own head SHA is independent evidence. Previously closed bindings are outside this watch.
 
 Both events use the original chat and report only the status and evidence links. They do not depend on the local checkout.
+
+## Publication checks
+
+The approved `gh pr merge` wrapper supports repository-owned verification rules in the local CI state directory. Record them in `publication-sources.json` as a map from lowercase GitHub repository slug to a list of rules. A rule has `paths` (Git diff path globs), `workflow` (Actions workflow filename), `job` and `step` (actual Actions names), and an optional target `base` branch. Keep this file in the local state directory.
+
+At merge time the bridge compares the exact PR base and head from GitHub using the current checkout's Git objects. For matching changes it reads the latest pull-request workflow run and its current attempt for that head. Both the selected job and its selected step must succeed. A step skipped inside a successful job is missing verification. Choose the existing workflow step that runs the required checks in the environment where the behavior is observable. The wrapper pins the exact checked PR head when it merges. PR branch pushes and PR creation can still start their usual CI. GitHub's required checks continue to govern other merge entry points.
+
+For project batch runners, `publication.select_item_checks(required, registered, requested)` compiles item checks once before iteration. The runner owns the two callable maps. Request data supplies check names. Required checks remain active, registered requests are selected once, and unregistered requests are returned separately for reporting.

@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import continuations
 import milestones
+import publication
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'hooks/codex'))
 from source_ledger import transport_text
@@ -121,8 +122,9 @@ def gh(*args):
     return json.loads(gh_output(*args))
 
 
-def git(cwd, *args):
-    return subprocess.check_output(['git', '-C', str(cwd), *args], text=True).strip()
+def git(cwd, *args, strip=True):
+    output = subprocess.check_output(['git', '-C', str(cwd), *args], text=True)
+    return output.strip() if strip else output
 
 
 def pr_state(repo, number):
@@ -364,6 +366,8 @@ def main():
     remove = subs.add_parser('unbind', help='Stop future notifications for a registered PR.')
     remove.add_argument('--repo', required=True)
     remove.add_argument('--number', type=int, required=True)
+    merge = subs.add_parser('verify-merge', help='Read-only verification for the approved GitHub CLI merge wrapper.')
+    merge.add_argument('arguments', nargs=argparse.REMAINDER)
     watcher = subs.add_parser('watch', help='Poll registered PRs with the existing GitHub readonly wrapper; no inbound port.')
     watcher.add_argument('--interval', type=float, default=60, help='Seconds between GitHub reads (no model calls).')
     watcher.add_argument('--once', action='store_true')
@@ -372,6 +376,17 @@ def main():
         sub.add_argument('--codex-bin', default='codex')
     continuations.arguments(subs)
     args = parser.parse_args()
+    if args.command == 'verify-merge':
+        arguments = args.arguments[1:] if args.arguments[:1] == ['--'] else args.arguments
+        try:
+            result = publication.configured_merge(sys.modules[__name__], args.state_dir, arguments)
+            if result:
+                print(*result, sep='\n')
+        except subprocess.CalledProcessError:
+            parser.exit(1, 'Cannot compare the exact PR commits in the current checkout. Fetch the PR refs and retry.\n')
+        except (OSError, ValueError, MonitorError, KeyError, TypeError) as error:
+            parser.exit(1, f'Publication verification: {error}\n')
+        return
     if args.command in continuations.COMMANDS:
         result = continuations.command(sys.modules[__name__], args)
         print(json.dumps(result, ensure_ascii=False))
