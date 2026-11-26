@@ -1,7 +1,7 @@
 # Codex config example for this harness.
 # Copy the relevant fragments into your local Codex config and adapt paths.
 
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 model_reasoning_effort = "medium"
 
 approval_policy = "on-request"

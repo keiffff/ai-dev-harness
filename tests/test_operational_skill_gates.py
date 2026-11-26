@@ -6,10 +6,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class OperationalSkillGateTests(unittest.TestCase):
-    def test_codex_config_uses_gpt_6_1_sol_as_the_main_model(self):
+    def test_codex_config_uses_gpt_6_2_sol_as_the_main_model(self):
         config = (ROOT / "codex" / "config.example.toml").read_text()
 
-        self.assertIn('model = "gpt-6.1-sol"', config)
+        self.assertIn('model = "gpt-6.2-sol"', config)
         self.assertIn('model_reasoning_effort = "medium"', config)
 
     def test_skill_descriptions_keep_discovery_context_bounded(self):
